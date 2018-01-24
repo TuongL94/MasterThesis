@@ -110,6 +110,7 @@ def main(unused_argv):
             input_fn = train_input_fn,
             steps=20000,
             hooks = [logging_hook])
+
     
     # Evaluate the model and print results
     eval_input_fn = tf.estimator.inputs.numpy_input_fn(
