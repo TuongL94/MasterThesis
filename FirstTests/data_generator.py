@@ -24,13 +24,13 @@ class data_generator:
         right = []
         sim = []
         
-        while self.ind < self.trainsize - 2:
+        while self.ind < self.trainsize - 2 and count < batch_size:
             left.append(self.images[self.ind])
             right.append(self.images[self.ind+1])
             if self.labels[self.ind] == self.labels[self.ind+1]:
-                sim.append(1)
+                sim.append([1])
             else:
-                sim.append(0)
+                sim.append([0])
             self.ind += 1
             count += 1
             
@@ -38,10 +38,10 @@ class data_generator:
             left.append(self.images[i])
             right.append(self.images[i+1])
             if self.labels[i] == self.labels[i+1]:
-                sim.append(1)
+                sim.append([1])
             else:
-                sim.append(0)
+                sim.append([0])
             self.ind += 1
             
-        return np.array(left),np.array(right),np.array(sim)
+        return np.array(left),np.array(right),sim
         

@@ -6,12 +6,11 @@ Created on Wed Jan 24 15:32:42 2018
 """
 
 import numpy as np
+import tensorflow as tf
 
-a = np.array([[1,2,3,4],[5,6,7,8]])
-rows,cols = a.shape
-print(rows)
-print(cols)
+x = 4
+y1  = tf.constant(x,4,name = 'h1')
 
-for i in range(1,5):
-     print('test')
-     
+with tf.Session() as sess:
+    sess.run(y1)
+    print(y1.eval())
