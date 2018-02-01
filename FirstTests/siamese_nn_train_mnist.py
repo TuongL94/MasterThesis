@@ -39,6 +39,9 @@ def main(unused_argv):
     learning_rate = 0.01
     momentum = 0.99
     
+    # parameters for evaluation
+    nbr_of_pairs = 5000
+    
     tf.reset_default_graph()
     
     # if models exists use the existing one otherwise create a new one
@@ -47,16 +50,20 @@ def main(unused_argv):
         is_model_new = True
 
          # create placeholders for pairs of images and ground truth matching
-        left,right,label = placeholder_inputs(batch_size)
+        left,right,label,left_eval,right_eval = placeholder_inputs(batch_size,nbr_of_pairs)
             
         left_output = inference(left)            
         right_output = inference(right)
+        left_eval_output = inference(left_eval)            
+        right_eval_output = inference(right_eval)
         
         margin = tf.constant(2.0)
         loss = contrastive_loss(left_output,right_output,label,margin)
         tf.add_to_collection("loss",loss)
         tf.add_to_collection("left_output",left_output)
         tf.add_to_collection("right_output",right_output)
+        tf.add_to_collection("left_eval_output",left_eval_output)
+        tf.add_to_collection("right_eval_output",right_eval_output)
         saver = tf.train.Saver()
         
     else:

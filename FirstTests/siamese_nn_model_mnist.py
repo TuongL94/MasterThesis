@@ -73,9 +73,11 @@ def training(loss, learning_rate, momentum):
     train_op = optimizer.minimize(loss,global_step = global_step)
     return train_op
     
-def placeholder_inputs(batch_size):
+def placeholder_inputs(batch_size,nbr_of_pairs):
     left = tf.placeholder(tf.float32, [batch_size, 28, 28, 1], name="left")
     right = tf.placeholder(tf.float32, [batch_size, 28, 28, 1], name="right")
     label = tf.placeholder(tf.float32, [batch_size, 1], name="label") # 1 if same, 0 if different
-    return left,right,label
+    left_eval = tf.placeholder(tf.float32, [nbr_of_pairs, 28, 28, 1], name="left_eval")
+    right_eval = tf.placeholder(tf.float32, [nbr_of_pairs, 28, 28, 1], name="right_eval")
+    return left,right,label,left_eval,right_eval
     

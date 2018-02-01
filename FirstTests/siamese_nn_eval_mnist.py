@@ -19,7 +19,7 @@ def prep_eval_data(eval_data,eval_labels):
     eval_data_moded = eval_data.reshape((nbr_of_images,dim,dim,1))
     left = []
     right = []
-    sim = np.zeros((nbr_of_image_pairs,1))
+    sim = np.zeros(nbr_of_image_pairs)
     for i in range(nbr_of_image_pairs):
         left.append(eval_data_moded[i,:,:,:])
         right.append(eval_data_moded[nbr_of_image_pairs+i,:,:,:])
@@ -28,13 +28,12 @@ def prep_eval_data(eval_data,eval_labels):
             
     return np.array(left),np.array(right),sim
     
-def evaluate_mnist_siamese_network(left_pairs,right_pairs,sim_labels,threshold):
-    left_pairs_inference = inference(tf.convert_to_tensor(left_pairs))
-    right_pairs_inference = inference(tf.convert_to_tensor(right_pairs))
+def evaluate_mnist_siamese_network(left_pairs_o,right_pairs_o,sim_labels,threshold):
     matching = np.zeros(len(sim_labels))
+
     
     for i in range(len(sim_labels)):
-        if tf.linalg.norm([left_pairs_inference[i,:],right_pairs_inference[i,:]]).eval() < threshold:
+        if sl.norm([left_pairs_o[i,:],right_pairs_o[i,:]]) < threshold:
             matching[i] = 1
     
     precision = np.sum((matching == sim_labels))/len(sim_labels)
@@ -68,11 +67,27 @@ def main(unused_argv):
     else:
         print("Using existing model in the directory " + output_dir + " for evaluation")
         
+#        nbr_of_pairs,width,height,_ = np.shape(left)
+        
+#        left_eval = tf.placeholder(tf.float32, [nbr_of_pairs, width, height, 1], name="left_eval")
+#        right_eval = tf.placeholder(tf.float32, [nbr_of_pairs, width, height, 1], name="right_eval")
+        
+#        tf.initialize_variables([left_eval,right_eval])
         saver = tf.train.import_meta_graph(output_dir + ".meta")
+        
+        g = tf.get_default_graph()
+        left_eval = g.get_tensor_by_name("left_eval:0")
+        right_eval = g.get_tensor_by_name("right_eval:0")
+        
+        left_eval_inference = tf.get_collection("left_eval_output")[0]
+        right_eval_inference = tf.get_collection("right_eval_output")[0]
+        
         with tf.Session() as sess:
             saver.restore(sess, tf.train.latest_checkpoint(output_dir))
-            precision = sess.run([evaluate_mnist_siamese_network(left,right,sim,3)])
-            print("Precision of siamese network: " + precision)
+            left_o,right_o= sess.run([left_eval_inference,right_eval_inference],feed_dict = {left_eval:left, right_eval:right})
+            precision = evaluate_mnist_siamese_network(left_o,right_o,sim,7.5)
+#            print("Precision of siamese network: " + precision)
+            print(precision)
       
 if __name__ == "__main__":
     tf.app.run()
