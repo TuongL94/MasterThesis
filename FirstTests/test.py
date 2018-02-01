@@ -8,9 +8,11 @@ Created on Wed Jan 24 15:32:42 2018
 import numpy as np
 import tensorflow as tf
 
-x = 4
-y1  = tf.constant(x,4,name = 'h1')
-
-with tf.Session() as sess:
-    sess.run(y1)
-    print(y1.eval())
+x = np.array([3,4])
+y  = np.array([3,2])
+#b = tf.pow(x-y,2)
+#print(b)
+#with tf.Session() as sess:
+#    print(b.eval())
+c = (x==y)
+print(c)

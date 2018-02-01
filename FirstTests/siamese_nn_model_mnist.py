@@ -9,15 +9,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from data_generator import data_generator
-from tensorflow.examples.tutorials.mnist import input_data
-from tensorflow.examples.tutorials.mnist import mnist
-
-import numpy as np
-import scipy.linalg as sl
 import tensorflow as tf
 
-def inference(input, reuse=True):
+def inference(input):
     input_layer = input
     
     # Convolutional layer 1
@@ -26,7 +20,9 @@ def inference(input, reuse=True):
             filters = 32,
             kernel_size = [5, 5], 
             padding = "same",
-            activation = tf.nn.relu)
+            activation = tf.nn.relu,
+            reuse = tf.AUTO_REUSE,
+            name="conv_layer_1")
     
     # Pooling layer 1
     pool1 = tf.layers.max_pooling2d(inputs = conv1, 
@@ -39,19 +35,36 @@ def inference(input, reuse=True):
             filters = 64,
             kernel_size = [5,5],
             padding = "same",
-            activation = tf.nn.relu)
+            activation = tf.nn.relu,
+            reuse = tf.AUTO_REUSE,
+            name="conv_layer_2")
             
     pool2 = tf.layers.max_pooling2d(
             inputs = conv2, 
             pool_size = [2,2],
             strides = 2)
     
-    net = tf.contrib.layers.flatten(pool2)
+    net = tf.layers.flatten(pool2)
     return net
     
     
-def loss(input_1,input_2):
+def l2_loss(input_1,input_2):
     return tf.linalg.norm([input_1,input_2])
+    
+def contrastive_loss(input_1,input_2,label,margin):
+    """ Computes the contrastive loss between two vectors
+    
+    Input:
+    inout_1 - first input vector
+    input_2 - second input vector
+    label - ground truth for similarity between the vectors. 1 if they are similar, 0 otherwise.
+    margin - margin for contrastive loss, positive constant
+    Returns the contrastive loss between input_1 and input_2 with specified margin.
+    """
+    d_sq = tf.reduce_sum(tf.pow(input_1-input_2,2),1,keep_dims=True)
+    max_sq = tf.square(tf.maximum(margin-d_sq,0))
+    return tf.reduce_mean(label*d_sq + (1-label)*max_sq)/2
+        
 
 def training(loss, learning_rate, momentum):
     tf.summary.scalar('loss', loss)
@@ -61,46 +74,8 @@ def training(loss, learning_rate, momentum):
     return train_op
     
 def placeholder_inputs(batch_size):
-    left = tf.placeholder(tf.float32, [batch_size, 28, 28, 1], name='left')
-    right = tf.placeholder(tf.float32, [batch_size, 28, 28, 1], name='right')
-    label = tf.placeholder(tf.int32, [batch_size, 1], name='label') # 1 if same, 0 if different
+    left = tf.placeholder(tf.float32, [batch_size, 28, 28, 1], name="left")
+    right = tf.placeholder(tf.float32, [batch_size, 28, 28, 1], name="right")
+    label = tf.placeholder(tf.float32, [batch_size, 1], name="label") # 1 if same, 0 if different
     return left,right,label
     
-         
-def main(unused_argv):
-    
-    #Load training and eval data
-    mnist = tf.contrib.learn.datasets.load_dataset("mnist")
-    train_data = mnist.train.images # Returns np.array
-    train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
-    eval_data = mnist.test.images # Returns np.array
-    eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
-    
-    batch_size = 5
-    train_iter = 2000
-    
-    generator = data_generator(train_data,train_labels) # initialize data generator
-    left,right,label = placeholder_inputs(batch_size) # create placeholders for pairs of images and ground truth matching
-    left_output = inference(left, reuse=False)
-    right_output = inference(right, reuse=True)
-    l2_loss = loss(left_output, right_output)
-    
-    learning_rate = tf.constant(0.01, name = 'learning_rate')
-    momentum = tf.constant(0.99, name = 'momentum')
-    train_op = training(l2_loss, learning_rate, momentum)
-
-    
-    with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer()) # initialize all trainable parameters
-        
-        for i in range(train_iter):
-            b_l, b_r, b_sim = generator.gen_batch(batch_size)
-            _,loss_value = sess.run([train_op, l2_loss],feed_dict={left:b_l, right:b_r, label:b_sim})
-            if i % 100 == 0:
-                print('Iteration %d: loss = %.2f' % (i, loss_value))
-                
-    
-    
-    
-if __name__ == "__main__":
-    tf.app.run()
