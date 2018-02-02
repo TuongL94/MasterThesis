@@ -11,6 +11,7 @@ import siamese_nn_model_mnist as sm
 import numpy as np
 import tensorflow as tf
 import os 
+import utilities as util
 
 
 def main(unused_argv):
@@ -26,16 +27,18 @@ def main(unused_argv):
     
     # Load mnist training and eval data
     mnist = tf.contrib.learn.datasets.load_dataset("mnist")
-    train_data = mnist.train.images # Returns np.array
+    train_data = util.reshape_grayscale_data(mnist.train.images) 
     train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
-
+    
     output_dir = "/tmp/siamese_mnist_model/" # directory where the model will be saved
     
-    generator = data_generator(train_data,train_labels) # initialize data generator
+    nbr_of_training_images = 10000 # number of images to use from the training data set
+    
+    generator = data_generator(train_data,train_labels,nbr_of_training_images) # initialize data generator
     
     # parameters for training
     batch_size = 50
-    train_iter = 10000
+    train_iter = 1000
 
     learning_rate = 0.01
     momentum = 0.99

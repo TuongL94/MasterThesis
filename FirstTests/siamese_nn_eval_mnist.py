@@ -5,8 +5,6 @@ Created on Wed Jan 31 14:34:36 2018
 @author: Tuong Lam
 """
 
-from data_generator import data_generator
-
 import numpy as np
 import scipy.linalg as sl
 import tensorflow as tf
@@ -43,10 +41,7 @@ def main(unused_argv):
     eval_data = mnist.test.images # Returns np.array
     eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
     
-    train_data = mnist.train.images # Returns np.array
-    train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
-    generator = data_generator(train_data,train_labels) # initialize data generator
-    left,right,sim = generator.prep_eval_data(eval_data,eval_labels)
+    left,right,sim = util.prep_eval_data(eval_data,eval_labels)
     
     output_dir = "/tmp/siamese_mnist_model/" # directory where the model is saved
     

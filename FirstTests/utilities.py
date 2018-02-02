@@ -39,3 +39,19 @@ def reshape_grayscale_data(input_data):
     dim = int(np.sqrt(dim_squarred))
     input_data_moded = input_data.reshape((nbr_of_images,dim,dim,1))
     return input_data_moded
+
+def prep_eval_data(eval_data,eval_labels):
+    eval_data_moded = reshape_grayscale_data(eval_data)
+    dims = np.shape(eval_data_moded)
+    nbr_of_image_pairs = int(dims[0]/2)
+    
+    left = []
+    right = []
+    sim = np.zeros(nbr_of_image_pairs)
+    for i in range(nbr_of_image_pairs):
+        left.append(eval_data_moded[i,:,:,:])
+        right.append(eval_data_moded[nbr_of_image_pairs+i,:,:,:])
+        if(eval_labels[i] == eval_labels[nbr_of_image_pairs + i]):
+            sim[i] = 1
+            
+    return np.array(left),np.array(right),sim

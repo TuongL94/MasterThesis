@@ -7,7 +7,6 @@ Created on Wed Jan 24 15:24:03 2018
 
 import numpy as np
 import random
-import utilities as util
 from random import shuffle
 
 
@@ -18,6 +17,7 @@ class data_generator:
         self.images = images[0:train_size,:,:,:]
         self.ind = 0
         self.trainsize = train_size
+        
         # Sort images so that they come in 0..9
         # This is maybe better to do before pasing to this function
         self.images = [x for _, x in sorted(zip(self.labels, self.images), key=lambda pair: pair[0])]
@@ -54,22 +54,6 @@ class data_generator:
                 sim.append([0])
             self.ind += 1
             
-        return np.array(left),np.array(right),sim
-        
-    def prep_eval_data(eval_data,eval_labels):
-        eval_data_moded = util.reshape_grayscale_data(eval_data)
-        dims = np.shape(eval_data_moded)
-        nbr_of_image_pairs = dims[0]/2
-        
-        left = []
-        right = []
-        sim = np.zeros(nbr_of_image_pairs)
-        for i in range(nbr_of_image_pairs):
-            left.append(eval_data_moded[i,:,:,:])
-            right.append(eval_data_moded[nbr_of_image_pairs+i,:,:,:])
-            if(eval_labels[i] == eval_labels[nbr_of_image_pairs + i]):
-                sim[i] = 1
-                
         return np.array(left),np.array(right),sim
 
     def gen_pair_batch(self,batch_size):   # May need batch size
