@@ -102,7 +102,6 @@ def main(unused_argv):
 #                print(global_vars[i])
         
         for i in range(1,train_iter + 1):
-#            b_l, b_r, b_sim = generator.gen_batch(batch_size)
             b_l, b_r, b_sim = generator.gen_pair_batch(batch_size)
             _,loss_value,left_o,right_o = sess.run([train_op, loss, left_output, right_output],feed_dict={left:b_l, right:b_r, label:b_sim})
 #            print(left_o)

@@ -23,9 +23,7 @@ class data_generator:
         self.images = [x for _, x in sorted(zip(self.labels, self.images), key=lambda pair: pair[0])]
         self.labels.sort()
         self.digit = []
-        digit = []
         for i in range(10):
-            digit.append(np.where(self.labels == i)[0][0])
             self.digit.append(np.where(self.labels == i)[0][0])
         self.digit.append(len(self.labels) - 1)
     
@@ -56,7 +54,7 @@ class data_generator:
             
         return np.array(left),np.array(right),sim
 
-    def gen_pair_batch(self,batch_size):   # May need batch size
+    def gen_pair_batch(self,batch_size):
         left = []
         right = []
         sim = []
@@ -76,7 +74,7 @@ class data_generator:
                 rnd_current_digit = random.randint(self.digit[i], self.digit[i+1])
                 # Generate random index of digit not being i
                 while True:
-                    rnd_other_digit = random.randint(self.digit[0], self.digit[len(self.digit)-1])
+                    rnd_other_digit = random.randint(self.digit[0], self.digit[-1])
                     if not self.digit[i] <= rnd_other_digit <= self.digit[i+1]:
                         break
                       
@@ -99,7 +97,7 @@ class data_generator:
             index_digit = random.randint(self.digit[new_digit], self.digit[new_digit+1])
             if mat == 0:    # Make unmatched pair
                 while True:
-                    index_non_match = random.randint(self.digit[0], self.digit[len(self.digit)-1])
+                    index_non_match = random.randint(self.digit[0], self.digit[-1])
                     if not self.digit[new_digit] <= index_non_match <= self.digit[new_digit+1]:
                         break
                 left.append(self.images[index_digit])
