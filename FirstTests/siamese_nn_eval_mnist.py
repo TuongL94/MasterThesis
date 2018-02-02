@@ -38,7 +38,7 @@ def main(unused_argv):
     """
     # Load mnist eval data
     mnist = tf.contrib.learn.datasets.load_dataset("mnist")
-    eval_data = mnist.test.images # Returns np.array
+    eval_data = util.reshape_grayscale_data(mnist.test.images) # Returns np.array
     eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
     
     left,right,sim = util.prep_eval_data(eval_data,eval_labels)

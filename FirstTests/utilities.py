@@ -41,16 +41,26 @@ def reshape_grayscale_data(input_data):
     return input_data_moded
 
 def prep_eval_data(eval_data,eval_labels):
-    eval_data_moded = reshape_grayscale_data(eval_data)
-    dims = np.shape(eval_data_moded)
+    """ Generates pairs from evaluation data to use for similarity networks.
+    
+    The method generates pairs by cutting the evaluation data in two halves
+    and pairing corresponding elements of the two halves. Labels for generated
+    pairs are constructed by comparing the labels from the original evaluation
+    labels.
+    Input:
+    eval_data - 4D evaluation data
+    eval_labels - labels of evaluation data
+    Returns: evaluation pairs and corresponding labels
+    """
+    dims = np.shape(eval_data)
     nbr_of_image_pairs = int(dims[0]/2)
     
     left = []
     right = []
     sim = np.zeros(nbr_of_image_pairs)
     for i in range(nbr_of_image_pairs):
-        left.append(eval_data_moded[i,:,:,:])
-        right.append(eval_data_moded[nbr_of_image_pairs+i,:,:,:])
+        left.append(eval_data[i,:,:,:])
+        right.append(eval_data[nbr_of_image_pairs+i,:,:,:])
         if(eval_labels[i] == eval_labels[nbr_of_image_pairs + i]):
             sim[i] = 1
             

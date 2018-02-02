@@ -25,9 +25,9 @@ def main(unused_argv):
     
     """
     
-    # Load mnist training and eval data
+    # Load mnist training and eval data and perform necessary data reshape
     mnist = tf.contrib.learn.datasets.load_dataset("mnist")
-    train_data = util.reshape_grayscale_data(mnist.train.images) 
+    train_data = util.reshape_grayscale_data(mnist.train.images) # Returns np.array
     train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
     
     output_dir = "/tmp/siamese_mnist_model/" # directory where the model will be saved
@@ -39,10 +39,11 @@ def main(unused_argv):
     # parameters for training
     batch_size = 50
     train_iter = 1000
-
     learning_rate = 0.01
     momentum = 0.99
-    dims = [batch_size, 28, 28,1]
+    
+    image_dims = np.shape(train_data)
+    placeholder_dims = [batch_size, image_dims[1], image_dims[2], image_dims[3]] 
     
     # parameters for evaluation
     nbr_of_eval_pairs = 5000
@@ -55,7 +56,7 @@ def main(unused_argv):
         is_model_new = True
 
          # create placeholders
-        left,right,label,left_eval,right_eval = sm.placeholder_inputs(dims,nbr_of_eval_pairs)
+        left,right,label,left_eval,right_eval = sm.placeholder_inputs(placeholder_dims,nbr_of_eval_pairs)
             
         left_output = sm.inference(left)            
         right_output = sm.inference(right)
