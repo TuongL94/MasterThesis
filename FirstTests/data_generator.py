@@ -6,18 +6,29 @@ Created on Wed Jan 24 15:24:03 2018
 """
 
 import numpy as np
+import random
+import utilities as util
+from random import shuffle
+
 
 class data_generator:
-    
-    def __init__(self,images,labels):
-        nbr_of_images,dim_squarred = np.shape(images)
-        self.trainsize = 10000
-        dim = int(np.sqrt(dim_squarred))
-        self.labels = labels[0:self.trainsize]
-        tmp_images = images.reshape((nbr_of_images,dim,dim,1))
-        self.images = tmp_images[0:self.trainsize,:,:,:]
+
+    def __init__(self, images, labels,train_size):
+        self.labels = labels[0:train_size]
+        self.images = images[0:train_size,:,:,:]
         self.ind = 0
-        
+        self.trainsize = train_size
+        # Sort images so that they come in 0..9
+        # This is maybe better to do before pasing to this function
+        self.images = [x for _, x in sorted(zip(self.labels, self.images), key=lambda pair: pair[0])]
+        self.labels.sort()
+        self.digit = []
+        digit = []
+        for i in range(10):
+            digit.append(np.where(self.labels == i)[0][0])
+            self.digit.append(np.where(self.labels == i)[0][0])
+        self.digit.append(len(self.labels) - 1)
+    
     def gen_batch(self,batch_size):
         count = 0
         left = []
@@ -45,11 +56,11 @@ class data_generator:
             
         return np.array(left),np.array(right),sim
         
-    def prep_eval_data(self,eval_data,eval_labels):
-        nbr_of_images,dim_squarred = np.shape(eval_data)
-        dim = int(np.sqrt(dim_squarred))
-        nbr_of_image_pairs = int(nbr_of_images/2)
-        eval_data_moded = eval_data.reshape((nbr_of_images,dim,dim,1))
+    def prep_eval_data(eval_data,eval_labels):
+        eval_data_moded = util.reshape_grayscale_data(eval_data)
+        dims = np.shape(eval_data_moded)
+        nbr_of_image_pairs = dims[0]/2
+        
         left = []
         right = []
         sim = np.zeros(nbr_of_image_pairs)
@@ -59,4 +70,78 @@ class data_generator:
             if(eval_labels[i] == eval_labels[nbr_of_image_pairs + i]):
                 sim[i] = 1
                 
+        return np.array(left),np.array(right),sim
+
+    def gen_pair_batch(self,batch_size):   # May need batch size
+        left = []
+        right = []
+        sim = []
+        count = 0
+        
+        for i in range(10):
+            nbr_each_digit = int(batch_size/20);
+            for j in range(nbr_each_digit):
+                l = random.randint(self.digit[i], self.digit[i+1])
+                r = random.randint(self.digit[i], self.digit[i+1])
+                left.append(self.images[l])
+                right.append(self.images[r])
+                sim.append([1])
+                count += 1
+            for j in range(nbr_each_digit):
+                # Generate random index of current digit i
+                rnd_current_digit = random.randint(self.digit[i], self.digit[i+1])
+                # Generate random index of digit not being i
+                while True:
+                    rnd_other_digit = random.randint(self.digit[0], self.digit[len(self.digit)-1])
+                    if not self.digit[i] <= rnd_other_digit <= self.digit[i+1]:
+                        break
+                      
+                # Put the pair in random left/right
+                if random.uniform(0,1) < 0.5:
+                    left.append(self.images[rnd_current_digit])
+                    right.append(self.images[rnd_other_digit])
+                else:
+                    left.append(self.images[rnd_other_digit])
+                    right.append(self.images[rnd_current_digit])                
+                    
+                sim.append([0])
+                count += 1
+                
+        # Generate remaining pairs in the batch
+        # Make matching pairs every second time
+        mat = 0
+        while count < batch_size:
+            new_digit = random.randint(0,9)
+            index_digit = random.randint(self.digit[new_digit], self.digit[new_digit+1])
+            if mat == 0:    # Make unmatched pair
+                while True:
+                    index_non_match = random.randint(self.digit[0], self.digit[len(self.digit)-1])
+                    if not self.digit[new_digit] <= index_non_match <= self.digit[new_digit+1]:
+                        break
+                left.append(self.images[index_digit])
+                right.append(self.images[index_non_match])
+                sim.append([0])
+                mat = 1 # Set next pair to be matching
+            else:           # Make matching pair
+                index_match = random.randint(self.digit[new_digit], self.digit[new_digit+1])
+                left.append(self.images[index_digit])
+                right.append(self.images[index_match])
+                sim.append([1])
+                mat = 0 #Set next pair to be non matching
+            count += 1
+                
+        # Shuffle the data pairs
+        index_shuf = list(range(len(sim)))
+        shuffle(index_shuf)
+        temp_l = []
+        temp_r = []
+        temp_s = []
+        for i in index_shuf:
+            temp_l.append(left[i])
+            temp_r.append(right[i])
+            temp_s.append(sim[i])
+        left = temp_l
+        right = temp_r
+        sim = temp_s
+            
         return np.array(left),np.array(right),sim
