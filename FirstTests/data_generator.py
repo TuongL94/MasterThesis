@@ -11,16 +11,22 @@ from random import shuffle
 
 
 class data_generator:
-    
-#    def __init__(self,images,labels):
-#        nbr_of_images,dim_squarred = np.shape(images)
-#        self.trainsize = 10000
-#        dim = int(np.sqrt(dim_squarred))
-#        self.labels = labels[0:self.trainsize]
-#        tmp_images = images.reshape((nbr_of_images,dim,dim,1))
-#        self.images = tmp_images[0:self.trainsize,:,:,:]
-#        self.ind = 0
+
+    def __init__(self, images, labels,train_size):
+        self.labels = labels[0:train_size]
+        self.images = images[0:train_size,:,:,:]
+        self.ind = 0
+        self.trainsize = train_size
         
+        # Sort images so that they come in 0..9
+        # This is maybe better to do before pasing to this function
+        self.images = [x for _, x in sorted(zip(self.labels, self.images), key=lambda pair: pair[0])]
+        self.labels.sort()
+        self.digit = []
+        for i in range(10):
+            self.digit.append(np.where(self.labels == i)[0][0])
+        self.digit.append(len(self.labels) - 1)
+    
     def gen_batch(self,batch_size):
         count = 0
         left = []
@@ -47,40 +53,8 @@ class data_generator:
             self.ind += 1
             
         return np.array(left),np.array(right),sim
-    
-    def __init__(self, images, labels):
-        # Indcies of each digit after sort
-        # 0: 0     - 5443
-        # 1: 5444  - 11622
-        # 2: 11623 - 17092
-        # 3: 17093 - 22730
-        # 4: 22731 - 28037
-        # 5: 28038 - 33024
-        # 6: 33025 - 38441
-        # 7: 38442 - 44156
-        # 8: 44157 - 49545
-        # 9: 49546 - 54999
-        nbr_of_images,dim_squarred = np.shape(images)
-        self.trainsize = 10000
-        dim = int(np.sqrt(dim_squarred))
-        self.labels = labels[0:self.trainsize]
-        tmp_images = images.reshape((nbr_of_images,dim,dim,1))
-        self.images = tmp_images[0:self.trainsize,:,:,:]     # Should maybe be done later in gen_pair_batch
-        self.ind = 0
-#        self.digit = [0, 5443, 11622, 17092, 22730, 28037, 33024, 38441, 44156, 49545, 54999
-        # Sort images so that they come in 0..9
-        # This is maybe better to do before pasing to this function
-        self.images = [x for _, x in sorted(zip(self.labels, self.images), key=lambda pair: pair[0])]
-        self.labels.sort()
-        self.digit = []
-        digit = []
-        for i in range(10):
-            digit.append(np.where(self.labels == i)[0][0])
-            self.digit.append(np.where(self.labels == i)[0][0])
-        self.digit.append(len(self.labels) - 1)
-        
-        
-    def gen_pair_batch(self,batch_size):   # May need batch size
+
+    def gen_pair_batch(self,batch_size):
         left = []
         right = []
         sim = []
@@ -100,7 +74,7 @@ class data_generator:
                 rnd_current_digit = random.randint(self.digit[i], self.digit[i+1])
                 # Generate random index of digit not being i
                 while True:
-                    rnd_other_digit = random.randint(self.digit[0], self.digit[len(self.digit)-1])
+                    rnd_other_digit = random.randint(self.digit[0], self.digit[-1])
                     if not self.digit[i] <= rnd_other_digit <= self.digit[i+1]:
                         break
                       
@@ -123,7 +97,7 @@ class data_generator:
             index_digit = random.randint(self.digit[new_digit], self.digit[new_digit+1])
             if mat == 0:    # Make unmatched pair
                 while True:
-                    index_non_match = random.randint(self.digit[0], self.digit[len(self.digit)-1])
+                    index_non_match = random.randint(self.digit[0], self.digit[-1])
                     if not self.digit[new_digit] <= index_non_match <= self.digit[new_digit+1]:
                         break
                 left.append(self.images[index_digit])
@@ -153,4 +127,3 @@ class data_generator:
         sim = temp_s
             
         return np.array(left),np.array(right),sim
-    

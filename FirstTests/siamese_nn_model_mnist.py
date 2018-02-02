@@ -55,7 +55,7 @@ def contrastive_loss(input_1,input_2,label,margin):
     """ Computes the contrastive loss between two vectors
     
     Input:
-    inout_1 - first input vector
+    input_1 - first input vector
     input_2 - second input vector
     label - ground truth for similarity between the vectors. 1 if they are similar, 0 otherwise.
     margin - margin for contrastive loss, positive constant
@@ -73,11 +73,26 @@ def training(loss, learning_rate, momentum):
     train_op = optimizer.minimize(loss,global_step = global_step)
     return train_op
     
-def placeholder_inputs(batch_size,nbr_of_pairs):
-    left = tf.placeholder(tf.float32, [batch_size, 28, 28, 1], name="left")
-    right = tf.placeholder(tf.float32, [batch_size, 28, 28, 1], name="right")
-    label = tf.placeholder(tf.float32, [batch_size, 1], name="label") # 1 if same, 0 if different
-    left_eval = tf.placeholder(tf.float32, [nbr_of_pairs, 28, 28, 1], name="left_eval")
-    right_eval = tf.placeholder(tf.float32, [nbr_of_pairs, 28, 28, 1], name="right_eval")
+def placeholder_inputs(dims,nbr_of_eval_pairs):
+    """ Creates placeholders for siamese neural network.
+    
+    This method returns placeholders for inputs to the siamese network in both
+    training and evaluation, it also returns a placeholder for ground truth of 
+    image pairs.
+    Input:
+    dims - list of following structure: [batch_size height width 1] (the 1 is for grayscale images)
+    nbr_of_eval_pairs - number of image pairs to use for evaluation
+    Returns:
+    left - placeholder for left input to siamese network for training
+    right - placeholder for right input to siamese network for training
+    label - placeholder for ground truths of image pairs for training
+    left_eval - placeholder for left input to siamese network for evaluation
+    right_eval - placeholder for right input to siamese network for evaluation
+    """
+    left = tf.placeholder(tf.float32, dims, name="left")
+    right = tf.placeholder(tf.float32, dims, name="right")
+    label = tf.placeholder(tf.float32, [dims[0], 1], name="label") # 1 if same, 0 if different
+    left_eval = tf.placeholder(tf.float32, [nbr_of_eval_pairs, dims[1], dims[1], dims[3]], name="left_eval")
+    right_eval = tf.placeholder(tf.float32, [nbr_of_eval_pairs, dims[1], dims[1], dims[3]], name="right_eval")
     return left,right,label,left_eval,right_eval
     
