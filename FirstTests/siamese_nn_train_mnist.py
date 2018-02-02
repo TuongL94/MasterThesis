@@ -34,8 +34,8 @@ def main(unused_argv):
     generator = data_generator(train_data,train_labels) # initialize data generator
     
     # parameters for training
-    batch_size = 50
-    train_iter = 10000
+    batch_size = 1000
+    train_iter = 2000
     learning_rate = 0.01
     momentum = 0.99
     

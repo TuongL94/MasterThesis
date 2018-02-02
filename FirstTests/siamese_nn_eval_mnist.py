@@ -12,6 +12,38 @@ import scipy.linalg as sl
 import tensorflow as tf
 import os 
 
+def prep_eval_data_pair(eval_data,eval_labels):
+    nbr_of_images,dim_squarred = np.shape(eval_data)
+    dim = int(np.sqrt(dim_squarred))
+    nbr_of_image_pairs = int(nbr_of_images/2/2)
+    eval_data_moded = eval_data.reshape((nbr_of_images,dim,dim,1))
+    # Generate non matching pairs (90% non matching)
+    left = []
+    right = []
+    sim = np.zeros(int(nbr_of_images/2))
+    for i in range(nbr_of_image_pairs):
+        left.append(eval_data_moded[i,:,:,:])
+        right.append(eval_data_moded[nbr_of_image_pairs+i,:,:,:])
+        if(eval_labels[i] == eval_labels[nbr_of_image_pairs + i]):
+            sim[i] = 1
+    # Truncate data to be sorted
+    eval_data_moded = eval_data_moded[0:int(nbr_of_images/2),:,:,:]
+    # Sort data
+    eval_data_moded = [x for _, x in sorted(zip(eval_labels, eval_data_moded), key=lambda pair: pair[0])]
+    eval_labels.sort()
+    digit = []
+    for i in range(10):
+        digit.append(np.where(eval_labels == i)[0][0])
+    digit.append(len(eval_labels) - 1)
+    # Generate matching pairs       
+    for i in range(nbr_of_image_pairs):
+        left.append(eval_data_moded[i])#[i,:,:,:])
+        right.append(eval_data_moded[i+1])#,:,:,:])
+        if(eval_labels[i] == eval_labels[i+1]):
+            sim[i+nbr_of_image_pairs] = 1
+            
+    return np.array(left),np.array(right),sim
+
 def prep_eval_data(eval_data,eval_labels):
     nbr_of_images,dim_squarred = np.shape(eval_data)
     dim = int(np.sqrt(dim_squarred))
@@ -60,7 +92,7 @@ def main(unused_argv):
     mnist = tf.contrib.learn.datasets.load_dataset("mnist")
     eval_data = mnist.test.images # Returns np.array
     eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
-    left,right,sim = prep_eval_data(eval_data,eval_labels)
+    left,right,sim = prep_eval_data_pair(eval_data,eval_labels)
     
     output_dir = "/tmp/siamese_mnist_model/" #directory where the model is saved
     
@@ -91,7 +123,7 @@ def main(unused_argv):
         with tf.Session() as sess:
             saver.restore(sess, tf.train.latest_checkpoint(output_dir))
             left_o,right_o= sess.run([left_eval_inference,right_eval_inference],feed_dict = {left_eval:left, right_eval:right})
-            precision, false_pos, false_neg = evaluate_mnist_siamese_network(left_o,right_o,sim,0.9)
+            precision, false_pos, false_neg = evaluate_mnist_siamese_network(left_o,right_o,sim,1.1)
 #            print("Precision of siamese network: " + precision)
             print("Precision: %f " % precision)
             print("# False positiv: %d " % false_pos)
