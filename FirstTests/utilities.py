@@ -70,13 +70,13 @@ def prep_eval_data(eval_data,eval_labels):
 def prep_eval_data_pair(eval_data,eval_labels):
     dims = np.shape(eval_data)
     nbr_of_images = dims[0]   
-    nbr_of_image_pairs = int(nbr_of_images/2/2)
+    nbr_of_image_pairs = int(nbr_of_images/2)
     
     # Generate non matching pairs (90% non matching)
     left = []
     right = []
-    sim = np.zeros(int(nbr_of_images/2))
-    for i in range(nbr_of_image_pairs):
+    sim = np.zeros(nbr_of_image_pairs)
+    for i in range(int(nbr_of_image_pairs/2)):
         left.append(eval_data[i,:,:,:])
         right.append(eval_data[nbr_of_image_pairs+i,:,:,:])
         if(eval_labels[i] == eval_labels[nbr_of_image_pairs + i]):
@@ -88,10 +88,10 @@ def prep_eval_data_pair(eval_data,eval_labels):
     eval_labels.sort()
 
     # Generate matching pairs       
-    for i in range(nbr_of_image_pairs):
+    for i in range(int(nbr_of_image_pairs/2)):
         left.append(eval_data[i])#[i,:,:,:])
         right.append(eval_data[i+1])#,:,:,:])
         if(eval_labels[i] == eval_labels[i+1]):
-            sim[i+nbr_of_image_pairs] = 1
+            sim[i+int(nbr_of_image_pairs/2)] = 1
             
     return np.array(left),np.array(right),sim

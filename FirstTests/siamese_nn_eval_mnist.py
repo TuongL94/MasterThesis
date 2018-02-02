@@ -17,6 +17,8 @@ def evaluate_mnist_siamese_network(left_pairs_o,right_pairs_o,sim_labels,thresho
     l2_normalized_diff = util.l2_normalize(left_pairs_o-right_pairs_o)
     false_pos = 0
     false_neg = 0
+    p = np.sum(sim_labels)
+    n = len(sim_labels) - p
     for i in range(len(sim_labels)):
         if sl.norm(l2_normalized_diff[i,:]) < threshold:
             matching[i] = 1
@@ -27,7 +29,15 @@ def evaluate_mnist_siamese_network(left_pairs_o,right_pairs_o,sim_labels,thresho
                 false_neg = false_neg + 1
     
     precision = np.sum((matching == sim_labels))/len(sim_labels)
-    return precision, false_pos, false_neg
+    tp = 0
+    for i in range(len(sim_labels)):
+        if matching[i] == 1 and sim_labels[i] == 1:
+            tp += 1
+    recall = tp/p
+    fnr = 1 - recall
+    fpr = false_pos/n
+    
+    return precision, false_pos, false_neg, recall, fnr, fpr
 
 def main(unused_argv):
     """ This method is used to evaluate a siamese network for the mnist dataset.
@@ -68,11 +78,13 @@ def main(unused_argv):
             saver.restore(sess, tf.train.latest_checkpoint(output_dir))
             left_o,right_o= sess.run([left_eval_inference,right_eval_inference],feed_dict = {left_eval:left, right_eval:right})
 
-            precision, false_pos, false_neg = evaluate_mnist_siamese_network(left_o,right_o,sim,1.1)
-#            print("Precision of siamese network: " + precision)
+            precision, false_pos, false_neg, recall, fnr, fpr = evaluate_mnist_siamese_network(left_o,right_o,sim,0.5)
             print("Precision: %f " % precision)
             print("# False positive: %d " % false_pos)
             print("# False negative: %d " % false_neg)
+            print("# Recall: %f " % recall)
+            print("# Miss rate/false negative rate: %f " % fnr)
+            print("# fall-out/false positive rate: %f " % fpr)
       
 if __name__ == "__main__":
     tf.app.run()
