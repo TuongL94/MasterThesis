@@ -35,7 +35,7 @@ def main(unused_argv):
     
     # parameters for training
     batch_size = 50
-    train_iter = 2000
+    train_iter = 10000
     learning_rate = 0.01
     momentum = 0.99
     
@@ -87,12 +87,16 @@ def main(unused_argv):
         else:
             saver.restore(sess, tf.train.latest_checkpoint(output_dir))
             train_op = tf.get_collection("train_op")[0]
+            
+#            for i in sess.graph.get_operations():
+#                print(i.values())
 #            global_vars = tf.global_variables()
 #            for i in range(len(global_vars)):
 #                print(global_vars[i])
         
         for i in range(1,train_iter + 1):
-            b_l, b_r, b_sim = generator.gen_batch(batch_size)
+#            b_l, b_r, b_sim = generator.gen_batch(batch_size)
+            b_l, b_r, b_sim = generator.gen_pair_batch(batch_size)
             _,loss_value,left_o,right_o = sess.run([train_op, loss, left_output, right_output],feed_dict={left:b_l, right:b_r, label:b_sim})
 #            print(left_o)
 #            print(right_o)

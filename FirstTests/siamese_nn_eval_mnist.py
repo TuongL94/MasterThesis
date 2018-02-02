@@ -30,14 +30,20 @@ def prep_eval_data(eval_data,eval_labels):
     
 def evaluate_mnist_siamese_network(left_pairs_o,right_pairs_o,sim_labels,threshold):
     matching = np.zeros(len(sim_labels))
-
+    false_pos = 0
+    false_neg = 0
     
     for i in range(len(sim_labels)):
-        if sl.norm([left_pairs_o[i,:],right_pairs_o[i,:]]) < threshold:
+        if sl.norm([left_pairs_o[i,:]-right_pairs_o[i,:]]) < threshold:
             matching[i] = 1
+            if sim_labels[i] == 0:
+                false_pos = false_pos + 1
+        else:
+            if sim_labels[i] == 1:
+                false_neg = false_neg + 1
     
     precision = np.sum((matching == sim_labels))/len(sim_labels)
-    return precision
+    return precision, false_pos, false_neg
     
     
     
@@ -85,9 +91,11 @@ def main(unused_argv):
         with tf.Session() as sess:
             saver.restore(sess, tf.train.latest_checkpoint(output_dir))
             left_o,right_o= sess.run([left_eval_inference,right_eval_inference],feed_dict = {left_eval:left, right_eval:right})
-            precision = evaluate_mnist_siamese_network(left_o,right_o,sim,7.5)
+            precision, false_pos, false_neg = evaluate_mnist_siamese_network(left_o,right_o,sim,0.9)
 #            print("Precision of siamese network: " + precision)
-            print(precision)
+            print("Precision: %f " % precision)
+            print("# False positiv: %d " % false_pos)
+            print("# False negative: %d " % false_neg)
       
 if __name__ == "__main__":
     tf.app.run()
