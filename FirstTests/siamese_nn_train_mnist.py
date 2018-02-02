@@ -6,15 +6,15 @@ Created on Mon Jan 29 13:44:22 2018
 """
 
 from data_generator import data_generator
-from siamese_nn_model_mnist import *
 
+import siamese_nn_model_mnist as sm
 import numpy as np
 import tensorflow as tf
 import os 
 
 
 def main(unused_argv):
-    """ This method is used to train a siamese network for the mnist dataset
+    """ This method is used to train a siamese network for the mnist dataset.
     
     The model is defined in the file siamese_nn_model_mnist.py. The class
     data_generator is used to generate batches for training. When training
@@ -24,23 +24,24 @@ def main(unused_argv):
     
     """
     
-    # Load training and eval data
+    # Load mnist training and eval data
     mnist = tf.contrib.learn.datasets.load_dataset("mnist")
     train_data = mnist.train.images # Returns np.array
     train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
 
-    output_dir = "/tmp/siamese_mnist_model/" #directory where the model will be saved
+    output_dir = "/tmp/siamese_mnist_model/" # directory where the model will be saved
     
     generator = data_generator(train_data,train_labels) # initialize data generator
     
     # parameters for training
     batch_size = 50
-    train_iter = 2000
+    train_iter = 500
     learning_rate = 0.01
     momentum = 0.99
+    dims = [batch_size, 28, 28,1]
     
     # parameters for evaluation
-    nbr_of_pairs = 5000
+    nbr_of_eval_pairs = 5000
     
     tf.reset_default_graph()
     
@@ -49,16 +50,17 @@ def main(unused_argv):
         print("No previous model exists, creating a new one.")
         is_model_new = True
 
-         # create placeholders for pairs of images and ground truth matching
-        left,right,label,left_eval,right_eval = placeholder_inputs(batch_size,nbr_of_pairs)
+         # create placeholders
+        left,right,label,left_eval,right_eval = sm.placeholder_inputs(dims,nbr_of_eval_pairs)
             
-        left_output = inference(left)            
-        right_output = inference(right)
-        left_eval_output = inference(left_eval)            
-        right_eval_output = inference(right_eval)
+        left_output = sm.inference(left)            
+        right_output = sm.inference(right)
+        left_eval_output = sm.inference(left_eval)            
+        right_eval_output = sm.inference(right_eval)
         
         margin = tf.constant(2.0)
-        loss = contrastive_loss(left_output,right_output,label,margin)
+        loss = sm.contrastive_loss(left_output,right_output,label,margin)
+        
         tf.add_to_collection("loss",loss)
         tf.add_to_collection("left_output",left_output)
         tf.add_to_collection("right_output",right_output)
@@ -81,12 +83,15 @@ def main(unused_argv):
         
     with tf.Session() as sess:
         if is_model_new:
-            train_op = training(loss, learning_rate, momentum)
+            train_op = sm.training(loss, learning_rate, momentum)
             sess.run(tf.global_variables_initializer()) # initialize all trainable parameters
             tf.add_to_collection("train_op",train_op)
         else:
             saver.restore(sess, tf.train.latest_checkpoint(output_dir))
             train_op = tf.get_collection("train_op")[0]
+            
+#            for i in sess.graph.get_operations():
+#                print(i.values())
 #            global_vars = tf.global_variables()
 #            for i in range(len(global_vars)):
 #                print(global_vars[i])

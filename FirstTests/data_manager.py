@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Jan 24 15:24:03 2018
+Created on Thu Feb  1 15:53:44 2018
 
 @author: Tuong Lam
 """
 
 import numpy as np
+import utilities as util
 
-class data_generator:
+class data_manager:
     
-    def __init__(self,images,labels):
-        nbr_of_images,dim_squarred = np.shape(images)
-        self.trainsize = 10000
-        dim = int(np.sqrt(dim_squarred))
-        self.labels = labels[0:self.trainsize]
-        tmp_images = images.reshape((nbr_of_images,dim,dim,1))
-        self.images = tmp_images[0:self.trainsize,:,:,:]
+    def __init__(self,train_images,train_labels,eval_images,eval_labels):
+        self.train_images = train_images
+        self.train_labels = train_labels
+        self.eval_images = eval_images
+        self.eval_labels = eval_labels
+        
         self.ind = 0
         
     def gen_batch(self,batch_size):
@@ -45,11 +45,11 @@ class data_generator:
             
         return np.array(left),np.array(right),sim
         
-    def prep_eval_data(self,eval_data,eval_labels):
-        nbr_of_images,dim_squarred = np.shape(eval_data)
-        dim = int(np.sqrt(dim_squarred))
-        nbr_of_image_pairs = int(nbr_of_images/2)
-        eval_data_moded = eval_data.reshape((nbr_of_images,dim,dim,1))
+    def prep_eval_data(eval_data,eval_labels):
+        eval_data_moded = util.reshape_grayscale_data(eval_data)
+        dims = np.shape(eval_data_moded)
+        nbr_of_image_pairs = dims[0]/2
+        
         left = []
         right = []
         sim = np.zeros(nbr_of_image_pairs)
