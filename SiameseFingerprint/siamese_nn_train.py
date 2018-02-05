@@ -7,7 +7,7 @@ Created on Mon Jan 29 13:44:22 2018
 
 from data_generator import data_generator
 
-import siamese_nn_model_mnist as sm
+import siamese_nn_model as sm
 import numpy as np
 import tensorflow as tf
 import os 
@@ -26,23 +26,31 @@ def main(unused_argv):
     """
     
     # Load mnist training and eval data and perform necessary data reshape
-    mnist = tf.contrib.learn.datasets.load_dataset("mnist")
-    train_data = util.reshape_grayscale_data(mnist.train.images) # Returns np.array
-    train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
+#    mnist = tf.contrib.learn.datasets.load_dataset("mnist")
+#    train_data = util.reshape_grayscale_data(mnist.train.images) # Returns np.array
+#    train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
     
-    output_dir = "/tmp/siamese_mnist_model/" # directory where the model will be saved
+#    Load fingerprint labels and data from file with names
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    finger_id = np.load(dir_path + "/finger_id.npy")
+    person_id = np.load(dir_path + "/person_id.npy")
+    finger_data = np.load(dir_path + "/fingerprints.npy")
     
-    nbr_of_training_images = 10000 # number of images to use from the training data set
     
-    generator = data_generator(train_data,train_labels,nbr_of_training_images) # initialize data generator
+    output_dir = "/tmp/siamese_finger_model/" # directory where the model will be saved
+    
+    nbr_of_training_images = np.shape(finger_data)[0] # number of images to use from the training data set
+    
+    finger_data = util.reshape_grayscale_data(finger_data)
+    generator = data_generator(finger_data, finger_id, person_id, nbr_of_training_images) # initialize data generator
     
     # parameters for training
-    batch_size = 1000
-    train_iter = 2000
+    batch_size = 50
+    train_iter = 100
     learning_rate = 0.01
     momentum = 0.99
     
-    image_dims = np.shape(train_data)
+    image_dims = np.shape(finger_data)
     placeholder_dims = [batch_size, image_dims[1], image_dims[2], image_dims[3]] 
     
     # parameters for evaluation
