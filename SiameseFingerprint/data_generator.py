@@ -140,3 +140,32 @@ class data_generator:
         sim = temp_s
             
         return np.array(left),np.array(right),sim
+    
+    
+    def prep_eval_data_pair(self, nbr_of_image_pairs):
+        left = []
+        right = []
+        sim = []
+        mat = 0
+        count = 0
+        while count < nbr_of_image_pairs:
+            new_finger = random.randint(0,len(self.shift_idx)-2)
+            index_finger = random.randint(self.shift_idx[new_finger], self.shift_idx[new_finger+1])
+            if mat == 0:    # Make unmatched pair
+                while True:
+                    index_non_match = random.randint(self.shift_idx[0], self.shift_idx[-1])
+                    if not self.shift_idx[new_finger] <= index_non_match <= self.shift_idx[new_finger+1]:
+                        break
+                left.append(self.images[index_finger])
+                right.append(self.images[index_non_match])
+                sim.append([0])
+                mat = 1 # Set next pair to be matching
+            else:           # Make matching pair
+                index_match = random.randint(self.shift_idx[new_finger], self.shift_idx[new_finger+1])
+                left.append(self.images[index_finger])
+                right.append(self.images[index_match])
+                sim.append([1])
+                mat = 0 #Set next pair to be non matching
+            count += 1
+        
+        return np.array(left),np.array(right),sim

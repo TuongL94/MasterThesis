@@ -45,8 +45,8 @@ def main(unused_argv):
     generator = data_generator(finger_data, finger_id, person_id, nbr_of_training_images) # initialize data generator
     
     # parameters for training
-    batch_size = 50
-    train_iter = 100
+    batch_size = 100
+    train_iter = 200
     learning_rate = 0.01
     momentum = 0.99
     
@@ -54,7 +54,7 @@ def main(unused_argv):
     placeholder_dims = [batch_size, image_dims[1], image_dims[2], image_dims[3]] 
     
     # parameters for evaluation
-    nbr_of_eval_pairs = 5000
+    nbr_of_eval_pairs = 100
     
     tf.reset_default_graph()
     

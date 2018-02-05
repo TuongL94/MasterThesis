@@ -73,10 +73,14 @@ def prep_eval_data(eval_data,eval_labels):
     return np.array(left),np.array(right),sim
 
 
-def prep_eval_data_pair(eval_data,eval_labels):
-    dims = np.shape(eval_data)
-    nbr_of_images = dims[0]   
-    nbr_of_image_pairs = int(nbr_of_images/2)
+def prep_eval_data_pair(eval_data, eval_finger, eval_person, nbr_of_image_pairs):
+#    dims = np.shape(eval_data)
+#    nbr_of_images = dims[0]   
+#    nbr_of_image_pairs = int(nbr_of_images/2)
+    left = []
+    right = []
+    sim = np.zeros(nbr_of_image_pairs)
+        
     
     # Generate non matching pairs (90% non matching)
     left = []

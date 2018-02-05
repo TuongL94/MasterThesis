@@ -4,7 +4,7 @@ Created on Wed Jan 31 14:34:36 2018
 
 @author: Tuong Lam
 """
-
+from data_generator import data_generator
 import numpy as np
 import scipy.linalg as sl
 import tensorflow as tf
@@ -48,15 +48,25 @@ def main(unused_argv):
     
     """
     # Load mnist eval data
-    mnist = tf.contrib.learn.datasets.load_dataset("mnist")
-    eval_data = util.reshape_grayscale_data(mnist.test.images) # Returns np.array
-    eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
-
-    left,right,sim = util.prep_eval_data_pair(eval_data,eval_labels)
+#    mnist = tf.contrib.learn.datasets.load_dataset("mnist")
+#    eval_data = util.reshape_grayscale_data(mnist.test.images) # Returns np.array
+#    eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    eval_finger = np.load(dir_path + "/finger_id.npy")
+    eval_person = np.load(dir_path + "/person_id.npy")
+    eval_data = np.load(dir_path + "/fingerprints.npy")    
+    
+    nbr_of_training_images = np.shape(eval_data)[0] # number of images to use from the training data set
+    
+    eval_data = util.reshape_grayscale_data(eval_data)
+    generator = data_generator(eval_data, eval_finger, eval_person, nbr_of_training_images) # initialize data generator
+        
+    nbr_of_image_pairs = 100
+    left,right,sim = generator.prep_eval_data_pair(nbr_of_image_pairs)
     
 #    left,right,sim = util.prep_eval_data(eval_data,eval_labels)
     
-    output_dir = "/tmp/siamese_mnist_model/" # directory where the model is saved
+    output_dir = "/tmp/siamese_finger_model/" # directory where the model is saved
     
     tf.reset_default_graph()
     
