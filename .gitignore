@@ -1,3 +1,4 @@
 Data/
 Literature/
+*__pycache__*
 *.npy
