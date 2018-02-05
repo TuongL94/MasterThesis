@@ -7,6 +7,7 @@ Created on Thu Feb  1 15:12:05 2018
 
 import numpy as np
 import scipy.linalg as sl
+from random import shuffle
 
 def l2_normalize(input_array):
     """ L2-normalizes a 1D or 2D array along first dimension
@@ -95,3 +96,15 @@ def prep_eval_data_pair(eval_data,eval_labels):
             sim[i+int(nbr_of_image_pairs/2)] = 1
             
     return np.array(left),np.array(right),sim
+
+def shuffle_data(data_list):
+    index_shuf = list(range(len(data_list[-1])))
+    shuffle(index_shuf)
+    shuffled_data_list = []
+    for i in range(len(data_list)):
+        shuffled_data_list.append([])
+    for i in index_shuf:
+        for j in range(len(shuffled_data_list)):
+            shuffled_data_list[j].append(data_list[j][i])
+    
+    return shuffled_data_list

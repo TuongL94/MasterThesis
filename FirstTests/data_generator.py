@@ -7,26 +7,30 @@ Created on Wed Jan 24 15:24:03 2018
 
 import numpy as np
 import random
-from random import shuffle
+import utilities as util
 
 
 class data_generator:
 
     def __init__(self, images, labels,train_size):
+        self.nbr_of_classes = len(np.unique(labels))
         self.labels = labels[0:train_size]
         self.images = images[0:train_size,:,:,:]
-        self.ind = 0
-        self.trainsize = train_size
         
         # Sort images so that they come in 0..9
         # This is maybe better to do before pasing to this function
         self.images = [x for _, x in sorted(zip(self.labels, self.images), key=lambda pair: pair[0])]
         self.labels.sort()
         self.digit = []
-        for i in range(10):
+        for i in range(self.nbr_of_classes):
             self.digit.append(np.where(self.labels == i)[0][0])
         self.digit.append(len(self.labels) - 1)
+        
+        # attributes need for gen_batch method, these might be removed 
+        self.ind = 0
+        self.trainsize = train_size
     
+    # this method is no longer used, might be removed
     def gen_batch(self,batch_size):
         count = 0
         left = []
@@ -60,7 +64,7 @@ class data_generator:
         sim = []
         count = 0
         
-        for i in range(10):
+        for i in range(self.nbr_of_classes):
             nbr_each_digit = int(batch_size/20);
             for j in range(nbr_each_digit):
                 l = random.randint(self.digit[i], self.digit[i+1])
@@ -93,7 +97,7 @@ class data_generator:
         # Make matching pairs every second time
         mat = 0
         while count < batch_size:
-            new_digit = random.randint(0,9)
+            new_digit = random.randint(0,self.nbr_of_classes-1)
             index_digit = random.randint(self.digit[new_digit], self.digit[new_digit+1])
             if mat == 0:    # Make unmatched pair
                 while True:
@@ -112,18 +116,8 @@ class data_generator:
                 mat = 0 #Set next pair to be non matching
             count += 1
                 
-        # Shuffle the data pairs
-        index_shuf = list(range(len(sim)))
-        shuffle(index_shuf)
-        temp_l = []
-        temp_r = []
-        temp_s = []
-        for i in index_shuf:
-            temp_l.append(left[i])
-            temp_r.append(right[i])
-            temp_s.append(sim[i])
-        left = temp_l
-        right = temp_r
-        sim = temp_s
+        # Shuffle the data pairs        
+        data_list = [left,right,sim]
+        shuffled_data_list = util.shuffle_data(data_list)
             
-        return np.array(left),np.array(right),sim
+        return np.array(shuffled_data_list[0]),np.array(shuffled_data_list[1]),shuffled_data_list[2]
