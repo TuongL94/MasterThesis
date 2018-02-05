@@ -39,9 +39,9 @@ def main(argv):
     finger_id = np.array(finger_id)
     fingerprints = np.array(fingerprints)
 
-    filename_1 = dir_path + "person_id"
-    filename_2 = dir_path + "finger_id"
-    filename_3 = dir_path + "fingerprints" 
+    filename_1 = dir_path + "/person_id"
+    filename_2 = dir_path + "/finger_id"
+    filename_3 = dir_path + "/fingerprints" 
     np.save(filename_1,person_id)
     np.save(filename_2,finger_id)
     np.save(filename_3,fingerprints)
