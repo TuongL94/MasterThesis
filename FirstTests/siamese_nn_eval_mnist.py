@@ -22,10 +22,10 @@ def evaluate_mnist_siamese_network(left_pairs_o,right_pairs_o,sim_labels,thresho
     for i in range(len(sim_labels)):
         if sl.norm(l2_normalized_diff[i,:]) < threshold:
             matching[i] = 1
-            if sim_labels[i] == 0:
+            if sim_labels[i] == [0]:
                 false_pos = false_pos + 1
         else:
-            if sim_labels[i] == 1:
+            if sim_labels[i] == [1]:
                 false_neg = false_neg + 1
     
     precision = np.sum((matching == sim_labels))/len(sim_labels)

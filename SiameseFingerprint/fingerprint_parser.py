@@ -37,7 +37,7 @@ def main(argv):
     person_id, finger_id, fingerprints = fingerprint_parser(argv[0],argv[1])
     person_id = np.array(person_id)
     finger_id = np.array(finger_id)
-    fingerprints = np.array(fingerprints)
+    fingerprints = np.array(fingerprints)/255
 
     filename_1 = dir_path + "/person_id"
     filename_2 = dir_path + "/finger_id"

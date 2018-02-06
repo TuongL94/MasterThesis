@@ -73,36 +73,6 @@ def prep_eval_data(eval_data,eval_labels):
             
     return np.array(left),np.array(right),sim
 
-
-def prep_eval_data_pair(eval_data,eval_labels):
-    dims = np.shape(eval_data)
-    nbr_of_images = dims[0]   
-    nbr_of_image_pairs = int(nbr_of_images/2)
-    
-    # Generate non matching pairs (90% non matching)
-    left = []
-    right = []
-    sim = np.zeros(nbr_of_image_pairs)
-    for i in range(int(nbr_of_image_pairs/2)):
-        left.append(eval_data[i,:,:,:])
-        right.append(eval_data[nbr_of_image_pairs+i,:,:,:])
-        if(eval_labels[i] == eval_labels[nbr_of_image_pairs + i]):
-            sim[i] = 1
-    # Truncate data to be sorted
-    eval_data = eval_data[0:int(nbr_of_images/2),:,:,:]
-    # Sort data
-    eval_data = [x for _, x in sorted(zip(eval_labels, eval_data), key=lambda pair: pair[0])]
-    eval_labels.sort()
-
-    # Generate matching pairs       
-    for i in range(int(nbr_of_image_pairs/2)):
-        left.append(eval_data[i])#[i,:,:,:])
-        right.append(eval_data[i+1])#,:,:,:])
-        if(eval_labels[i] == eval_labels[i+1]):
-            sim[i+int(nbr_of_image_pairs/2)] = 1
-            
-    return np.array(left),np.array(right),sim
-
 def shuffle_data(data_list):
     index_shuf = list(range(len(data_list[-1])))
     shuffle(index_shuf)

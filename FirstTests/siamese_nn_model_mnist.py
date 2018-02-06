@@ -92,7 +92,7 @@ def placeholder_inputs(dims,nbr_of_eval_pairs):
     left = tf.placeholder(tf.float32, dims, name="left")
     right = tf.placeholder(tf.float32, dims, name="right")
     label = tf.placeholder(tf.float32, [dims[0], 1], name="label") # 1 if same, 0 if different
-    left_eval = tf.placeholder(tf.float32, [nbr_of_eval_pairs, dims[1], dims[1], dims[3]], name="left_eval")
-    right_eval = tf.placeholder(tf.float32, [nbr_of_eval_pairs, dims[1], dims[1], dims[3]], name="right_eval")
+    left_eval = tf.placeholder(tf.float32, [nbr_of_eval_pairs, dims[1], dims[2], dims[3]], name="left_eval")
+    right_eval = tf.placeholder(tf.float32, [nbr_of_eval_pairs, dims[1], dims[2], dims[3]], name="right_eval")
     return left,right,label,left_eval,right_eval
     

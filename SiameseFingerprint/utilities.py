@@ -7,6 +7,7 @@ Created on Thu Feb  1 15:12:05 2018
 
 import numpy as np
 import scipy.linalg as sl
+from random import shuffle
 
 def l2_normalize(input_array):
     """ L2-normalizes a 1D or 2D array along first dimension
@@ -46,62 +47,14 @@ def reshape_grayscale_data(input_data, *dims):
         input_data_moded = input_data.reshape((nbr_of_images,dim,dim,1))
     return input_data_moded
 
-def prep_eval_data(eval_data,eval_labels):
-    """ Generates pairs from evaluation data to use for similarity networks.
+def shuffle_data(data_list):
+    index_shuf = list(range(len(data_list[-1])))
+    shuffle(index_shuf)
+    shuffled_data_list = []
+    for i in range(len(data_list)):
+        shuffled_data_list.append([])
+    for i in index_shuf:
+        for j in range(len(shuffled_data_list)):
+            shuffled_data_list[j].append(data_list[j][i])
     
-    The method generates pairs by cutting the evaluation data in two halves
-    and pairing corresponding elements of the two halves. Labels for generated
-    pairs are constructed by comparing the labels from the original evaluation
-    labels.
-    Input:
-    eval_data - 4D evaluation data
-    eval_labels - labels of evaluation data
-    Returns: evaluation pairs and corresponding labels
-    """
-    dims = np.shape(eval_data)
-    nbr_of_image_pairs = int(dims[0]/2)
-    
-    left = []
-    right = []
-    sim = np.zeros(nbr_of_image_pairs)
-    for i in range(nbr_of_image_pairs):
-        left.append(eval_data[i,:,:,:])
-        right.append(eval_data[nbr_of_image_pairs+i,:,:,:])
-        if(eval_labels[i] == eval_labels[nbr_of_image_pairs + i]):
-            sim[i] = 1
-            
-    return np.array(left),np.array(right),sim
-
-
-def prep_eval_data_pair(eval_data, eval_finger, eval_person, nbr_of_image_pairs):
-#    dims = np.shape(eval_data)
-#    nbr_of_images = dims[0]   
-#    nbr_of_image_pairs = int(nbr_of_images/2)
-    left = []
-    right = []
-    sim = np.zeros(nbr_of_image_pairs)
-        
-    
-    # Generate non matching pairs (90% non matching)
-    left = []
-    right = []
-    sim = np.zeros(nbr_of_image_pairs)
-    for i in range(int(nbr_of_image_pairs/2)):
-        left.append(eval_data[i,:,:,:])
-        right.append(eval_data[nbr_of_image_pairs+i,:,:,:])
-        if(eval_labels[i] == eval_labels[nbr_of_image_pairs + i]):
-            sim[i] = 1
-    # Truncate data to be sorted
-    eval_data = eval_data[0:int(nbr_of_images/2),:,:,:]
-    # Sort data
-    eval_data = [x for _, x in sorted(zip(eval_labels, eval_data), key=lambda pair: pair[0])]
-    eval_labels.sort()
-
-    # Generate matching pairs       
-    for i in range(int(nbr_of_image_pairs/2)):
-        left.append(eval_data[i])#[i,:,:,:])
-        right.append(eval_data[i+1])#,:,:,:])
-        if(eval_labels[i] == eval_labels[i+1]):
-            sim[i+int(nbr_of_image_pairs/2)] = 1
-            
-    return np.array(left),np.array(right),sim
+    return shuffled_data_list

@@ -36,7 +36,6 @@ def main(unused_argv):
     person_id = np.load(dir_path + "/person_id.npy")
     finger_data = np.load(dir_path + "/fingerprints.npy")
     
-    
     output_dir = "/tmp/siamese_finger_model/" # directory where the model will be saved
     
     nbr_of_training_images = np.shape(finger_data)[0] # number of images to use from the training data set
@@ -45,16 +44,16 @@ def main(unused_argv):
     generator = data_generator(finger_data, finger_id, person_id, nbr_of_training_images) # initialize data generator
     
     # parameters for training
-    batch_size = 100
-    train_iter = 200
-    learning_rate = 0.01
+    batch_size = 25
+    train_iter = 100
+    learning_rate = 0.0001
     momentum = 0.99
     
     image_dims = np.shape(finger_data)
     placeholder_dims = [batch_size, image_dims[1], image_dims[2], image_dims[3]] 
     
     # parameters for evaluation
-    nbr_of_eval_pairs = 100
+    nbr_of_eval_pairs = 25
     
     tf.reset_default_graph()
     
@@ -71,7 +70,7 @@ def main(unused_argv):
         left_eval_output = sm.inference(left_eval)            
         right_eval_output = sm.inference(right_eval)
         
-        margin = tf.constant(2.0)
+        margin = tf.constant(5.0)
         loss = sm.contrastive_loss(left_output,right_output,label,margin)
         
         tf.add_to_collection("loss",loss)
@@ -114,7 +113,7 @@ def main(unused_argv):
             _,loss_value,left_o,right_o = sess.run([train_op, loss, left_output, right_output],feed_dict={left:b_l, right:b_r, label:b_sim})
 #            print(left_o)
 #            print(right_o)
-            if i % 100 == 0:
+            if i % 10 == 0:
                 print("Iteration %d: loss = %.5f" % (i, loss_value))
         
 #        graph = tf.get_default_graph()
