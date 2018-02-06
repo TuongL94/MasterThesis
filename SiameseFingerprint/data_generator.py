@@ -7,8 +7,7 @@ Created on Wed Jan 24 15:24:03 2018
 
 import numpy as np
 import random
-from random import shuffle
-
+import utilities as util
 
 class data_generator:
 
@@ -16,13 +15,6 @@ class data_generator:
         self.finger_id = finger_id[0:train_size]
         self.person_id = person_id[0:train_size]
         self.images = images[0:train_size,:,:,:]
-        self.ind = 0
-        self.trainsize = train_size
-        
-        # Sort images so that they come in 0..9
-        # This is maybe better to do before pasing to this function
-#        self.images = [x for _, x in sorted(zip(self.labels, self.images), key=lambda pair: pair[0])]
-#        self.labels.sort()
         self.shift_idx = []
         idx_counter = 0
         nbr_of_persons = person_id[-1]
@@ -38,33 +30,6 @@ class data_generator:
                 idx_counter += 1
                 
         self.shift_idx.append(len(self.person_id) - 1)
-    
-    def gen_batch(self,batch_size):
-        count = 0
-        left = []
-        right = []
-        sim = []
-        
-        while self.ind < self.trainsize - 2 and count < batch_size:
-            left.append(self.images[self.ind])
-            right.append(self.images[self.ind+1])
-            if self.labels[self.ind] == self.labels[self.ind+1]:
-                sim.append([1])
-            else:
-                sim.append([0])
-            self.ind += 1
-            count += 1
-            
-        for i in range(batch_size - count):
-            left.append(self.images[i])
-            right.append(self.images[i+1])
-            if self.labels[i] == self.labels[i+1]:
-                sim.append([1])
-            else:
-                sim.append([0])
-            self.ind += 1
-            
-        return np.array(left),np.array(right),sim
 
     def gen_pair_batch(self,batch_size):
         left = []
@@ -125,22 +90,11 @@ class data_generator:
                 mat = 0 #Set next pair to be non matching
             count += 1
                 
-        # Shuffle the data pairs
-        index_shuf = list(range(len(sim)))
-        shuffle(index_shuf)
-        temp_l = []
-        temp_r = []
-        temp_s = []
-        for i in index_shuf:
-            temp_l.append(left[i])
-            temp_r.append(right[i])
-            temp_s.append(sim[i])
-        left = temp_l
-        right = temp_r
-        sim = temp_s
+        # Shuffle the data pairs and corresponding labels
+        data_list = [left,right,sim]
+        shuffled_data_list = util.shuffle_data(data_list)
             
-        return np.array(left),np.array(right),sim
-    
+        return np.array(shuffled_data_list[0]),np.array(shuffled_data_list[1]),shuffled_data_list[2]
     
     def prep_eval_data_pair(self, nbr_of_image_pairs):
         left = []

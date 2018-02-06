@@ -11,7 +11,6 @@ import tensorflow as tf
 import os 
 import utilities as util
 
-
 def evaluate_mnist_siamese_network(left_pairs_o,right_pairs_o,sim_labels,threshold):
     matching = np.zeros(len(sim_labels))
     l2_normalized_diff = util.l2_normalize(left_pairs_o-right_pairs_o)
@@ -63,11 +62,10 @@ def main(unused_argv):
     eval_data = util.reshape_grayscale_data(eval_data)
     generator = data_generator(eval_data, eval_finger, eval_person, nbr_of_training_images) # initialize data generator
         
-    nbr_of_image_pairs = 100
+    nbr_of_image_pairs = 25
+    
     left,right,sim = generator.prep_eval_data_pair(nbr_of_image_pairs)
-    
-#    left,right,sim = util.prep_eval_data(eval_data,eval_labels)
-    
+        
     output_dir = "/tmp/siamese_finger_model/" # directory where the model is saved
     
     tf.reset_default_graph()

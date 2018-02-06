@@ -36,7 +36,6 @@ def main(unused_argv):
     person_id = np.load(dir_path + "/person_id.npy")
     finger_data = np.load(dir_path + "/fingerprints.npy")
     
-    
     output_dir = "/tmp/siamese_finger_model/" # directory where the model will be saved
     
     nbr_of_training_images = np.shape(finger_data)[0] # number of images to use from the training data set
@@ -49,12 +48,13 @@ def main(unused_argv):
     train_iter = 1000
     learning_rate = 0.0001
     momentum = 0.9
+
     
     image_dims = np.shape(finger_data)
     placeholder_dims = [batch_size, image_dims[1], image_dims[2], image_dims[3]] 
     
     # parameters for evaluation
-    nbr_of_eval_pairs = 100
+    nbr_of_eval_pairs = 25
     
     tf.reset_default_graph()
     

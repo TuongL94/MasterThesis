@@ -25,38 +25,6 @@ class data_generator:
         for i in range(self.nbr_of_classes):
             self.digit.append(np.where(self.labels == i)[0][0])
         self.digit.append(len(self.labels) - 1)
-        
-        # attributes need for gen_batch method, these might be removed 
-        self.ind = 0
-        self.trainsize = train_size
-    
-    # this method is no longer used, might be removed
-    def gen_batch(self,batch_size):
-        count = 0
-        left = []
-        right = []
-        sim = []
-        
-        while self.ind < self.trainsize - 2 and count < batch_size:
-            left.append(self.images[self.ind])
-            right.append(self.images[self.ind+1])
-            if self.labels[self.ind] == self.labels[self.ind+1]:
-                sim.append([1])
-            else:
-                sim.append([0])
-            self.ind += 1
-            count += 1
-            
-        for i in range(batch_size - count):
-            left.append(self.images[i])
-            right.append(self.images[i+1])
-            if self.labels[i] == self.labels[i+1]:
-                sim.append([1])
-            else:
-                sim.append([0])
-            self.ind += 1
-            
-        return np.array(left),np.array(right),sim
 
     def gen_pair_batch(self,batch_size):
         left = []

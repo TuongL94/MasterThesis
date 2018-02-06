@@ -15,19 +15,26 @@ def fingerprint_parser(index_file_dir, index_file_name):
     person_id = []
     finger_id = []
     fingerprints = []
+    translation = []
+    rotation = []
     counter = 0
 
     with open(index_file_dir + index_file_name,"r") as file:
         for line in file:
-            words = re.split("\t|\s|\n",line)
-            if words[0] != "#" and words[0] != "##":
+            words = re.split("\t",line)
+#            if words[0] != "#" and words[0] != "##":
+            if len(words) > 1 and words[0] != "#":
+                last_word = re.split(":",words[-1])
+                alignment_word = last_word[-1].split()
                 person_id.append(int(words[0]))
                 finger_id.append(int(words[1]))
-                fingerprint_path = words[-2]
+                fingerprint_path = last_word[0]
                 if counter % 100 == 0:
                     print(counter)
                 finger = imio.imread(index_file_dir + fingerprint_path)
                 fingerprints.append(np.ndarray.flatten(np.array(finger)))
+                translation.append([(int(alignment_word[1]),int(alignment_word[2]))])
+                rotation.append(int(alignment_word[3]))
                 counter += 1
                 
     return person_id, finger_id, fingerprints            
