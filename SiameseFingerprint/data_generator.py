@@ -168,4 +168,4 @@ class data_generator:
                 mat = 0 #Set next pair to be non matching
             count += 1
         
-        return np.array(left),np.array(right),sim
+        return np.array(left),np.array(right),np.array(sim)

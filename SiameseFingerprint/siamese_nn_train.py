@@ -46,9 +46,9 @@ def main(unused_argv):
     
     # parameters for training
     batch_size = 100
-    train_iter = 200
-    learning_rate = 0.01
-    momentum = 0.99
+    train_iter = 1000
+    learning_rate = 0.0001
+    momentum = 0.9
     
     image_dims = np.shape(finger_data)
     placeholder_dims = [batch_size, image_dims[1], image_dims[2], image_dims[3]] 
@@ -71,7 +71,7 @@ def main(unused_argv):
         left_eval_output = sm.inference(left_eval)            
         right_eval_output = sm.inference(right_eval)
         
-        margin = tf.constant(2.0)
+        margin = tf.constant(5.0)
         loss = sm.contrastive_loss(left_output,right_output,label,margin)
         
         tf.add_to_collection("loss",loss)
@@ -112,9 +112,10 @@ def main(unused_argv):
         for i in range(1,train_iter + 1):
             b_l, b_r, b_sim = generator.gen_pair_batch(batch_size)
             _,loss_value,left_o,right_o = sess.run([train_op, loss, left_output, right_output],feed_dict={left:b_l, right:b_r, label:b_sim})
+#            print(loss_value)
 #            print(left_o)
 #            print(right_o)
-            if i % 100 == 0:
+            if i % 10 == 0:
                 print("Iteration %d: loss = %.5f" % (i, loss_value))
         
 #        graph = tf.get_default_graph()

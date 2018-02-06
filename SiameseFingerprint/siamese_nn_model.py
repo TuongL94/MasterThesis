@@ -17,9 +17,9 @@ def inference(input):
     # Convolutional layer 1
     conv1 = tf.layers.conv2d(
             inputs = input_layer,
-            filters = 32,
-            kernel_size = [5, 5], 
-            padding = "same",
+            filters = 16,
+            kernel_size = [15, 15], 
+#            padding = "same",
             activation = tf.nn.relu,
             reuse = tf.AUTO_REUSE,
             name="conv_layer_1")
@@ -32,9 +32,9 @@ def inference(input):
     # Convolutional Layer 2 and pooling layer 2
     conv2 = tf.layers.conv2d(
             inputs = pool1,
-            filters = 64,
-            kernel_size = [5,5],
-            padding = "same",
+            filters = 32,
+            kernel_size = [7,7],
+#            padding = "same",
             activation = tf.nn.relu,
             reuse = tf.AUTO_REUSE,
             name="conv_layer_2")
@@ -44,7 +44,29 @@ def inference(input):
             pool_size = [2,2],
             strides = 2)
     
-    net = tf.layers.flatten(pool2)
+    # Convolutional layer 3
+    conv3 = tf.layers.conv2d(
+            inputs = pool2,
+            filters = 64,
+            kernel_size = [5, 5], 
+#            padding = "same",
+            activation = tf.nn.relu,
+            reuse = tf.AUTO_REUSE,
+            name="conv_layer_3")
+    
+    # Pooling layer 3
+    pool3 = tf.layers.max_pooling2d(inputs = conv3, 
+                                     pool_size = [2,2], 
+                                     strides = 2)
+    
+    # Dense layer 1
+    net = tf.layers.flatten(pool3)
+    net = tf.layers.dense(
+            inputs = net,
+            units = 100,
+            activation = tf.nn.relu)
+    
+    
     return net
     
     

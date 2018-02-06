@@ -17,15 +17,28 @@ def l2_normalize(input_array):
     """
     dims = np.shape(input_array)
     if len(dims) == 1:
+        # Rescaled the data to (0,1) interval
+#        max_in = input_array.max(1)
+#        min_in = input_array.min(1)
+#        return (input_array - min_in)/(max_in - min_in)
+        # Scale max to 1
         return input_array/sl.norm(input_array)
     else:
         max_length = -1
+        min_length = 100000
+        idx = -1
         for i in range(dims[0]):
-            current_length = sl.norm(input_array[i,:])
+            current_length = sl.norm(input_array[i,:])            
             if current_length > max_length:
                 max_length = current_length
-                
+            if current_length < min_length:
+                min_length = current_length
+                idx = i
+                    
         return input_array/max_length
+                
+#        return (input_array - min_length)/(max_length - min_length)
+#        return (input_array - input_array[idx,:])/(max_length - min_length)
     
 def reshape_grayscale_data(input_data, *dims):
     """ Reshapes 2D grayscale data to 4D.

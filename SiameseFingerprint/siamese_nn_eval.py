@@ -15,11 +15,13 @@ import utilities as util
 def evaluate_mnist_siamese_network(left_pairs_o,right_pairs_o,sim_labels,threshold):
     matching = np.zeros(len(sim_labels))
     l2_normalized_diff = util.l2_normalize(left_pairs_o-right_pairs_o)
+#    l2_normalized_diff = left_pairs_o-right_pairs_o
     false_pos = 0
     false_neg = 0
     p = np.sum(sim_labels)
     n = len(sim_labels) - p
     for i in range(len(sim_labels)):
+        print(sl.norm(l2_normalized_diff[i,:]))
         if sl.norm(l2_normalized_diff[i,:]) < threshold:
             matching[i] = 1
             if sim_labels[i] == 0:
@@ -28,7 +30,7 @@ def evaluate_mnist_siamese_network(left_pairs_o,right_pairs_o,sim_labels,thresho
             if sim_labels[i] == 1:
                 false_neg = false_neg + 1
     
-    precision = np.sum((matching == sim_labels))/len(sim_labels)
+    precision = np.sum((matching == sim_labels.T))/len(sim_labels)
     tp = 0
     for i in range(len(sim_labels)):
         if matching[i] == 1 and sim_labels[i] == 1:
@@ -88,7 +90,7 @@ def main(unused_argv):
             saver.restore(sess, tf.train.latest_checkpoint(output_dir))
             left_o,right_o= sess.run([left_eval_inference,right_eval_inference],feed_dict = {left_eval:left, right_eval:right})
 
-            precision, false_pos, false_neg, recall, fnr, fpr = evaluate_mnist_siamese_network(left_o,right_o,sim,0.5)
+            precision, false_pos, false_neg, recall, fnr, fpr = evaluate_mnist_siamese_network(left_o,right_o,sim,0.87)
             print("Precision: %f " % precision)
             print("# False positive: %d " % false_pos)
             print("# False negative: %d " % false_neg)
