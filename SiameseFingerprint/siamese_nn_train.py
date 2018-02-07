@@ -2,7 +2,7 @@
 """
 Created on Mon Jan 29 13:44:22 2018
 
-@author: Tuong Lam
+@author: Tuong Lam & Simon Nilsson
 """
 
 from data_generator import data_generator
@@ -35,17 +35,21 @@ def main(unused_argv):
     finger_id = np.load(dir_path + "/finger_id.npy")
     person_id = np.load(dir_path + "/person_id.npy")
     finger_data = np.load(dir_path + "/fingerprints.npy")
+    translation = np.load(dir_path + "/translation.npy")
+    rotation = np.load(dir_path + "/rotation.npy")
+    
     
     output_dir = "/tmp/siamese_finger_model/" # directory where the model will be saved
     
     nbr_of_training_images = np.shape(finger_data)[0] # number of images to use from the training data set
     
     finger_data = util.reshape_grayscale_data(finger_data)
-    generator = data_generator(finger_data, finger_id, person_id, nbr_of_training_images) # initialize data generator
+#    generator = data_generator(finger_data, finger_id, person_id, nbr_of_training_images) # initialize data generator
+    generator = data_generator(finger_data, finger_id, person_id, nbr_of_training_images, translation, rotation) # initialize data generator
     
     # parameters for training
     batch_size = 100
-    train_iter = 1000
+    train_iter = 100
     learning_rate = 0.0001
     momentum = 0.9
 
@@ -110,7 +114,8 @@ def main(unused_argv):
 #                print(global_vars[i])
         
         for i in range(1,train_iter + 1):
-            b_l, b_r, b_sim = generator.gen_pair_batch(batch_size)
+#            b_l, b_r, b_sim = generator.gen_pair_batch(batch_size)
+            b_l, b_r, b_sim = generator.gen_match_batch(batch_size)
             _,loss_value,left_o,right_o = sess.run([train_op, loss, left_output, right_output],feed_dict={left:b_l, right:b_r, label:b_sim})
 #            print(loss_value)
 #            print(left_o)
