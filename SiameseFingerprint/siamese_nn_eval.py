@@ -14,7 +14,6 @@ import utilities as util
 def evaluate_mnist_siamese_network(left_pairs_o,right_pairs_o,sim_labels,threshold):
     matching = np.zeros(len(sim_labels))
     l2_normalized_diff = util.l2_normalize(left_pairs_o-right_pairs_o)
-#    l2_normalized_diff = left_pairs_o-right_pairs_o
     false_pos = 0
     false_neg = 0
     p = np.sum(sim_labels)
@@ -41,17 +40,13 @@ def evaluate_mnist_siamese_network(left_pairs_o,right_pairs_o,sim_labels,thresho
     return precision, false_pos, false_neg, recall, fnr, fpr
 
 def main(unused_argv):
-    """ This method is used to evaluate a siamese network for the mnist dataset.
+    """ This method is used to evaluate a siamese network for fingerprint datasets.
     
-    The model is defined in the file siamese_nn_model_mnist.py and trained in 
-    the file siamese_nn_train_mnist.py. Evaluation will only be performed if
+    The model is defined in the file siamese_nn_model.py and trained in 
+    the file siamese_nn_train.py. Evaluation will only be performed if
     a model exists.
     
     """
-    # Load mnist eval data
-#    mnist = tf.contrib.learn.datasets.load_dataset("mnist")
-#    eval_data = util.reshape_grayscale_data(mnist.test.images) # Returns np.array
-#    eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
     dir_path = os.path.dirname(os.path.realpath(__file__))
     eval_finger = np.load(dir_path + "/finger_id.npy")
     eval_person = np.load(dir_path + "/person_id.npy")
@@ -62,13 +57,11 @@ def main(unused_argv):
     nbr_of_training_images = np.shape(eval_data)[0] # number of images to use from the training data set
     
     eval_data = util.reshape_grayscale_data(eval_data)
-#    generator = data_generator(eval_data, eval_finger, eval_person, nbr_of_training_images) # initialize data generator
     generator = data_generator(eval_data, eval_finger, eval_person, nbr_of_training_images, translation, rotation) # initialize data generator
         
     nbr_of_image_pairs = 100
     eval_itr = 10
     
-#    left,right,sim = generator.prep_eval_data_pair(nbr_of_image_pairs)
     left,right,sim = generator.prep_eval_match(nbr_of_image_pairs)
         
     output_dir = "/tmp/siamese_finger_model/" # directory where the model is saved

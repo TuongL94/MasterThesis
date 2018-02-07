@@ -19,7 +19,7 @@ def inference(input):
             inputs = input_layer,
             filters = 32,
             kernel_size = [5, 5], 
-#            padding = "same",
+            padding = "same",
             activation = tf.nn.relu,
             reuse = tf.AUTO_REUSE,
             name="conv_layer_1")
@@ -34,7 +34,7 @@ def inference(input):
             inputs = pool1,
             filters = 64,
             kernel_size = [5,5],
-#             padding = "same",
+             padding = "same",
             activation = tf.nn.relu,
             reuse = tf.AUTO_REUSE,
             name="conv_layer_2")
@@ -72,11 +72,8 @@ def inference(input):
     
 
     net = tf.layers.flatten(pool2)
-    
+     
     return net
-    
-def l2_loss(input_1,input_2):
-    return tf.linalg.norm([input_1,input_2])
     
 def contrastive_loss(input_1,input_2,label,margin):
     """ Computes the contrastive loss between two vectors
@@ -91,7 +88,6 @@ def contrastive_loss(input_1,input_2,label,margin):
     d_sq = tf.reduce_sum(tf.pow(input_1-input_2,2),1,keep_dims=True)
     max_sq = tf.square(tf.maximum(margin-d_sq,0))
     return tf.reduce_mean(label*d_sq + (1-label)*max_sq)/2
-        
 
 def training(loss, learning_rate, momentum):
     tf.summary.scalar('loss', loss)

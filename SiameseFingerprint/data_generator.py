@@ -17,9 +17,10 @@ class data_generator:
         self.images = images[0:train_size,:,:,:]
         self.translation = translation[0:train_size]
         self.rotation = rotation[0:train_size]
-        self.shift_idx = []
+        self.shift_idx = [] # list with indices where fingerId changes
         idx_counter = 0
         nbr_of_persons = person_id[-1]
+        
         for i in range(nbr_of_persons):
             finger_counter = 0
             while idx_counter < len(person_id):
@@ -40,13 +41,14 @@ class data_generator:
         self.match = []
         self.no_match = []
         for i in range(len(self.shift_idx)-1):
-            template_trans = translation[self.shift_idx[i]+1]
-            template_rot = rotation[self.shift_idx[i]+1]
-            for j in range(self.shift_idx[i]+1+1, self.shift_idx[i+1]):
+            template_trans = translation[self.shift_idx[i]]
+            template_rot = rotation[self.shift_idx[i]]
+            for j in range(self.shift_idx[i]+1, self.shift_idx[i+1]):
                 rot_match = False
                 trans_match = False
                 trans_cand = translation[j]
                 rot_cand_interval = np.zeros(2)
+                
                 # Check if image is close in rotation to template
                 if rotation[j] - rot_sim < 0:
                     rot_cand_interval[1] = rotation[j] + rot_sim
@@ -72,14 +74,13 @@ class data_generator:
                         trans_match = True
                 
                 if trans_match and rot_match:
-                    self.match.append([self.shift_idx[i]+1, j])
+                    self.match.append([self.shift_idx[i], j])
                 else:
-                    self.no_match.append([self.shift_idx[i]+1, j])
+                    self.no_match.append([self.shift_idx[i], j])
         
         # Shuffle no_match's columns so that it contains different non-matching fingers 
         self.no_match = np.array(self.no_match)
         np.random.shuffle(self.no_match)
-        
         
 #    def __init__(self, images, finger_id, person_id, train_size):
 #        self.finger_id = finger_id[0:train_size]
@@ -125,15 +126,8 @@ class data_generator:
                     rnd_other_finger = random.randint(self.shift_idx[0], self.shift_idx[-1])
                     if not self.shift_idx[i] <= rnd_other_finger <= self.shift_idx[i+1]:
                         break
-                      
-                # Put the pair in random left/right
-                if random.uniform(0,1) < 0.5:
-                    left.append(self.images[rnd_current_finger])
-                    right.append(self.images[rnd_other_finger])
-                else:
-                    left.append(self.images[rnd_other_finger])
-                    right.append(self.images[rnd_current_finger])                
                     
+                util.rand_assign_pair(left,right,self.images[rnd_current_finger],self.images[rnd_other_finger])
                 sim.append([0])
                 count += 1
                 
@@ -141,23 +135,16 @@ class data_generator:
         # Make matching pairs every second time
         mat = 0
         while count < batch_size:
-            new_finger = random.randint(0,len(self.shift_idx)-2)
-            index_finger = random.randint(self.shift_idx[new_finger], self.shift_idx[new_finger+1])
-            if mat == 0:    # Make unmatched pair
-                while True:
-                    index_non_match = random.randint(self.shift_idx[0], self.shift_idx[-1])
-                    if not self.shift_idx[new_finger] <= index_non_match <= self.shift_idx[new_finger+1]:
-                        break
-                left.append(self.images[index_finger])
-                right.append(self.images[index_non_match])
-                sim.append([0])
-                mat = 1 # Set next pair to be matching
-            else:           # Make matching pair
-                index_match = random.randint(self.shift_idx[new_finger], self.shift_idx[new_finger+1])
-                left.append(self.images[index_finger])
-                right.append(self.images[index_match])
-                sim.append([1])
-                mat = 0 #Set next pair to be non matching
+            left_tmp,right_tmp,sim_tmp = util.generate_pair(self.images,self.shift_idx,mat)
+            left.append(left_tmp)
+            right.append(right_tmp)
+            sim.append(sim_tmp)
+            
+            # if a dissimilar pair was generated, generate a matching pair next time and vice versa
+            if sim_tmp[0] == 0: 
+                mat = 1
+            else:
+                mat = 0
             count += 1
                 
         # Shuffle the data pairs and corresponding labels
@@ -173,55 +160,34 @@ class data_generator:
         mat = 0
         count = 0
         while count < nbr_of_image_pairs:
-            new_finger = random.randint(0,len(self.shift_idx)-2)
-            index_finger = random.randint(self.shift_idx[new_finger], self.shift_idx[new_finger+1])
-            if mat == 0:    # Make unmatched pair
-                while True:
-                    index_non_match = random.randint(self.shift_idx[0], self.shift_idx[-1])
-                    if not self.shift_idx[new_finger] <= index_non_match <= self.shift_idx[new_finger+1]:
-                        break
-                left.append(self.images[index_finger])
-                right.append(self.images[index_non_match])
-                sim.append([0])
-                mat = 1 # Set next pair to be matching
-            else:           # Make matching pair
-                index_match = random.randint(self.shift_idx[new_finger], self.shift_idx[new_finger+1])
-                left.append(self.images[index_finger])
-                right.append(self.images[index_match])
-                sim.append([1])
-                mat = 0 #Set next pair to be non matching
+            left_tmp,right_tmp,sim_tmp = util.generate_pair(self.images,self.shift_idx,mat)
+            left.append(left_tmp)
+            right.append(right_tmp)
+            sim.append(sim_tmp)
+            
+            # if a dissimilar pair was generated, generate a matching pair next time and vice versa
+            if sim_tmp[0] == 0: 
+                mat = 1
+            else:
+                mat = 0
             count += 1
         
         return np.array(left),np.array(right),np.array(sim)
-
 
     def gen_match_batch(self, batch_size):
         left = []
         right = []
         sim = []
         switch_match = 0
-        switch_side = 0
         for i in range(batch_size):
             if switch_match == 0:
                 rnd_match = self.match[random.randint(0,len(self.match)-1)]
-                if switch_side == 0:
-                    left.append(self.images[rnd_match[0]])
-                    right.append(self.images[rnd_match[1]])
-                else:
-                    left.append(self.images[rnd_match[1]])
-                    right.append(self.images[rnd_match[0]])
-                    switch_side = 1
+                util.rand_assign_pair(left,right,self.images[rnd_match[0]],self.images[rnd_match[1]])
                 sim.append([1])
                 switch_match = 1
             else:
                 rnd_no_match = self.no_match[random.randint(0,len(self.no_match)-1)]
-                if switch_side == 0:
-                    left.append(self.images[rnd_no_match[0]])
-                    right.append(self.images[rnd_no_match[1]])
-                else:
-                    left.append(self.images[rnd_no_match[1]])
-                    right.append(self.images[rnd_no_match[0]])
-                    switch_side = 0
+                util.rand_assign_pair(left,right,self.images[rnd_no_match[0]],self.images[rnd_no_match[1]])
                 sim.append([0])
                 switch_match = 0
         
@@ -252,24 +218,4 @@ class data_generator:
                 mat = 0 #Set next pair to be non matching
             count += 1
         
-        
         return np.array(left),np.array(right),np.array(sim)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
