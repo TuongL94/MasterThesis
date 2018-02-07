@@ -44,6 +44,32 @@ def inference(input):
             pool_size = [2,2],
             strides = 2)
     
+    # Convolutional Layer 3
+#    conv3 = tf.layers.conv2d(
+#            inputs = pool2,
+#            filters = 64,
+#            kernel_size = [5,5],
+##             padding = "same",
+#            activation = tf.nn.relu,
+#            reuse = tf.AUTO_REUSE,
+#            name="conv_layer_3")
+#            
+#    
+#    # Convolutional Layer 4
+#    conv4 = tf.layers.conv2d(
+#            inputs = conv3,
+#            filters = 64,
+#            kernel_size = [3,3],
+##             padding = "same",
+#            activation = tf.nn.relu,
+#            reuse = tf.AUTO_REUSE,
+#            name="conv_layer_4")
+            
+#    pool3 = tf.layers.max_pooling2d(
+#            inputs = conv4, 
+#            pool_size = [2,2],
+#            strides = 2)
+    
 
     net = tf.layers.flatten(pool2)
     

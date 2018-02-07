@@ -20,7 +20,7 @@ def evaluate_mnist_siamese_network(left_pairs_o,right_pairs_o,sim_labels,thresho
     p = np.sum(sim_labels)
     n = len(sim_labels) - p
     for i in range(len(sim_labels)):
-        print(sl.norm(l2_normalized_diff[i,:]))
+#        print(sl.norm(l2_normalized_diff[i,:]))
         if sl.norm(l2_normalized_diff[i,:]) < threshold:
             matching[i] = 1
             if sim_labels[i] == 0:
@@ -66,6 +66,7 @@ def main(unused_argv):
     generator = data_generator(eval_data, eval_finger, eval_person, nbr_of_training_images, translation, rotation) # initialize data generator
         
     nbr_of_image_pairs = 100
+    eval_itr = 10
     
 #    left,right,sim = generator.prep_eval_data_pair(nbr_of_image_pairs)
     left,right,sim = generator.prep_eval_match(nbr_of_image_pairs)
@@ -90,9 +91,23 @@ def main(unused_argv):
         
         with tf.Session() as sess:
             saver.restore(sess, tf.train.latest_checkpoint(output_dir))
-            left_o,right_o= sess.run([left_eval_inference,right_eval_inference],feed_dict = {left_eval:left, right_eval:right})
-
-            precision, false_pos, false_neg, recall, fnr, fpr = evaluate_mnist_siamese_network(left_o,right_o,sim,0.65)
+#            left_full = []
+#            right_full = []
+            for i in range(eval_itr):
+                left,right,sim = generator.prep_eval_match(nbr_of_image_pairs)
+                left_o,right_o= sess.run([left_eval_inference,right_eval_inference],feed_dict = {left_eval:left, right_eval:right})
+                if i == 0:
+                    left_full = left_o
+                    right_full = right_o
+                    sim_full = sim
+                else:
+                    left_full = np.vstack((left_full,left_o))
+                    right_full = np.vstack((right_full,right_o))
+                    sim_full = np.vstack((sim_full, sim))
+                
+#            left_full = np.array(left_full)
+#            right_full = np.array(right_full)
+            precision, false_pos, false_neg, recall, fnr, fpr = evaluate_mnist_siamese_network(left_full,right_full,sim_full,0.7)
             print("Precision: %f " % precision)
             print("# False positive: %d " % false_pos)
             print("# False negative: %d " % false_neg)

@@ -49,7 +49,7 @@ def main(unused_argv):
     
     # parameters for training
     batch_size = 100
-    train_iter = 200
+    train_iter = 1000
     learning_rate = 0.0001
     momentum = 0.9
 
@@ -72,7 +72,7 @@ def main(unused_argv):
             
         left_output = sm.inference(left)            
         right_output = sm.inference(right)
-        left_eval_output = sm.inference(left_eval)            
+        left_eval_output = sm.inference(left_eval)
         right_eval_output = sm.inference(right_eval)
         
         margin = tf.constant(5.0)
@@ -98,6 +98,8 @@ def main(unused_argv):
         left_output = tf.get_collection("left_output")[0]
         right_output = tf.get_collection("right_output")[0]
         
+    summary_op = tf.summary.scalar('loss', loss)
+    
     with tf.Session() as sess:
         if is_model_new:
             train_op = sm.training(loss, learning_rate, momentum)
@@ -112,16 +114,21 @@ def main(unused_argv):
 #            global_vars = tf.global_variables()
 #            for i in range(len(global_vars)):
 #                print(global_vars[i])
+            
+        # Summary setup
+        writer = tf.summary.FileWriter(output_dir + "/sum", graph=tf.get_default_graph())
+            
         
         for i in range(1,train_iter + 1):
 #            b_l, b_r, b_sim = generator.gen_pair_batch(batch_size)
             b_l, b_r, b_sim = generator.gen_match_batch(batch_size)
-            _,loss_value,left_o,right_o = sess.run([train_op, loss, left_output, right_output],feed_dict={left:b_l, right:b_r, label:b_sim})
+            _,loss_value,left_o,right_o, summary = sess.run([train_op, loss, left_output, right_output, summary_op],feed_dict={left:b_l, right:b_r, label:b_sim})
 #            print(loss_value)
 #            print(left_o)
 #            print(right_o)
             if i % 10 == 0:
                 print("Iteration %d: loss = %.5f" % (i, loss_value))
+            writer.add_summary(summary, i)
         
 #        graph = tf.get_default_graph()
 #        kernel_var = graph.get_tensor_by_name("conv_layer_1/bias:0")

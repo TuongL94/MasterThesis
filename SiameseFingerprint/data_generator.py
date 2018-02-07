@@ -35,14 +35,14 @@ class data_generator:
         
         # Simularity thresholds
         rot_sim = 5     # 5 degrees rotation threshold
-        trans_sim = 30  # 30 pixels translation threshold
+        trans_sim = 100  # 30 pixels translation threshold
         # Generate matching pair indecies
         self.match = []
         self.no_match = []
         for i in range(len(self.shift_idx)-1):
-            template_trans = translation[self.shift_idx[i]]
-            template_rot = rotation[self.shift_idx[i]]
-            for j in range(self.shift_idx[i]+1, self.shift_idx[i+1]):
+            template_trans = translation[self.shift_idx[i]+1]
+            template_rot = rotation[self.shift_idx[i]+1]
+            for j in range(self.shift_idx[i]+1+1, self.shift_idx[i+1]):
                 rot_match = False
                 trans_match = False
                 trans_cand = translation[j]
@@ -56,7 +56,7 @@ class data_generator:
                 elif rotation[j] + rot_sim > 360:
                     rot_cand_interval[1] = rotation[j] + rot_sim - 360
                     rot_cand_interval[0] = rotation[j] - rot_sim
-                    if template_rot > rot_cand_interval[1] or template_rot < rot_cand_interval[0]:
+                    if template_rot < rot_cand_interval[1] or template_rot > rot_cand_interval[0]:
                         rot_match = True
                 else:
                     rot_cand_interval[1] = rotation[j] + rot_sim
@@ -72,11 +72,14 @@ class data_generator:
                         trans_match = True
                 
                 if trans_match and rot_match:
-                    self.match.append([self.shift_idx[i], j])
+                    self.match.append([self.shift_idx[i]+1, j])
                 else:
-                    self.no_match.append([self.shift_idx[i], j])
-                
-                
+                    self.no_match.append([self.shift_idx[i]+1, j])
+        
+        # Shuffle no_match's columns so that it contains different non-matching fingers 
+        self.no_match = np.array(self.no_match)
+        np.random.shuffle(self.no_match)
+        
         
 #    def __init__(self, images, finger_id, person_id, train_size):
 #        self.finger_id = finger_id[0:train_size]
@@ -232,6 +235,8 @@ class data_generator:
         sim = []
         mat = 0
         count = 0
+        t_m = self.match
+        t_n = self.no_match
         while count < nbr_of_image_pairs:
             if mat == 0:    # Make unmatched pair
                 rnd_no_match = random.randint(0,len(self.no_match)-1)
