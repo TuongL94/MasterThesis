@@ -221,8 +221,34 @@ class data_generator:
                     switch_side = 0
                 sim.append([0])
                 switch_match = 0
-                    
+        
+        left, right, sim =  util.shuffle_data([left, right, sim])    
+        
         return np.array(left), np.array(right), np.array(sim)
+    
+    def prep_eval_match(self, nbr_of_image_pairs):
+        left = []
+        right = []
+        sim = []
+        mat = 0
+        count = 0
+        while count < nbr_of_image_pairs:
+            if mat == 0:    # Make unmatched pair
+                rnd_no_match = random.randint(0,len(self.no_match)-1)
+                left.append(self.images[self.no_match[rnd_no_match][0]])
+                right.append(self.images[self.no_match[rnd_no_match][1]])
+                sim.append([0])
+                mat = 1 # Set next pair to be matching
+            else:           # Make matching pair
+                rnd_match = random.randint(0,len(self.match)-1)
+                left.append(self.images[self.match[rnd_match][0]])
+                right.append(self.images[self.match[rnd_match][1]])
+                sim.append([1])
+                mat = 0 #Set next pair to be non matching
+            count += 1
+        
+        
+        return np.array(left),np.array(right),np.array(sim)
 
 
 

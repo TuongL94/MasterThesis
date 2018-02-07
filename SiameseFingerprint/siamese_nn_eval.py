@@ -56,15 +56,19 @@ def main(unused_argv):
     eval_finger = np.load(dir_path + "/finger_id.npy")
     eval_person = np.load(dir_path + "/person_id.npy")
     eval_data = np.load(dir_path + "/fingerprints.npy")    
+    translation = np.load(dir_path + "/translation.npy")
+    rotation = np.load(dir_path + "/rotation.npy")
     
     nbr_of_training_images = np.shape(eval_data)[0] # number of images to use from the training data set
     
     eval_data = util.reshape_grayscale_data(eval_data)
-    generator = data_generator(eval_data, eval_finger, eval_person, nbr_of_training_images) # initialize data generator
+#    generator = data_generator(eval_data, eval_finger, eval_person, nbr_of_training_images) # initialize data generator
+    generator = data_generator(eval_data, eval_finger, eval_person, nbr_of_training_images, translation, rotation) # initialize data generator
         
-    nbr_of_image_pairs = 25
+    nbr_of_image_pairs = 100
     
-    left,right,sim = generator.prep_eval_data_pair(nbr_of_image_pairs)
+#    left,right,sim = generator.prep_eval_data_pair(nbr_of_image_pairs)
+    left,right,sim = generator.prep_eval_match(nbr_of_image_pairs)
         
     output_dir = "/tmp/siamese_finger_model/" # directory where the model is saved
     
@@ -88,7 +92,7 @@ def main(unused_argv):
             saver.restore(sess, tf.train.latest_checkpoint(output_dir))
             left_o,right_o= sess.run([left_eval_inference,right_eval_inference],feed_dict = {left_eval:left, right_eval:right})
 
-            precision, false_pos, false_neg, recall, fnr, fpr = evaluate_mnist_siamese_network(left_o,right_o,sim,0.87)
+            precision, false_pos, false_neg, recall, fnr, fpr = evaluate_mnist_siamese_network(left_o,right_o,sim,0.65)
             print("Precision: %f " % precision)
             print("# False positive: %d " % false_pos)
             print("# False negative: %d " % false_neg)

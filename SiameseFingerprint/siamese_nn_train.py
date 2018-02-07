@@ -49,7 +49,7 @@ def main(unused_argv):
     
     # parameters for training
     batch_size = 100
-    train_iter = 100
+    train_iter = 200
     learning_rate = 0.0001
     momentum = 0.9
 
@@ -58,7 +58,7 @@ def main(unused_argv):
     placeholder_dims = [batch_size, image_dims[1], image_dims[2], image_dims[3]] 
     
     # parameters for evaluation
-    nbr_of_eval_pairs = 25
+    nbr_of_eval_pairs = 100
     
     tf.reset_default_graph()
     
