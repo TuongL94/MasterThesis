@@ -15,20 +15,15 @@ import utilities as util
 
 
 def main(unused_argv):
-    """ This method is used to train a siamese network for the mnist dataset.
+    """ This method is used to train a siamese network for fingerprint datasets.
     
     The model is defined in the file siamese_nn_model_mnist.py. The class
     data_generator is used to generate batches for training. When training
-    is completed the model is saved in the file /tmp/siamese_mnist_model/.
+    is completed the model is saved in the file /tmp/siamese_finger_model/.
     If a model exists it will be used for further training, otherwise a new
     one is created.
     
     """
-    
-    # Load mnist training and eval data and perform necessary data reshape
-#    mnist = tf.contrib.learn.datasets.load_dataset("mnist")
-#    train_data = util.reshape_grayscale_data(mnist.train.images) # Returns np.array
-#    train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
     
 #    Load fingerprint labels and data from file with names
     dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -38,27 +33,24 @@ def main(unused_argv):
     translation = np.load(dir_path + "/translation.npy")
     rotation = np.load(dir_path + "/rotation.npy")
     
-    
     output_dir = "/tmp/siamese_finger_model/" # directory where the model will be saved
     
     nbr_of_training_images = np.shape(finger_data)[0] # number of images to use from the training data set
     
     finger_data = util.reshape_grayscale_data(finger_data)
-#    generator = data_generator(finger_data, finger_id, person_id, nbr_of_training_images) # initialize data generator
     generator = data_generator(finger_data, finger_id, person_id, nbr_of_training_images, translation, rotation) # initialize data generator
     
     # parameters for training
-    batch_size = 100
-    train_iter = 200
+    batch_size = 5
+    train_iter = 10
     learning_rate = 0.0001
     momentum = 0.9
 
-    
     image_dims = np.shape(finger_data)
     placeholder_dims = [batch_size, image_dims[1], image_dims[2], image_dims[3]] 
     
     # parameters for evaluation
-    nbr_of_eval_pairs = 100
+    nbr_of_eval_pairs = 5
     
     tf.reset_default_graph()
     
@@ -75,7 +67,7 @@ def main(unused_argv):
         left_eval_output = sm.inference(left_eval)            
         right_eval_output = sm.inference(right_eval)
         
-        margin = tf.constant(5.0)
+        margin = tf.constant(5.0) # margin for contrastive loss
         loss = sm.contrastive_loss(left_output,right_output,label,margin)
         
         tf.add_to_collection("loss",loss)
@@ -114,7 +106,6 @@ def main(unused_argv):
 #                print(global_vars[i])
         
         for i in range(1,train_iter + 1):
-#            b_l, b_r, b_sim = generator.gen_pair_batch(batch_size)
             b_l, b_r, b_sim = generator.gen_match_batch(batch_size)
             _,loss_value,left_o,right_o = sess.run([train_op, loss, left_output, right_output],feed_dict={left:b_l, right:b_r, label:b_sim})
 #            print(loss_value)
