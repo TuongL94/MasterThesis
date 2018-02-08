@@ -12,6 +12,19 @@ import utilities as util
 class data_generator:
     
     def __init__(self, images, finger_id, person_id, translation, rotation, data_size):
+        """ Initializes an instance of a data_generator class
+        
+        The data_generator contain attributes referring to the input data.
+        The input data_size specifies the number of examples one wants to use
+        from the original input data.
+        Input:
+        images - 4D numpy array of the format [nbr_of_images,height,width,1]
+        finger_id - numpy array containing finger ids specified as integers (1,2,3,6,7,8)
+        person_id - numpy array containing person ids specified as integers [0,inf)
+        translation - 2D numpy array with rows corresponding to 2D translations
+        rotation - numpy array containing rotation of images given in degrees
+        data_size - amount of data one wants to use from original data 
+        """
         self.finger_id = finger_id[0:data_size]
         self.person_id = person_id[0:data_size]
         self.images = images[0:data_size,:,:,:]
@@ -38,6 +51,15 @@ class data_generator:
         self.match_eval, self.no_match_eval = self.gen_pair_indices(5,30,training = False)
         
     def is_rotation_similar(self,angle_1,angle_2,rotation_diff):
+        """ Checks if two angles differ by at most rotation_diff in absolute value.
+        
+        Input:
+        angle_1 - first angle, specified in degrees [0,360]
+        angle_2 - second angle, specified in degrees [0,360]
+        rotation_diff - difference in rotation
+        Returns: True if the angles differ by at most rotation_diff in absolute value,
+        otherwise False
+        """
         rot_cand_interval = np.zeros(2)
         rot_match = False
         if angle_2 - rotation_diff < 0:
@@ -59,9 +81,19 @@ class data_generator:
         return rot_match
     
     def is_translation_similar(self,translation_1,translation_2, translation_diff):
+        """ Checks if two 2D translations correspond to points that are close to each other.
+        
+        The translatios are assumed to be relative to a fixed point in 2D space.
+        Input:
+        translation_1 - first translation, specified as a numpy array of two elements (x,y)
+        translation_2 - second translation, specified as a numpy array of two elements (x,y)
+        translation_diff - maximum distance between the translations in each axis
+        Returns: True if the distance between the translations is at most translation_diff in each axis,
+        otherwise False
+        """
         translation_match = False
         dx = np.abs(translation_1[0] - translation_2[0])
-        dy = np.abs(translation_1[0] - translation_2[0])
+        dy = np.abs(translation_1[1] - translation_2[1])
         
         if dx < translation_diff and dy < translation_diff:
             translation_match = True
@@ -69,6 +101,23 @@ class data_generator:
         return translation_match
     
     def gen_pair_indices(self,rotation_diff, translation_diff, training = True):
+        """ Generates indices for matching and non-matching pairs of images.
+        
+        This method generates indices for matching and non-matching pairs of images.
+        If training is set to True it will generate indices used in training,
+        otherwise indices for evaluation will be generated. Matching pairs are
+        defined by images with sufficiently small rotation and translation
+        difference, specified by rotation_diff and translation_diff.
+        Input:
+        rotation_diff - maximum allowed difference in rotation between two matching images
+        translation_diff - maximum allowed distance between translations of two matching images
+        in each axis
+        training - parameter to determine if indices should be generated for training or evaluation.
+        If training = True indices for training are generated otherwise the indices are for evaluation
+        Returns:
+        match - list of matching indices
+        no_match - numpy array of non-matching indices, one row corresponds to one non-matching indices
+        """
         match = [] # matching pair indices
         no_match = [] # non-matching pair indices
         
@@ -135,79 +184,87 @@ class data_generator:
 #                
 #        self.shift_idx.append(len(self.person_id) - 1)
 
-    def gen_pair_batch(self,batch_size):
-        left = []
-        right = []
-        sim = []
-        count = 0
-        
-        nbr_fingerprints = len(self.finger_id) - 1
-        for i in range(nbr_fingerprints):
-            nbr_each_fingerprint = int(batch_size/nbr_fingerprints/2);
-            for j in range(nbr_each_fingerprint):
-                l = random.randint(self.shift_idx[i], self.shift_idx[i+1])
-                r = random.randint(self.shift_idx[i], self.shift_idx[i+1])
-                left.append(self.images[l])
-                right.append(self.images[r])
-                sim.append([1])
-                count += 1
-            for j in range(nbr_each_fingerprint):
-                # Generate random index of current digit i
-                rnd_current_finger = random.randint(self.shift_idx[i], self.shift_idx[i+1])
-                # Generate random index of digit not being i
-                while True:
-                    rnd_other_finger = random.randint(self.shift_idx[0], self.shift_idx[-1])
-                    if not self.shift_idx[i] <= rnd_other_finger <= self.shift_idx[i+1]:
-                        break
-                    
-                util.rand_assign_pair(left,right,self.images[rnd_current_finger],self.images[rnd_other_finger])
-                sim.append([0])
-                count += 1
-                
-        # Generate remaining pairs in the batch
-        # Make matching pairs every second time
-        mat = 0
-        while count < batch_size:
-            left_tmp,right_tmp,sim_tmp = util.generate_pair(self.images,self.shift_idx,mat)
-            left.append(left_tmp)
-            right.append(right_tmp)
-            sim.append(sim_tmp)
-            
-            # if a dissimilar pair was generated, generate a matching pair next time and vice versa
-            if sim_tmp[0] == 0: 
-                mat = 1
-            else:
-                mat = 0
-            count += 1
-                
-        # Shuffle the data pairs and corresponding labels
-        data_list = [left,right,sim]
-        shuffled_data_list = util.shuffle_data(data_list)
-            
-        return np.array(shuffled_data_list[0]),np.array(shuffled_data_list[1]),shuffled_data_list[2]
+#    def gen_pair_batch(self,batch_size):
+#        left = []
+#        right = []
+#        sim = []
+#        count = 0
+#        
+#        nbr_fingerprints = len(self.finger_id) - 1
+#        for i in range(nbr_fingerprints):
+#            nbr_each_fingerprint = int(batch_size/nbr_fingerprints/2);
+#            for j in range(nbr_each_fingerprint):
+#                l = random.randint(self.shift_idx[i], self.shift_idx[i+1])
+#                r = random.randint(self.shift_idx[i], self.shift_idx[i+1])
+#                left.append(self.images[l])
+#                right.append(self.images[r])
+#                sim.append([1])
+#                count += 1
+#            for j in range(nbr_each_fingerprint):
+#                # Generate random index of current digit i
+#                rnd_current_finger = random.randint(self.shift_idx[i], self.shift_idx[i+1])
+#                # Generate random index of digit not being i
+#                while True:
+#                    rnd_other_finger = random.randint(self.shift_idx[0], self.shift_idx[-1])
+#                    if not self.shift_idx[i] <= rnd_other_finger <= self.shift_idx[i+1]:
+#                        break
+#                    
+#                util.rand_assign_pair(left,right,self.images[rnd_current_finger],self.images[rnd_other_finger])
+#                sim.append([0])
+#                count += 1
+#                
+#        # Generate remaining pairs in the batch
+#        # Make matching pairs every second time
+#        mat = 0
+#        while count < batch_size:
+#            left_tmp,right_tmp,sim_tmp = util.generate_pair(self.images,self.shift_idx,mat)
+#            left.append(left_tmp)
+#            right.append(right_tmp)
+#            sim.append(sim_tmp)
+#            
+#            # if a dissimilar pair was generated, generate a matching pair next time and vice versa
+#            if sim_tmp[0] == 0: 
+#                mat = 1
+#            else:
+#                mat = 0
+#            count += 1
+#                
+#        # Shuffle the data pairs and corresponding labels
+#        data_list = [left,right,sim]
+#        shuffled_data_list = util.shuffle_data(data_list)
+#            
+#        return np.array(shuffled_data_list[0]),np.array(shuffled_data_list[1]),shuffled_data_list[2]
     
-    def prep_eval_data_pair(self, nbr_of_image_pairs):
-        left = []
-        right = []
-        sim = []
-        mat = 0
-        count = 0
-        while count < nbr_of_image_pairs:
-            left_tmp,right_tmp,sim_tmp = util.generate_pair(self.images,self.shift_idx,mat)
-            left.append(left_tmp)
-            right.append(right_tmp)
-            sim.append(sim_tmp)
-            
-            # if a dissimilar pair was generated, generate a matching pair next time and vice versa
-            if sim_tmp[0] == 0: 
-                mat = 1
-            else:
-                mat = 0
-            count += 1
-        
-        return np.array(left),np.array(right),np.array(sim)
+#    def prep_eval_data_pair(self, nbr_of_image_pairs):
+#        left = []
+#        right = []
+#        sim = []
+#        mat = 0
+#        count = 0
+#        while count < nbr_of_image_pairs:
+#            left_tmp,right_tmp,sim_tmp = util.generate_pair(self.images,self.shift_idx,mat)
+#            left.append(left_tmp)
+#            right.append(right_tmp)
+#            sim.append(sim_tmp)
+#            
+#            # if a dissimilar pair was generated, generate a matching pair next time and vice versa
+#            if sim_tmp[0] == 0: 
+#                mat = 1
+#            else:
+#                mat = 0
+#            count += 1
+#        
+#        return np.array(left),np.array(right),np.array(sim)
 
     def gen_match_batch(self, batch_size):
+        """ Generates a training batch with matched and non-matched pairs of images.
+        
+        Input:
+        batch_size - the size of the batch
+        Returns: three numpy arrays where the first two contain one image from randomly selected image pairs respectively.
+        The last array indicates if corresponding pairs in the first two arrays are matching or non-matching
+        pairs, if the pairs match the corresponding element in the last array is 1, otherwise 0.
+        """
         left = []
         right = []
         sim = []
@@ -229,6 +286,14 @@ class data_generator:
         return np.array(left), np.array(right), np.array(sim)
     
     def prep_eval_match(self, nbr_of_image_pairs):
+        """ Generates an evaluation batch with matched and non-matched pairs of images.
+        
+        Input:
+        nbr_of_image_pairs - the size of the evaluation batch
+        Returns: three numpy arrays where the first two contain one image from randomly selected image pairs respectively.
+        The last array indicates if corresponding pairs in the first two arrays are matching or non-matching
+        pairs, if the pairs match the corresponding element in the last array is 1, otherwise 0.
+        """
         left = []
         right = []
         sim = []
