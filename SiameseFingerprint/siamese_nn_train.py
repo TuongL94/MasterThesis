@@ -38,11 +38,11 @@ def main(unused_argv):
     nbr_of_training_images = np.shape(finger_data)[0] # number of images to use from the training data set
     
     finger_data = util.reshape_grayscale_data(finger_data)
-    generator = data_generator(finger_data, finger_id, person_id, nbr_of_training_images, translation, rotation) # initialize data generator
+    generator = data_generator(finger_data, finger_id, person_id, translation, rotation, nbr_of_training_images) # initialize data generator
     
     # parameters for training
-    batch_size = 100
-    train_iter = 1000
+    batch_size = 5
+    train_iter = 10
     learning_rate = 0.0001
     momentum = 0.9
 
