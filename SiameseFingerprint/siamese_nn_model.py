@@ -14,16 +14,16 @@ import tensorflow as tf
 def inference(input):
     input_layer = input
     
-    # Convolutional layer 1
+        # Convolutional layer 1
     conv1 = tf.layers.conv2d(
             inputs = input_layer,
-            filters = 32,
+            filters = 25,
             kernel_size = [5, 5], 
             padding = "same",
             activation = tf.nn.relu,
             reuse = tf.AUTO_REUSE,
-            name="conv_layer_1")
-    
+            name="conv_layer_1") 
+        
     # Pooling layer 1
     pool1 = tf.layers.max_pooling2d(inputs = conv1, 
                                      pool_size = [2,2], 
@@ -34,7 +34,7 @@ def inference(input):
             inputs = pool1,
             filters = 64,
             kernel_size = [5,5],
-             padding = "same",
+            padding = "same",
             activation = tf.nn.relu,
             reuse = tf.AUTO_REUSE,
             name="conv_layer_2")

@@ -60,7 +60,7 @@ def main(unused_argv):
     generator = data_generator(eval_data, eval_finger, eval_person, nbr_of_training_images, translation, rotation) # initialize data generator
         
     nbr_of_image_pairs = 100
-    eval_itr = 10
+    eval_itr = 5
     
     left,right,sim = generator.prep_eval_match(nbr_of_image_pairs)
         

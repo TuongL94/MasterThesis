@@ -42,7 +42,7 @@ def main(unused_argv):
     
     # parameters for training
     batch_size = 100
-    train_iter = 1000
+    train_iter = 50
     learning_rate = 0.0001
     momentum = 0.9
 
@@ -50,7 +50,7 @@ def main(unused_argv):
     placeholder_dims = [batch_size, image_dims[1], image_dims[2], image_dims[3]] 
     
     # parameters for evaluation
-    nbr_of_eval_pairs = 5
+    nbr_of_eval_pairs = 100
     
     tf.reset_default_graph()
     
@@ -89,8 +89,7 @@ def main(unused_argv):
         loss = tf.get_collection("loss")[0]
         left_output = tf.get_collection("left_output")[0]
         right_output = tf.get_collection("right_output")[0]
-        
-    summary_op = tf.summary.scalar('loss', loss)
+    
     
     with tf.Session() as sess:
         if is_model_new:
@@ -106,9 +105,16 @@ def main(unused_argv):
 #            global_vars = tf.global_variables()
 #            for i in range(len(global_vars)):
 #                print(global_vars[i])
+        graph = tf.get_default_graph()
+        conv1_layer = graph.get_tensor_by_name("conv_layer_1/kernel:0")
+        conv1_layer = tf.transpose(conv1_layer, perm = [3,0,1,2])
+        filter1 = tf.summary.image('Filter_1', conv1_layer, max_outputs=32)
             
+        summary_op = tf.summary.scalar('loss', loss)
+        x_image = tf.summary.image('input', left)
+        summary_op = tf.summary.merge([summary_op, x_image, filter1])
         # Summary setup
-        writer = tf.summary.FileWriter(output_dir + "/sum", graph=tf.get_default_graph())
+        writer = tf.summary.FileWriter(output_dir + "/summary", graph=tf.get_default_graph())
             
         
         for i in range(1,train_iter + 1):

@@ -41,9 +41,9 @@ class data_generator:
         self.match = []
         self.no_match = []
         for i in range(len(self.shift_idx)-1):
-            template_trans = translation[self.shift_idx[i]]
-            template_rot = rotation[self.shift_idx[i]]
-            for j in range(self.shift_idx[i]+1, self.shift_idx[i+1]):
+            template_trans = translation[self.shift_idx[i]+1]
+            template_rot = rotation[self.shift_idx[i]+1]
+            for j in range(self.shift_idx[i]+1+1, self.shift_idx[i+1]):
                 rot_match = False
                 trans_match = False
                 trans_cand = translation[j]
@@ -67,6 +67,7 @@ class data_generator:
                         rot_match = True
                         
                 # If rotation close check if translation is close
+                rot_match = True
                 if rot_match:
                     dx = np.abs(template_trans[0] - trans_cand[0])
                     dy = np.abs(template_trans[1] - trans_cand[1])
@@ -74,9 +75,9 @@ class data_generator:
                         trans_match = True
                 
                 if trans_match and rot_match:
-                    self.match.append([self.shift_idx[i], j])
+                    self.match.append([self.shift_idx[i]+1, j])
                 else:
-                    self.no_match.append([self.shift_idx[i], j])
+                    self.no_match.append([self.shift_idx[i]+1, j])
         
         # Shuffle no_match's columns so that it contains different non-matching fingers 
         self.no_match = np.array(self.no_match)
