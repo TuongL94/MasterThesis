@@ -42,8 +42,8 @@ def main(unused_argv):
     
     # parameters for training
     batch_size = 100
-    train_iter = 50
-    learning_rate = 0.0001
+    train_iter = 500
+    learning_rate = 0.00001
     momentum = 0.9
 
     image_dims = np.shape(finger_data)

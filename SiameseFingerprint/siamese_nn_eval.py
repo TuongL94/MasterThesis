@@ -100,7 +100,7 @@ def main(unused_argv):
                 
 #            left_full = np.array(left_full)
 #            right_full = np.array(right_full)
-            precision, false_pos, false_neg, recall, fnr, fpr = evaluate_mnist_siamese_network(left_full,right_full,sim_full,0.7)
+            precision, false_pos, false_neg, recall, fnr, fpr = evaluate_mnist_siamese_network(left_full,right_full,sim_full,0.62)
             print("Precision: %f " % precision)
             print("# False positive: %d " % false_pos)
             print("# False negative: %d " % false_neg)
