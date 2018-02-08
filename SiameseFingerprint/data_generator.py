@@ -11,16 +11,16 @@ import utilities as util
 
 class data_generator:
     
-    def __init__(self, images, finger_id, person_id, train_size, translation, rotation):
-        self.finger_id = finger_id[0:train_size]
-        self.person_id = person_id[0:train_size]
-        self.images = images[0:train_size,:,:,:]
-        self.translation = translation[0:train_size]
-        self.rotation = rotation[0:train_size]
+    def __init__(self, images, finger_id, person_id, translation, rotation, data_size):
+        self.finger_id = finger_id[0:data_size]
+        self.person_id = person_id[0:data_size]
+        self.images = images[0:data_size,:,:,:]
+        self.translation = translation[0:data_size]
+        self.rotation = rotation[0:data_size]
         self.shift_idx = [] # list with indices where fingerId changes
+
         idx_counter = 0
         nbr_of_persons = person_id[-1]
-        
         for i in range(nbr_of_persons):
             finger_counter = 0
             while idx_counter < len(person_id):
@@ -34,55 +34,87 @@ class data_generator:
                 
         self.shift_idx.append(len(self.person_id) - 1)
         
-        # Simularity thresholds
-        rot_sim = 5     # 5 degrees rotation threshold
-        trans_sim = 100  # 30 pixels translation threshold
-        # Generate matching pair indecies
-        self.match = []
-        self.no_match = []
-        for i in range(len(self.shift_idx)-1):
-            template_trans = translation[self.shift_idx[i]+1]
-            template_rot = rotation[self.shift_idx[i]+1]
-            for j in range(self.shift_idx[i]+1+1, self.shift_idx[i+1]):
-                rot_match = False
-                trans_match = False
-                trans_cand = translation[j]
-                rot_cand_interval = np.zeros(2)
-                
-                # Check if image is close in rotation to template
-                if rotation[j] - rot_sim < 0:
-                    rot_cand_interval[1] = rotation[j] + rot_sim
-                    rot_cand_interval[0] = 360 - (rotation[j] - rot_sim)
-                    if template_rot < rot_cand_interval[1] or template_rot > rot_cand_interval[0]:
-                        rot_match = True
-                elif rotation[j] + rot_sim > 360:
-                    rot_cand_interval[1] = rotation[j] + rot_sim - 360
-                    rot_cand_interval[0] = rotation[j] - rot_sim
-                    if template_rot < rot_cand_interval[1] or template_rot > rot_cand_interval[0]:
-                        rot_match = True
-                else:
-                    rot_cand_interval[1] = rotation[j] + rot_sim
-                    rot_cand_interval[0] = rotation[j] - rot_sim
-                    if template_rot < rot_cand_interval[1] or template_rot > rot_cand_interval[0]:
-                        rot_match = True
-                        
-                # If rotation close check if translation is close
+        self.match_train, self.no_match_train = self.gen_pair_indices(5,30,training = True)
+        self.match_eval, self.no_match_eval = self.gen_pair_indices(5,30,training = False)
+        
+    def is_rotation_similar(self,angle_1,angle_2,rotation_diff):
+        rot_cand_interval = np.zeros(2)
+        rot_match = False
+        if angle_2 - rotation_diff < 0:
+            rot_cand_interval[1] = angle_2 + rotation_diff
+            rot_cand_interval[0] = 360 - (angle_2 - rotation_diff)
+            if angle_1 < rot_cand_interval[1] or angle_1 > rot_cand_interval[0]:
                 rot_match = True
-                if rot_match:
-                    dx = np.abs(template_trans[0] - trans_cand[0])
-                    dy = np.abs(template_trans[1] - trans_cand[1])
-                    if dx < trans_sim and dy < trans_sim:
-                        trans_match = True
+        elif angle_2 + rotation_diff > 360:
+            rot_cand_interval[1] = angle_2 + rotation_diff - 360
+            rot_cand_interval[0] = angle_2 - rotation_diff
+            if angle_1 < rot_cand_interval[1] or angle_1 > rot_cand_interval[0]:
+                rot_match = True
+        else:
+            rot_cand_interval[1] = angle_2 + rotation_diff
+            rot_cand_interval[0] = angle_2 - rotation_diff
+            if angle_1 < rot_cand_interval[1] or angle_1 > rot_cand_interval[0]:
+                rot_match = True
                 
-                if trans_match and rot_match:
-                    self.match.append([self.shift_idx[i]+1, j])
-                else:
-                    self.no_match.append([self.shift_idx[i]+1, j])
+        return rot_match
+    
+    def is_translation_similar(self,translation_1,translation_2, translation_diff):
+        translation_match = False
+        dx = np.abs(translation_1[0] - translation_2[0])
+        dy = np.abs(translation_1[0] - translation_2[0])
         
+        if dx < translation_diff and dy < translation_diff:
+            translation_match = True
+            
+        return translation_match
+    
+    def gen_pair_indices(self,rotation_diff, translation_diff, training = True):
+        match = [] # matching pair indices
+        no_match = [] # non-matching pair indices
+        
+        if training:
+            for i in range(len(self.shift_idx)-1):
+                template_trans = self.translation[self.shift_idx[i]]
+                template_rot = self.rotation[self.shift_idx[i]]
+                for j in range(self.shift_idx[i]+1, self.shift_idx[i+1]):
+                    rot_cand = self.rotation[j]
+                    trans_cand = self.translation[j]
+                    translation_match = False
+                    rotation_match = self.is_rotation_similar(template_rot,rot_cand,rotation_diff)
+                    
+                    # if rotation is sufficiently similar check translation
+                    if rotation_match:
+                        translation_match = self.is_translation_similar(template_trans,trans_cand,translation_diff)
+                    
+                    # if rotation and translation is similar the images related to the corresponding
+                    # shift indices are considered similar
+                    if translation_match and rotation_match:
+                        match.append([self.shift_idx[i], j])
+                    else:
+                        no_match.append([self.shift_idx[i], j])
+        else:
+            for i in range(len(self.shift_idx)-1):
+                template_trans = self.translation[self.shift_idx[i]+1]
+                template_rot = self.rotation[self.shift_idx[i]+1]
+                for j in range(self.shift_idx[i]+2, self.shift_idx[i+1]):
+                    rot_cand = self.rotation[j]
+                    trans_cand = self.translation[j]
+                    translation_match = False
+                    rotation_match = self.is_rotation_similar(template_rot,rot_cand,rotation_diff)
+                    
+                    if rotation_match:
+                        translation_match = self.is_translation_similar(template_trans,trans_cand,translation_diff)
+                    
+                    if translation_match and rotation_match:
+                        match.append([self.shift_idx[i]+1, j])
+                    else:
+                        no_match.append([self.shift_idx[i]+1, j])
+    
         # Shuffle no_match's columns so that it contains different non-matching fingers 
-        self.no_match = np.array(self.no_match)
-        np.random.shuffle(self.no_match)
-        
+        no_match = np.array(no_match)
+        np.random.shuffle(no_match)
+        return match,no_match
+
 #    def __init__(self, images, finger_id, person_id, train_size):
 #        self.finger_id = finger_id[0:train_size]
 #        self.person_id = person_id[0:train_size]
@@ -182,12 +214,12 @@ class data_generator:
         switch_match = 0
         for i in range(batch_size):
             if switch_match == 0:
-                rnd_match = self.match[random.randint(0,len(self.match)-1)]
+                rnd_match = self.match_train[random.randint(0,len(self.match_train)-1)]
                 util.rand_assign_pair(left,right,self.images[rnd_match[0]],self.images[rnd_match[1]])
                 sim.append([1])
                 switch_match = 1
             else:
-                rnd_no_match = self.no_match[random.randint(0,len(self.no_match)-1)]
+                rnd_no_match = self.no_match_train[random.randint(0,len(self.no_match_train)-1)]
                 util.rand_assign_pair(left,right,self.images[rnd_no_match[0]],self.images[rnd_no_match[1]])
                 sim.append([0])
                 switch_match = 0
@@ -202,19 +234,17 @@ class data_generator:
         sim = []
         mat = 0
         count = 0
-        t_m = self.match
-        t_n = self.no_match
         while count < nbr_of_image_pairs:
             if mat == 0:    # Make unmatched pair
-                rnd_no_match = random.randint(0,len(self.no_match)-1)
-                left.append(self.images[self.no_match[rnd_no_match][0]])
-                right.append(self.images[self.no_match[rnd_no_match][1]])
+                rnd_no_match = random.randint(0,len(self.no_match_eval)-1)
+                left.append(self.images[self.no_match_eval[rnd_no_match][0]])
+                right.append(self.images[self.no_match_eval[rnd_no_match][1]])
                 sim.append([0])
                 mat = 1 # Set next pair to be matching
             else:           # Make matching pair
-                rnd_match = random.randint(0,len(self.match)-1)
-                left.append(self.images[self.match[rnd_match][0]])
-                right.append(self.images[self.match[rnd_match][1]])
+                rnd_match = random.randint(0,len(self.match_eval)-1)
+                left.append(self.images[self.match_eval[rnd_match][0]])
+                right.append(self.images[self.match_eval[rnd_match][1]])
                 sim.append([1])
                 mat = 0 #Set next pair to be non matching
             count += 1

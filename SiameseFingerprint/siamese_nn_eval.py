@@ -57,7 +57,7 @@ def main(unused_argv):
     nbr_of_training_images = np.shape(eval_data)[0] # number of images to use from the training data set
     
     eval_data = util.reshape_grayscale_data(eval_data)
-    generator = data_generator(eval_data, eval_finger, eval_person, nbr_of_training_images, translation, rotation) # initialize data generator
+    generator = data_generator(eval_data, eval_finger, eval_person, translation, rotation, nbr_of_training_images) # initialize data generator
         
     nbr_of_image_pairs = 100
     eval_itr = 5
