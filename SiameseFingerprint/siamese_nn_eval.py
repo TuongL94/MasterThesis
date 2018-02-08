@@ -11,7 +11,23 @@ import tensorflow as tf
 import os 
 import utilities as util
 
-def evaluate_mnist_siamese_network(left_pairs_o,right_pairs_o,sim_labels,threshold):
+def evaluate_siamese_network(left_pairs_o,right_pairs_o,sim_labels,threshold):
+    """ Computes evaluation metrics.
+    
+    Input:
+    left_pairs_o - numpy array with rows corresponding to arrays obtained from inference step in the siamese network
+    right_pairs_o - numpy array with rows corresponding to arrays obtained from inference step in the siamese network
+    sim_labels - ground truth for pairs of arrays (1 if the arrays correspond to matching images, 0 otherwise)
+    threshold - distance threshold, if the 2-norm distanc between two arrays are less than or equal to this value 
+    they are considered to correspond to a matching pair of images.
+    Returns:
+    precision - precision
+    false_pos - number of false positives
+    false_neg - number of false negatives
+    recall - recall (nbr of true positives/total number of positive examples)
+    fnr - false negative rate (false negative/total number of positive examples)
+    fpr - false positive rate (false positive/total number of negative examples)
+    """
     matching = np.zeros(len(sim_labels))
     l2_normalized_diff = util.l2_normalize(left_pairs_o-right_pairs_o)
     false_pos = 0
@@ -100,7 +116,9 @@ def main(unused_argv):
                 
 #            left_full = np.array(left_full)
 #            right_full = np.array(right_full)
-            precision, false_pos, false_neg, recall, fnr, fpr = evaluate_mnist_siamese_network(left_full,right_full,sim_full,0.62)
+
+            precision, false_pos, false_neg, recall, fnr, fpr = evaluate_siamese_network(left_full,right_full,sim_full,0.7)
+
             print("Precision: %f " % precision)
             print("# False positive: %d " % false_pos)
             print("# False negative: %d " % false_neg)

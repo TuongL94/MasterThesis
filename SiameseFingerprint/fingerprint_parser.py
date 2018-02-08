@@ -12,6 +12,13 @@ import os
 import sys
 
 def fingerprint_parser(index_file_dir, index_file_name):
+    """ Parser for Precise Biometrics fingerprint database with alignment data.
+    
+    Input:
+    index_file_dir - directory of the index file (ending with a forward slash "/")
+    index_file_name - name of the index file
+    Returns: lists with information used in the siamese network for fingerprint verification    
+    """
     person_id = []
     finger_id = []
     fingerprints = []
@@ -42,17 +49,22 @@ def fingerprint_parser(index_file_dir, index_file_name):
 def main(argv):
     dir_path = os.path.dirname(os.path.realpath(__file__)) # directory of file being executed
     person_id, finger_id, fingerprints, translation, rotation = fingerprint_parser(argv[0],argv[1])
+    
+    # convert to numpy arrays and corrects scaling 
     person_id = np.array(person_id)
     finger_id = np.array(finger_id)
     fingerprints = np.array(fingerprints)/255
     translation = np.array(translation)/256
     rotation = np.array(rotation)/65536*360 
 
+    # save paths
     filename_1 = dir_path + "/person_id"
     filename_2 = dir_path + "/finger_id"
     filename_3 = dir_path + "/fingerprints" 
     filename_4 = dir_path + "/translation" 
     filename_5 = dir_path + "/rotation" 
+    
+    # saves numpy arrays
     np.save(filename_1,person_id)
     np.save(filename_2,finger_id)
     np.save(filename_3,fingerprints)
