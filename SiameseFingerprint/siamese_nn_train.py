@@ -41,7 +41,7 @@ def main(unused_argv):
     generator = data_generator(finger_data, finger_id, person_id, translation, rotation, nbr_of_training_images) # initialize data generator
     
     # parameters for training
-    batch_size = 100
+    batch_size = 5
     train_iter = 50
     learning_rate = 0.0001
     momentum = 0.9
@@ -50,7 +50,7 @@ def main(unused_argv):
     placeholder_dims = [batch_size, image_dims[1], image_dims[2], image_dims[3]] 
     
     # parameters for evaluation
-    nbr_of_eval_pairs = 100
+    nbr_of_eval_pairs = 5
     
     tf.reset_default_graph()
     
@@ -105,10 +105,12 @@ def main(unused_argv):
 #            global_vars = tf.global_variables()
 #            for i in range(len(global_vars)):
 #                print(global_vars[i])
+
         graph = tf.get_default_graph()
         conv1_layer = graph.get_tensor_by_name("conv_layer_1/kernel:0")
+        nbr_of_filters_conv1 = sess.run(tf.shape(conv1_layer)[-1])
         conv1_layer = tf.transpose(conv1_layer, perm = [3,0,1,2])
-        filter1 = tf.summary.image('Filter_1', conv1_layer, max_outputs=32)
+        filter1 = tf.summary.image('Filter_1', conv1_layer, max_outputs=nbr_of_filters_conv1)
             
         summary_op = tf.summary.scalar('loss', loss)
         x_image = tf.summary.image('input', left)
