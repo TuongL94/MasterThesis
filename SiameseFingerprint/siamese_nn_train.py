@@ -68,7 +68,7 @@ def main(unused_argv):
         left_eval_output = sm.inference(left_eval)
         right_eval_output = sm.inference(right_eval)
         
-        margin = tf.constant(2000.0) # margin for contrastive loss
+        margin = tf.constant(1.0) # margin for contrastive loss
         loss = sm.contrastive_loss(left_output,right_output,label,margin)
         
         tf.add_to_collection("loss",loss)
@@ -109,23 +109,20 @@ def main(unused_argv):
 
         graph = tf.get_default_graph()
         conv1_layer = graph.get_tensor_by_name("conv_layer_1/kernel:0")
-<<<<<<< HEAD
+        nbr_of_filters_conv1 = sess.run(tf.shape(conv1_layer)[-1])
+
         conv2_layer = graph.get_tensor_by_name("conv_layer_2/kernel:0")
         hist_conv1 = tf.summary.histogram("hist_conv1", conv1_layer)
         hist_conv2 = tf.summary.histogram("hist_conv2", conv2_layer)
         conv1_layer = tf.transpose(conv1_layer, perm = [3,0,1,2])
-        filter1 = tf.summary.image('Filter_1', conv1_layer, max_outputs=32)
+        filter1 = tf.summary.image('Filter_1', conv1_layer, max_outputs=nbr_of_filters_conv1)
 #        conv2_layer = tf.transpose(conv2_layer, perm = [3,0,1,2])
 #        filter2 = tf.summary.image('Filter_2', conv2_layer, max_outputs=32)
         bias_conv1 = graph.get_tensor_by_name("conv_layer_1/bias:0")
         hist_bias1 = tf.summary.histogram("hist_bias1", bias_conv1)
         bias_conv2 = graph.get_tensor_by_name("conv_layer_2/bias:0")
         hist_bias2 = tf.summary.histogram("hist_bias2", bias_conv2)
-=======
-        nbr_of_filters_conv1 = sess.run(tf.shape(conv1_layer)[-1])
-        conv1_layer = tf.transpose(conv1_layer, perm = [3,0,1,2])
-        filter1 = tf.summary.image('Filter_1', conv1_layer, max_outputs=nbr_of_filters_conv1)
->>>>>>> 0cc1a4636f86ec5cc7d9bd4797af4b8c70b7a7fe
+
             
         summary_op = tf.summary.scalar('loss', loss)
         x_image = tf.summary.image('input', left)
