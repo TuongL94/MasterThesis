@@ -1,0 +1,2 @@
+model_checkpoint_path: "/tmp/siamese_finger_model/"
+all_model_checkpoint_paths: "/tmp/siamese_finger_model/"

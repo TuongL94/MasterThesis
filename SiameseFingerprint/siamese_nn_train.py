@@ -42,7 +42,7 @@ def main(unused_argv):
     
     # parameters for training
     batch_size = 100
-    train_iter = 500
+    train_iter = 2000
     learning_rate = 0.00001
     momentum = 0.9
 
@@ -61,13 +61,14 @@ def main(unused_argv):
 
          # create placeholders
         left,right,label,left_eval,right_eval = sm.placeholder_inputs(placeholder_dims,nbr_of_eval_pairs)
+#        left,right,label = sm.placeholder_inputs(placeholder_dims,nbr_of_eval_pairs)
             
         left_output = sm.inference(left)            
         right_output = sm.inference(right)
         left_eval_output = sm.inference(left_eval)
         right_eval_output = sm.inference(right_eval)
         
-        margin = tf.constant(5.0) # margin for contrastive loss
+        margin = tf.constant(2000.0) # margin for contrastive loss
         loss = sm.contrastive_loss(left_output,right_output,label,margin)
         
         tf.add_to_collection("loss",loss)
@@ -107,12 +108,21 @@ def main(unused_argv):
 #                print(global_vars[i])
         graph = tf.get_default_graph()
         conv1_layer = graph.get_tensor_by_name("conv_layer_1/kernel:0")
+        conv2_layer = graph.get_tensor_by_name("conv_layer_2/kernel:0")
+        hist_conv1 = tf.summary.histogram("hist_conv1", conv1_layer)
+        hist_conv2 = tf.summary.histogram("hist_conv2", conv2_layer)
         conv1_layer = tf.transpose(conv1_layer, perm = [3,0,1,2])
         filter1 = tf.summary.image('Filter_1', conv1_layer, max_outputs=32)
+#        conv2_layer = tf.transpose(conv2_layer, perm = [3,0,1,2])
+#        filter2 = tf.summary.image('Filter_2', conv2_layer, max_outputs=32)
+        bias_conv1 = graph.get_tensor_by_name("conv_layer_1/bias:0")
+        hist_bias1 = tf.summary.histogram("hist_bias1", bias_conv1)
+        bias_conv2 = graph.get_tensor_by_name("conv_layer_2/bias:0")
+        hist_bias2 = tf.summary.histogram("hist_bias2", bias_conv2)
             
         summary_op = tf.summary.scalar('loss', loss)
         x_image = tf.summary.image('input', left)
-        summary_op = tf.summary.merge([summary_op, x_image, filter1])
+        summary_op = tf.summary.merge([summary_op, x_image, filter1, hist_conv1, hist_conv2, hist_bias1, hist_bias2])
         # Summary setup
         writer = tf.summary.FileWriter(output_dir + "/summary", graph=tf.get_default_graph())
             

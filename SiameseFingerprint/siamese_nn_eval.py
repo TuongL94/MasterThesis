@@ -76,7 +76,7 @@ def main(unused_argv):
     generator = data_generator(eval_data, eval_finger, eval_person, translation, rotation, nbr_of_training_images) # initialize data generator
         
     nbr_of_image_pairs = 100
-    eval_itr = 5
+    eval_itr = 10
     
     left,right,sim = generator.prep_eval_match(nbr_of_image_pairs)
         
@@ -117,7 +117,7 @@ def main(unused_argv):
 #            left_full = np.array(left_full)
 #            right_full = np.array(right_full)
 
-            precision, false_pos, false_neg, recall, fnr, fpr = evaluate_siamese_network(left_full,right_full,sim_full,0.7)
+            precision, false_pos, false_neg, recall, fnr, fpr = evaluate_siamese_network(left_full,right_full,sim_full,0.15)
 
             print("Precision: %f " % precision)
             print("# False positive: %d " % false_pos)

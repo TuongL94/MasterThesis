@@ -49,9 +49,9 @@ class data_generator:
         
         self.match_train, self.no_match_train = self.gen_pair_indices(5,30,training = True)
         self.match_eval, self.no_match_eval = self.gen_pair_indices(5,30,training = False)
-        self.all_match, self.all_no_match = self.all_combinations(5, 80)
-        mat = self.all_match
-        no = self.all_no_match
+#        self.all_match, self.all_no_match = self.all_combinations(5, 80)
+#        mat = self.all_match
+#        no = self.all_no_match
         
     def is_rotation_similar(self,angle_1,angle_2,rotation_diff):
         """ Checks if two angles differ by at most rotation_diff in absolute value.
