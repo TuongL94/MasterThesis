@@ -49,6 +49,9 @@ class data_generator:
         
         self.match_train, self.no_match_train = self.gen_pair_indices(5,30,training = True)
         self.match_eval, self.no_match_eval = self.gen_pair_indices(5,30,training = False)
+        self.all_match, self.all_no_match = self.all_combinations(5, 80)
+        mat = self.all_match
+        no = self.all_no_match
         
     def is_rotation_similar(self,angle_1,angle_2,rotation_diff):
         """ Checks if two angles differ by at most rotation_diff in absolute value.
@@ -119,7 +122,7 @@ class data_generator:
         no_match - numpy array of non-matching indices, one row corresponds to one non-matching indices
         """
         match = [] # matching pair indices
-        no_match = [] # non-matching pair indices
+        no_match = [] # non-matching pair indices 
         
         if training:
             for i in range(len(self.shift_idx)-1):
@@ -160,6 +163,42 @@ class data_generator:
                         no_match.append([self.shift_idx[i]+1, j])
     
         # Shuffle no_match's columns so that it contains different non-matching fingers 
+        no_match = np.array(no_match)
+        np.random.shuffle(no_match)
+        return match,no_match
+    
+    def all_combinations(self, rotation_diff, translation_diff):
+        match = [] # matching pair indices
+        no_match = [] # non-matching pair indices 
+        
+       
+        for i in range(len(self.shift_idx)-1):
+            for k in range(self.shift_idx[i+1]-self.shift_idx[i]):
+                template_trans = self.translation[self.shift_idx[i]+k]
+                template_rot = self.rotation[self.shift_idx[i]+k]
+#                k = 2
+                for j in range(self.shift_idx[i]+k+1, self.shift_idx[i+1]):
+                    rot_cand = self.rotation[j]
+                    trans_cand = self.translation[j]
+                    translation_match = False
+                    rotation_match = self.is_rotation_similar(template_rot,rot_cand,rotation_diff)
+                    
+                    # if rotation is sufficiently similar check translation
+                    if rotation_match:
+                        translation_match = self.is_translation_similar(template_trans,trans_cand,translation_diff)
+                    
+                    # if rotation and translation is similar the images related to the corresponding
+                    # shift indices are considered similar
+                    if translation_match and rotation_match:
+                        match.append([self.shift_idx[i]+k, j])
+                    else:
+                        no_match.append([self.shift_idx[i]+k, j])
+#                    k += 1    
+                    
+            for n in range(self.shift_idx[i+1], self.images.shape[0]):
+                no_match.append([self.shift_idx[i]+i, n])
+            
+            
         no_match = np.array(no_match)
         np.random.shuffle(no_match)
         return match,no_match
