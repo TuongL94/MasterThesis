@@ -50,7 +50,7 @@ def main(unused_argv):
     placeholder_dims = [batch_size, image_dims[1], image_dims[2], image_dims[3]] 
     
     # parameters for evaluation
-    nbr_of_eval_pairs = 100
+    nbr_of_eval_pairs = 5
     
     tf.reset_default_graph()
     
@@ -106,8 +106,10 @@ def main(unused_argv):
 #            global_vars = tf.global_variables()
 #            for i in range(len(global_vars)):
 #                print(global_vars[i])
+
         graph = tf.get_default_graph()
         conv1_layer = graph.get_tensor_by_name("conv_layer_1/kernel:0")
+<<<<<<< HEAD
         conv2_layer = graph.get_tensor_by_name("conv_layer_2/kernel:0")
         hist_conv1 = tf.summary.histogram("hist_conv1", conv1_layer)
         hist_conv2 = tf.summary.histogram("hist_conv2", conv2_layer)
@@ -119,6 +121,11 @@ def main(unused_argv):
         hist_bias1 = tf.summary.histogram("hist_bias1", bias_conv1)
         bias_conv2 = graph.get_tensor_by_name("conv_layer_2/bias:0")
         hist_bias2 = tf.summary.histogram("hist_bias2", bias_conv2)
+=======
+        nbr_of_filters_conv1 = sess.run(tf.shape(conv1_layer)[-1])
+        conv1_layer = tf.transpose(conv1_layer, perm = [3,0,1,2])
+        filter1 = tf.summary.image('Filter_1', conv1_layer, max_outputs=nbr_of_filters_conv1)
+>>>>>>> 0cc1a4636f86ec5cc7d9bd4797af4b8c70b7a7fe
             
         summary_op = tf.summary.scalar('loss', loss)
         x_image = tf.summary.image('input', left)
