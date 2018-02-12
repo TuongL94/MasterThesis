@@ -18,7 +18,7 @@ def inference(input):
     with tf.name_scope("conv1"):
         conv1 = tf.layers.conv2d(
                 inputs = input_layer,
-                filters = 25,
+                filters = 80,
                 kernel_size = [5, 5], 
                 padding = "same",
                 activation = tf.nn.relu,
@@ -35,13 +35,13 @@ def inference(input):
     # Convolutional Layer 2 and pooling layer 2
     conv2 = tf.layers.conv2d(
             inputs = pool1,
-            filters = 64,
+            filters = 50,
             kernel_size = [5,5],
             padding = "same",
             activation = tf.nn.relu,
             reuse = tf.AUTO_REUSE,
-#            kernel_initializer = tf.initializers.truncated_normal(),
-            kernel_initializer = tf.random_uniform_initializer(minval=-1, maxval=1),
+            kernel_initializer = tf.initializers.truncated_normal(),
+#            kernel_initializer = tf.random_uniform_initializer(minval=-1, maxval=1),
             name="conv_layer_2")
             
     pool2 = tf.layers.max_pooling2d(

@@ -6,12 +6,14 @@ Created on Mon Jan 29 13:44:22 2018
 """
 
 from data_generator import data_generator
+import siamese_nn_eval as nn_eval
 
 import siamese_nn_model as sm
 import numpy as np
 import tensorflow as tf
 import os 
 import utilities as util
+import matplotlib.pyplot as plt
 
 
 def main(unused_argv):
@@ -42,15 +44,15 @@ def main(unused_argv):
     
     # parameters for training
     batch_size = 100
-    train_iter = 2000
-    learning_rate = 0.00001
+    train_iter = 200
+    learning_rate = 0.0000001
     momentum = 0.9
 
     image_dims = np.shape(finger_data)
     placeholder_dims = [batch_size, image_dims[1], image_dims[2], image_dims[3]] 
     
     # parameters for evaluation
-    nbr_of_eval_pairs = 5
+    nbr_of_eval_pairs = 100
     
     tf.reset_default_graph()
     
@@ -68,7 +70,7 @@ def main(unused_argv):
         left_eval_output = sm.inference(left_eval)
         right_eval_output = sm.inference(right_eval)
         
-        margin = tf.constant(1.0) # margin for contrastive loss
+        margin = tf.constant(5.0) # margin for contrastive loss
         loss = sm.contrastive_loss(left_output,right_output,label,margin)
         
         tf.add_to_collection("loss",loss)
@@ -106,7 +108,8 @@ def main(unused_argv):
 #            global_vars = tf.global_variables()
 #            for i in range(len(global_vars)):
 #                print(global_vars[i])
-
+            
+        # Set up summaries to be displayed in tensorboard
         graph = tf.get_default_graph()
         conv1_layer = graph.get_tensor_by_name("conv_layer_1/kernel:0")
         nbr_of_filters_conv1 = sess.run(tf.shape(conv1_layer)[-1])
@@ -122,25 +125,40 @@ def main(unused_argv):
         hist_bias1 = tf.summary.histogram("hist_bias1", bias_conv1)
         bias_conv2 = graph.get_tensor_by_name("conv_layer_2/bias:0")
         hist_bias2 = tf.summary.histogram("hist_bias2", bias_conv2)
-
-            
+        
         summary_op = tf.summary.scalar('loss', loss)
         x_image = tf.summary.image('input', left)
         summary_op = tf.summary.merge([summary_op, x_image, filter1, hist_conv1, hist_conv2, hist_bias1, hist_bias2])
         # Summary setup
         writer = tf.summary.FileWriter(output_dir + "/summary", graph=tf.get_default_graph())
             
-        
+        # Training loop
+        counter = 0
+        data_size = batch_size
+        precision_over_time = []
         for i in range(1,train_iter + 1):
-            b_l, b_r, b_sim = generator.gen_match_batch(batch_size)
+#            b_l, b_r, b_sim = generator.gen_match_batch(batch_size)
+            b_l, b_r, b_sim, counter = generator.gen_seed0(counter, data_size, batch_size)
             _,loss_value,left_o,right_o, summary = sess.run([train_op, loss, left_output, right_output, summary_op],feed_dict={left:b_l, right:b_r, label:b_sim})
 #            print(loss_value)
 #            print(left_o)
 #            print(right_o)
             if i % 10 == 0:
                 print("Iteration %d: loss = %.5f" % (i, loss_value))
+#                precision, false_pos, false_neg, recall, fnr, fpr = nn_eval.evaluate_siamese_network(left_o,
+#                                                                                                     right_o,
+#                                                                                                     b_sim,
+#                                                                                                     0.65)
+#                precision_over_time.append(precision)
             writer.add_summary(summary, i)
-        
+            
+            precision, false_pos, false_neg, recall, fnr, fpr = nn_eval.evaluate_siamese_network(left_o,
+                                                                                                     right_o,
+                                                                                                     b_sim,
+                                                                                                     0.65)
+            precision_over_time.append(precision)
+
+                
 #        graph = tf.get_default_graph()
 #        kernel_var = graph.get_tensor_by_name("conv_layer_1/bias:0")
 #        kernel_var_after_init = sess.run(kernel_var)
@@ -149,6 +167,11 @@ def main(unused_argv):
         
         save_path = tf.train.Saver().save(sess,output_dir)
         print("Trained model saved in path: %s" % save_path)
+        
+        # Plot precision over time
+        time = list(range(len(precision_over_time)))
+        plt.plot(time, precision_over_time)
+        plt.show()
     
     
 if __name__ == "__main__":

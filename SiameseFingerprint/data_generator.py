@@ -33,10 +33,10 @@ class data_generator:
         self.shift_idx = [] # list with indices where fingerId changes
 
         idx_counter = 0
-        nbr_of_persons = person_id[-1]
+        nbr_of_persons = self.person_id[-1]
         for i in range(nbr_of_persons):
             finger_counter = 0
-            while idx_counter < len(person_id):
+            while idx_counter < len(self.person_id):
                 if not i+1 == self.person_id[idx_counter]:
                     break
                 if not finger_counter == self.finger_id[idx_counter]:
@@ -320,7 +320,7 @@ class data_generator:
                 sim.append([0])
                 switch_match = 0
         
-        left, right, sim =  util.shuffle_data([left, right, sim])    
+#        left, right, sim =  util.shuffle_data([left, right, sim])    
         
         return np.array(left), np.array(right), np.array(sim)
     
@@ -354,3 +354,26 @@ class data_generator:
             count += 1
         
         return np.array(left),np.array(right),np.array(sim)
+    
+    def gen_seed0(self, counter, data_size, batch_size):
+        if counter == 0:
+            self.left_all, self.right_all, self.sim_all = self.gen_match_batch(data_size)
+#            self.left_all = left_all[0:data_size,:,:,:]
+#            self.right_all = right_all[0:data_size,:,:,:]
+#            self.sim_all = sim_all[0:data_size]
+            
+        idx_counter = counter % batch_size
+        
+        left = self.left_all[idx_counter:idx_counter+batch_size]
+        right = self.right_all[idx_counter:idx_counter+batch_size]
+        sim = self.sim_all[idx_counter:idx_counter+batch_size]
+        
+        return left,right,sim,counter+batch_size
+            
+        
+        
+        
+        
+        
+        
+        
