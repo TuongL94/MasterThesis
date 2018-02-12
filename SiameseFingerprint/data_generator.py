@@ -195,8 +195,8 @@ class data_generator:
                         no_match.append([self.shift_idx[i]+k, j])
 #                    k += 1    
                     
-            for n in range(self.shift_idx[i+1], self.images.shape[0]):
-                no_match.append([self.shift_idx[i]+i, n])
+                for n in range(self.shift_idx[i+1], self.images.shape[0]):
+                    no_match.append([self.shift_idx[i]+k, n])
             
             
         no_match = np.array(no_match)
