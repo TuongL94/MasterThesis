@@ -8,6 +8,7 @@ Created on Wed Jan 24 15:24:03 2018
 import numpy as np
 import random
 import utilities as util
+import math
 
 class data_generator:
     
@@ -47,11 +48,13 @@ class data_generator:
                 
         self.shift_idx.append(len(self.person_id) - 1)
         
-        self.match_train, self.no_match_train = self.gen_pair_indices(5,30,training = True)
-        self.match_eval, self.no_match_eval = self.gen_pair_indices(5,30,training = False)
-#        self.all_match, self.all_no_match = self.all_combinations(5, 80)
-#        mat = self.all_match
-#        no = self.all_no_match
+#        self.match_train, self.no_match_train = self.gen_pair_indices(5,80,training = True)
+#        self.match_eval, self.no_match_eval = self.gen_pair_indices(5,80,training = False)
+        
+        self.all_match, self.all_no_match = self.all_combinations(5, 80)
+        percentages = [0.8,0.1]
+        self.match_train, self.match_val, self.match_eval = self.three_split_array(self.all_match,percentages)        
+        self.no_match_train, self.no_match_val , self.no_match_eval = self.three_split_array(self.all_no_match,percentages)
         
     def is_rotation_similar(self,angle_1,angle_2,rotation_diff):
         """ Checks if two angles differ by at most rotation_diff in absolute value.
@@ -171,12 +174,10 @@ class data_generator:
         match = [] # matching pair indices
         no_match = [] # non-matching pair indices 
         
-       
         for i in range(len(self.shift_idx)-1):
             for k in range(self.shift_idx[i+1]-self.shift_idx[i]):
                 template_trans = self.translation[self.shift_idx[i]+k]
                 template_rot = self.rotation[self.shift_idx[i]+k]
-#                k = 2
                 for j in range(self.shift_idx[i]+k+1, self.shift_idx[i+1]):
                     rot_cand = self.rotation[j]
                     trans_cand = self.translation[j]
@@ -193,7 +194,6 @@ class data_generator:
                         match.append([self.shift_idx[i]+k, j])
                     else:
                         no_match.append([self.shift_idx[i]+k, j])
-#                    k += 1    
                     
             for n in range(self.shift_idx[i+1], self.images.shape[0]):
                 no_match.append([self.shift_idx[i]+i, n])
@@ -294,7 +294,7 @@ class data_generator:
 #            count += 1
 #        
 #        return np.array(left),np.array(right),np.array(sim)
-
+#
     def gen_match_batch(self, batch_size):
         """ Generates a training batch with matched and non-matched pairs of images.
         
@@ -316,6 +316,46 @@ class data_generator:
                 switch_match = 1
             else:
                 rnd_no_match = self.no_match_train[random.randint(0,len(self.no_match_train)-1)]
+                util.rand_assign_pair(left,right,self.images[rnd_no_match[0]],self.images[rnd_no_match[1]])
+                sim.append([0])
+                switch_match = 0
+        
+        left, right, sim =  util.shuffle_data([left, right, sim])    
+        
+        return np.array(left), np.array(right), np.array(sim)
+        
+    
+    def gen_batch(self, batch_size, training = 1):
+        """ Generates a batch with matched and non-matched pairs of images.
+        
+        Input:
+        batch_size - the size of the batch
+        training - parameter to determine if the generated batch should be used for training,
+        if training is set to 1 the batch is used for training otherwise it is used for validation.
+        Returns: three numpy arrays where the first two contain one image from randomly selected image pairs respectively.
+        The last array indicates if corresponding pairs in the first two arrays are matching or non-matching
+        pairs, if the pairs match the corresponding element in the last array is 1, otherwise 0.
+        """
+        left = []
+        right = []
+        sim = []
+        
+        if training == 1:
+            current_matching_set = self.match_train
+            current_non_matching_set = self.no_match_train
+        else:
+            current_matching_set = self.match_val
+            current_non_matching_set = self.no_match_val
+            
+        switch_match = 0
+        for i in range(batch_size):
+            if switch_match == 0:
+                rnd_match = current_matching_set[random.randint(0,len(current_matching_set)-1)]
+                util.rand_assign_pair(left,right,self.images[rnd_match[0]],self.images[rnd_match[1]])
+                sim.append([1])
+                switch_match = 1
+            else:
+                rnd_no_match = current_non_matching_set[random.randint(0,len(current_non_matching_set)-1)]
                 util.rand_assign_pair(left,right,self.images[rnd_no_match[0]],self.images[rnd_no_match[1]])
                 sim.append([0])
                 switch_match = 0
@@ -354,3 +394,13 @@ class data_generator:
             count += 1
         
         return np.array(left),np.array(right),np.array(sim)
+
+    def three_split_array(self,input_array,percentage):
+        length = len(input_array)
+        split_ind = [math.floor(length*percentage[0]), math.floor(length*percentage[0])+math.floor(length*percentage[1])]
+        
+        first_split = input_array[0:split_ind[0]+1]
+        second_split = input_array[split_ind[0]+1:split_ind[1]+1]
+        third_split = input_array[split_ind[1]+1:]
+        return first_split,second_split,third_split
+    

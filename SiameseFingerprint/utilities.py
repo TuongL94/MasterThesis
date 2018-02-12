@@ -100,11 +100,3 @@ def rand_assign_pair(left,right,image_1,image_2):
         left.append(image_2)
         right.append(image_1)
     
-    
-    
-    
-    
-    
-    
-    
-    

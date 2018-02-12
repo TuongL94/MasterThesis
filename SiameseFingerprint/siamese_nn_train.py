@@ -35,19 +35,22 @@ def main(unused_argv):
     
     output_dir = "/tmp/siamese_finger_model/" # directory where the model will be saved
     
-    nbr_of_training_images = np.shape(finger_data)[0] # number of images to use from the training data set
+    nbr_of_images = np.shape(finger_data)[0] # number of images to use from the original data set
     
     finger_data = util.reshape_grayscale_data(finger_data)
-    generator = data_generator(finger_data, finger_id, person_id, translation, rotation, nbr_of_training_images) # initialize data generator
+    generator = data_generator(finger_data, finger_id, person_id, translation, rotation, nbr_of_images) # initialize data generator
     
     # parameters for training
-    batch_size = 100
-    train_iter = 2000
+    batch_size_train = 5
+    train_iter = 50
     learning_rate = 0.00001
     momentum = 0.9
 
     image_dims = np.shape(finger_data)
-    placeholder_dims = [batch_size, image_dims[1], image_dims[2], image_dims[3]] 
+    placeholder_dims = [batch_size_train, image_dims[1], image_dims[2], image_dims[3]]
+    
+    # parameters for validation
+    batch_size_val = 5
     
     # parameters for evaluation
     nbr_of_eval_pairs = 5
@@ -60,7 +63,7 @@ def main(unused_argv):
         is_model_new = True
 
          # create placeholders
-        left,right,label,left_eval,right_eval = sm.placeholder_inputs(placeholder_dims,nbr_of_eval_pairs)
+        left,right,label,left_val,right_val,label_val,left_eval,right_eval = sm.placeholder_inputs(placeholder_dims,nbr_of_eval_pairs,batch_size_val)
 #        left,right,label = sm.placeholder_inputs(placeholder_dims,nbr_of_eval_pairs)
             
         left_output = sm.inference(left)            
@@ -68,14 +71,21 @@ def main(unused_argv):
         left_eval_output = sm.inference(left_eval)
         right_eval_output = sm.inference(right_eval)
         
-        margin = tf.constant(1.0) # margin for contrastive loss
-        loss = sm.contrastive_loss(left_output,right_output,label,margin)
+        left_val_output = sm.inference(left_val)
+        right_val_output = sm.inference(right_val)
         
-        tf.add_to_collection("loss",loss)
+        margin = tf.constant(4.0) # margin for contrastive loss
+        train_loss = sm.contrastive_loss(left_output,right_output,label,margin)
+        
+        val_loss = sm.contrastive_loss(left_val_output,right_val_output,label_val,margin)
+        
+        tf.add_to_collection("train_loss",train_loss)
+        tf.add_to_collection("val_loss",val_loss)
         tf.add_to_collection("left_output",left_output)
         tf.add_to_collection("right_output",right_output)
         tf.add_to_collection("left_eval_output",left_eval_output)
         tf.add_to_collection("right_eval_output",right_eval_output)
+        
         saver = tf.train.Saver()
         
     else:
@@ -87,14 +97,18 @@ def main(unused_argv):
         left = g.get_tensor_by_name("left:0")
         right = g.get_tensor_by_name("right:0")
         label = g.get_tensor_by_name("label:0")
-        loss = tf.get_collection("loss")[0]
+        train_loss = tf.get_collection("train_loss")[0]
         left_output = tf.get_collection("left_output")[0]
         right_output = tf.get_collection("right_output")[0]
-    
+        
+        left_val = g.get_tensor_by_name("left_val:0")
+        right_val = g.get_tensor_by_name("right_val:0")
+        label_val = g.get_tensor_by_name("label_val:0")
+        val_loss = tf.get_collection("val_loss")[0]
     
     with tf.Session() as sess:
         if is_model_new:
-            train_op = sm.training(loss, learning_rate, momentum)
+            train_op = sm.training(train_loss, learning_rate, momentum)
             sess.run(tf.global_variables_initializer()) # initialize all trainable parameters
             tf.add_to_collection("train_op",train_op)
         else:
@@ -124,21 +138,25 @@ def main(unused_argv):
         hist_bias2 = tf.summary.histogram("hist_bias2", bias_conv2)
 
             
-        summary_op = tf.summary.scalar('loss', loss)
+        summary_op = tf.summary.scalar('training_loss', train_loss)
+        summary_val_loss = tf.summary.scalar("validation_loss",val_loss)
         x_image = tf.summary.image('input', left)
-        summary_op = tf.summary.merge([summary_op, x_image, filter1, hist_conv1, hist_conv2, hist_bias1, hist_bias2])
+        summary_op = tf.summary.merge([summary_op, x_image, filter1, hist_conv1, hist_conv2, hist_bias1, hist_bias2,summary_val_loss])
         # Summary setup
         writer = tf.summary.FileWriter(output_dir + "/summary", graph=tf.get_default_graph())
             
         
         for i in range(1,train_iter + 1):
-            b_l, b_r, b_sim = generator.gen_match_batch(batch_size)
-            _,loss_value,left_o,right_o, summary = sess.run([train_op, loss, left_output, right_output, summary_op],feed_dict={left:b_l, right:b_r, label:b_sim})
+#            b_l, b_r, b_sim = generator.gen_match_batch(batch_size_train)
+            b_l, b_r, b_sim = generator.gen_batch(batch_size_train)
+            b_val_l, b_val_r, b_val_sim = generator.gen_batch(batch_size_val,training = 0)
+            _,train_loss_value, val_loss_value,left_o,right_o, summary = sess.run([train_op, train_loss, val_loss, left_output, right_output, summary_op],feed_dict={left:b_l, right:b_r, label:b_sim, left_val:b_val_l, right_val:b_val_r,label_val:b_val_sim})
 #            print(loss_value)
 #            print(left_o)
 #            print(right_o)
             if i % 10 == 0:
-                print("Iteration %d: loss = %.5f" % (i, loss_value))
+                print("Iteration %d: train loss = %.5f" % (i, train_loss_value))
+                print("Iteration %d: val loss = %.5f" % (i,val_loss_value))
             writer.add_summary(summary, i)
         
 #        graph = tf.get_default_graph()

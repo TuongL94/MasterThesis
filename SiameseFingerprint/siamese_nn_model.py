@@ -95,13 +95,12 @@ def contrastive_loss(input_1,input_2,label,margin):
     return tf.reduce_mean(label*d_sq + (1-label)*max_sq)/2
 
 def training(loss, learning_rate, momentum):
-    tf.summary.scalar('loss', loss)
     global_step = tf.Variable(0, trainable = False)
     optimizer = tf.train.MomentumOptimizer(learning_rate,momentum, use_nesterov=True)
     train_op = optimizer.minimize(loss,global_step = global_step)
     return train_op
     
-def placeholder_inputs(dims,nbr_of_eval_pairs):
+def placeholder_inputs(dims, nbr_of_val_pairs, nbr_of_eval_pairs):
     """ Creates placeholders for siamese neural network.
     
     This method returns placeholders for inputs to the siamese network in both
@@ -120,7 +119,12 @@ def placeholder_inputs(dims,nbr_of_eval_pairs):
     left = tf.placeholder(tf.float32, dims, name="left")
     right = tf.placeholder(tf.float32, dims, name="right")
     label = tf.placeholder(tf.float32, [dims[0], 1], name="label") # 1 if same, 0 if different
+    
+    left_val = tf.placeholder(tf.float32, [nbr_of_val_pairs, dims[1], dims[2], dims[3]], name="left_val")
+    right_val = tf.placeholder(tf.float32, [nbr_of_val_pairs, dims[1], dims[2], dims[3]], name="right_val")
+    label_val = tf.placeholder(tf.float32, [nbr_of_val_pairs, 1], name="label_val") # 1 if same, 0 if different
+    
     left_eval = tf.placeholder(tf.float32, [nbr_of_eval_pairs, dims[1], dims[2], dims[3]], name="left_eval")
     right_eval = tf.placeholder(tf.float32, [nbr_of_eval_pairs, dims[1], dims[2], dims[3]], name="right_eval")
-    return left,right,label,left_eval,right_eval
+    return left,right,label,left_val,right_val,label_val,left_eval,right_eval
     
