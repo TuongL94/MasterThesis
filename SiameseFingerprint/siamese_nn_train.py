@@ -12,6 +12,7 @@ import numpy as np
 import tensorflow as tf
 import os 
 import utilities as util
+import siamese_nn_eval as sme
 
 
 def main(unused_argv):
@@ -42,7 +43,7 @@ def main(unused_argv):
     
     # parameters for training
     batch_size_train = 5
-    train_iter = 50
+    train_iter = 20
     learning_rate = 0.00001
     momentum = 0.9
 
@@ -54,6 +55,8 @@ def main(unused_argv):
     
     # parameters for evaluation
     nbr_of_eval_pairs = 5
+    eval_itr = 10
+    threshold = 0.15
     
     tf.reset_default_graph()
     
@@ -168,6 +171,9 @@ def main(unused_argv):
         save_path = tf.train.Saver().save(sess,output_dir)
         print("Trained model saved in path: %s" % save_path)
     
-    
+    # Only run this if the final network is to be evaluated    
+    sme.evaluate_siamese_network(generator,nbr_of_eval_pairs,eval_itr,threshold,output_dir)
+
+
 if __name__ == "__main__":
     tf.app.run()

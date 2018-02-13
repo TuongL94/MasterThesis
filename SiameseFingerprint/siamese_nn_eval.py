@@ -4,15 +4,15 @@ Created on Wed Jan 31 14:34:36 2018
 
 @author: Tuong Lam
 """
-from data_generator import data_generator
+
 import numpy as np
 import scipy.linalg as sl
 import tensorflow as tf
 import os 
 import utilities as util
 
-def evaluate_siamese_network(left_pairs_o,right_pairs_o,sim_labels,threshold):
-    """ Computes evaluation metrics.
+def get_eval_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold):
+    """ Computes and returns evaluation metrics.
     
     Input:
     left_pairs_o - numpy array with rows corresponding to arrays obtained from inference step in the siamese network
@@ -54,8 +54,8 @@ def evaluate_siamese_network(left_pairs_o,right_pairs_o,sim_labels,threshold):
     fpr = false_pos/n
     
     return precision, false_pos, false_neg, recall, fnr, fpr
-
-def main(unused_argv):
+ 
+def evaluate_siamese_network(generator, nbr_of_eval_pairs, eval_itr, threshold,output_dir):
     """ This method is used to evaluate a siamese network for fingerprint datasets.
     
     The model is defined in the file siamese_nn_model.py and trained in 
@@ -63,25 +63,9 @@ def main(unused_argv):
     a model exists.
     
     """
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    eval_finger = np.load(dir_path + "/finger_id.npy")
-    eval_person = np.load(dir_path + "/person_id.npy")
-    eval_data = np.load(dir_path + "/fingerprints.npy")    
-    translation = np.load(dir_path + "/translation.npy")
-    rotation = np.load(dir_path + "/rotation.npy")
     
-    nbr_of_training_images = np.shape(eval_data)[0] # number of images to use from the training data set
-    
-    eval_data = util.reshape_grayscale_data(eval_data)
-    generator = data_generator(eval_data, eval_finger, eval_person, translation, rotation, nbr_of_training_images) # initialize data generator
-        
-    nbr_of_image_pairs = 100
-    eval_itr = 10
-    
-    left,right,sim = generator.prep_eval_match(nbr_of_image_pairs)
-        
-    output_dir = "/tmp/siamese_finger_model/" # directory where the model is saved
-    
+    left,right,sim = generator.prep_eval_match(nbr_of_eval_pairs)
+
     tf.reset_default_graph()
     
     if not os.path.exists(output_dir + ".meta"):
@@ -100,10 +84,8 @@ def main(unused_argv):
         
         with tf.Session() as sess:
             saver.restore(sess, tf.train.latest_checkpoint(output_dir))
-#            left_full = []
-#            right_full = []
             for i in range(eval_itr):
-                left,right,sim = generator.prep_eval_match(nbr_of_image_pairs)
+                left,right,sim = generator.prep_eval_match(nbr_of_eval_pairs)
                 left_o,right_o= sess.run([left_eval_inference,right_eval_inference],feed_dict = {left_eval:left, right_eval:right})
                 if i == 0:
                     left_full = left_o
@@ -114,10 +96,7 @@ def main(unused_argv):
                     right_full = np.vstack((right_full,right_o))
                     sim_full = np.vstack((sim_full, sim))
                 
-#            left_full = np.array(left_full)
-#            right_full = np.array(right_full)
-
-            precision, false_pos, false_neg, recall, fnr, fpr = evaluate_siamese_network(left_full,right_full,sim_full,0.15)
+            precision, false_pos, false_neg, recall, fnr, fpr = get_eval_diagnostics(left_full,right_full,sim_full,threshold)
 
             print("Precision: %f " % precision)
             print("# False positive: %d " % false_pos)
@@ -125,13 +104,4 @@ def main(unused_argv):
             print("# Recall: %f " % recall)
             print("# Miss rate/false negative rate: %f " % fnr)
             print("# fall-out/false positive rate: %f " % fpr)
-      
-if __name__ == "__main__":
-    tf.app.run()
-    
-    
-    
-    
-    
-
-        
+         
