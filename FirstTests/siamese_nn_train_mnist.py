@@ -32,14 +32,14 @@ def main(unused_argv):
     
     output_dir = "/tmp/siamese_mnist_model/" # directory where the model will be saved
     
-    nbr_of_training_images = 10000 # number of images to use from the training data set
+    nbr_of_training_images = 55000 # number of images to use from the training data set
     
     generator = data_generator(train_data,train_labels,nbr_of_training_images) # initialize data generator
     
     # parameters for training
     batch_size = 100
-    train_iter = 500
-    learning_rate = 0.01
+    train_iter = 2000
+    learning_rate = 0.00000001
     momentum = 0.99
     
     image_dims = np.shape(train_data)
@@ -100,15 +100,37 @@ def main(unused_argv):
 #            global_vars = tf.global_variables()
 #            for i in range(len(global_vars)):
 #                print(global_vars[i])
+        graph = tf.get_default_graph()
+        conv1_layer = graph.get_tensor_by_name("conv_layer_1/kernel:0")
+        nbr_of_filters_conv1 = sess.run(tf.shape(conv1_layer)[-1])
+
+        conv2_layer = graph.get_tensor_by_name("conv_layer_2/kernel:0")
+        hist_conv1 = tf.summary.histogram("hist_conv1", conv1_layer)
+        hist_conv2 = tf.summary.histogram("hist_conv2", conv2_layer)
+        conv1_layer = tf.transpose(conv1_layer, perm = [3,0,1,2])
+        filter1 = tf.summary.image('Filter_1', conv1_layer, max_outputs=nbr_of_filters_conv1)
+#        conv2_layer = tf.transpose(conv2_layer, perm = [3,0,1,2])
+#        filter2 = tf.summary.image('Filter_2', conv2_layer, max_outputs=32)
+        bias_conv1 = graph.get_tensor_by_name("conv_layer_1/bias:0")
+        hist_bias1 = tf.summary.histogram("hist_bias1", bias_conv1)
+        bias_conv2 = graph.get_tensor_by_name("conv_layer_2/bias:0")
+        hist_bias2 = tf.summary.histogram("hist_bias2", bias_conv2)
+            
+        summary_op = tf.summary.scalar('training_loss', loss)
+        x_image = tf.summary.image('input', left)
+        summary_op = tf.summary.merge([summary_op, x_image, filter1, hist_conv1, hist_conv2, hist_bias1, hist_bias2])
+        # Summary setup
+        writer = tf.summary.FileWriter(output_dir + "/summary", graph=tf.get_default_graph())
         
         for i in range(1,train_iter + 1):
             b_l, b_r, b_sim = generator.gen_pair_batch(batch_size)
-            _,loss_value,left_o,right_o = sess.run([train_op, loss, left_output, right_output],feed_dict={left:b_l, right:b_r, label:b_sim})
+            _,loss_value,left_o,right_o,summary = sess.run([train_op, loss, left_output, right_output, summary_op],feed_dict={left:b_l, right:b_r, label:b_sim})
 #            print(left_o)
 #            print(right_o)
             if i % 100 == 0:
                 print("Iteration %d: loss = %.5f" % (i, loss_value))
-        
+                
+            writer.add_summary(summary, i)
 #        graph = tf.get_default_graph()
 #        kernel_var = graph.get_tensor_by_name("conv_layer_1/bias:0")
 #        kernel_var_after_init = sess.run(kernel_var)

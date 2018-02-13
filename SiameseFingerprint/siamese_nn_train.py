@@ -12,7 +12,9 @@ import numpy as np
 import tensorflow as tf
 import os 
 import utilities as util
-
+import matplotlib.pyplot as plt
+import siamese_nn_eval as nn_eval
+import pickle
 
 def main(unused_argv):
     """ This method is used to train a siamese network for fingerprint datasets.
@@ -32,19 +34,27 @@ def main(unused_argv):
     finger_data = np.load(dir_path + "/fingerprints.npy")
     translation = np.load(dir_path + "/translation.npy")
     rotation = np.load(dir_path + "/rotation.npy")
+
     
     output_dir = "/tmp/siamese_finger_model/" # directory where the model will be saved
     
     nbr_of_images = np.shape(finger_data)[0] # number of images to use from the original data set
     
     finger_data = util.reshape_grayscale_data(finger_data)
-    generator = data_generator(finger_data, finger_id, person_id, translation, rotation, nbr_of_images) # initialize data generator
+    # Only run generator when the current saved generator is out of date and save it
+#    with open('generator_data.pk1', 'wb') as output:
+#        generator = data_generator(finger_data, finger_id, person_id, translation, rotation, nbr_of_images) # initialize data generator
+#        pickle.dump(generator, output, pickel.HIGHEST_PROTOCOL)
+    
+    # Load generator
+    with open('generator_data.pk1', 'rb') as input:
+        generator = pickle.load(input)
     
     # parameters for training
-    batch_size_train = 5
-    train_iter = 50
-    learning_rate = 0.00001
-    momentum = 0.9
+    batch_size_train = 100
+    train_iter = 500
+    learning_rate = 0.0000001
+    momentum = 0.99
 
     image_dims = np.shape(finger_data)
     placeholder_dims = [batch_size_train, image_dims[1], image_dims[2], image_dims[3]]
@@ -144,8 +154,13 @@ def main(unused_argv):
         summary_op = tf.summary.merge([summary_op, x_image, filter1, hist_conv1, hist_conv2, hist_bias1, hist_bias2,summary_val_loss])
         # Summary setup
         writer = tf.summary.FileWriter(output_dir + "/summary", graph=tf.get_default_graph())
-            
-        
+          
+#        counter = 0
+#        data_size = batch_size
+        precision_over_time = []
+        threshold = 0.5
+        thresh_step = 0.05
+        # Training loop
         for i in range(1,train_iter + 1):
 #            b_l, b_r, b_sim = generator.gen_match_batch(batch_size_train)
             b_l, b_r, b_sim = generator.gen_batch(batch_size_train)
@@ -158,7 +173,15 @@ def main(unused_argv):
                 print("Iteration %d: train loss = %.5f" % (i, train_loss_value))
                 print("Iteration %d: val loss = %.5f" % (i,val_loss_value))
             writer.add_summary(summary, i)
-        
+            precision, false_pos, false_neg, recall, fnr, fpr = nn_eval.evaluate_siamese_network(left_o,
+                                                                                                     right_o,
+                                                                                                     b_sim,
+                                                                                                     threshold) 
+            if false_pos > false_neg:
+                threshold -= thresh_step
+            else:
+                threshold += thresh_step   
+            precision_over_time.append(precision)
 #        graph = tf.get_default_graph()
 #        kernel_var = graph.get_tensor_by_name("conv_layer_1/bias:0")
 #        kernel_var_after_init = sess.run(kernel_var)
@@ -168,6 +191,12 @@ def main(unused_argv):
         save_path = tf.train.Saver().save(sess,output_dir)
         print("Trained model saved in path: %s" % save_path)
     
+        # Plot precision over time
+        time = list(range(len(precision_over_time)))
+        plt.plot(time, precision_over_time)
+        plt.show()
+        
+        print("Current threshold: %f" % threshold)
     
 if __name__ == "__main__":
     tf.app.run()

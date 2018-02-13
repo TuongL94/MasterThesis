@@ -404,3 +404,17 @@ class data_generator:
         third_split = input_array[split_ind[1]+1:]
         return first_split,second_split,third_split
     
+    
+    def gen_seed0(self, counter, data_size, batch_size):
+        if counter == 0:
+            self.left_all, self.right_all, self.sim_all = self.gen_match_batch(data_size)
+            
+        idx_counter = counter % batch_size
+        
+        left = self.left_all[idx_counter:idx_counter+batch_size]
+        right = self.right_all[idx_counter:idx_counter+batch_size]
+        sim = self.sim_all[idx_counter:idx_counter+batch_size]
+        
+        return left,right,sim,counter+batch_size
+            
+    
