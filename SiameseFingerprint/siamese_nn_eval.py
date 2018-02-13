@@ -60,8 +60,14 @@ def evaluate_siamese_network(generator, nbr_of_eval_pairs, eval_itr, threshold,o
     
     The model is defined in the file siamese_nn_model.py and trained in 
     the file siamese_nn_train.py. Evaluation will only be performed if
-    a model exists.
+    a model exists. The method will print evaluation metrics.
     
+    Input:
+    generator - an instance of a data_generator object used in training
+    nbr_of_eval_pairs - batch size for the evaluation placeholder
+    eval_itr - number of evaluation iterations
+    threshold - distance threshold (2-norm) for the decision stage
+    output_dir - the directory of the siamese model
     """
     
     left,right,sim = generator.prep_eval_match(nbr_of_eval_pairs)

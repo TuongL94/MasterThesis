@@ -13,33 +13,42 @@ import tensorflow as tf
 import os 
 import utilities as util
 import siamese_nn_eval as sme
+import matplotlib.pyplot as plt
+import pickle
 
 
 def main(unused_argv):
     """ This method is used to train a siamese network for fingerprint datasets.
     
     The model is defined in the file siamese_nn_model_mnist.py. The class
-    data_generator is used to generate batches for training. When training
-    is completed the model is saved in the file /tmp/siamese_finger_model/.
+    data_generator is used to generate batches for training and validation.
+    When training is completed the model is saved in the file /tmp/siamese_finger_model/.
     If a model exists it will be used for further training, otherwise a new
-    one is created.
+    one is created. It is also possible to evaluate the model directly after training.
     
     """
     
-#    Load fingerprint labels and data from file with names
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    finger_id = np.load(dir_path + "/finger_id.npy")
-    person_id = np.load(dir_path + "/person_id.npy")
-    finger_data = np.load(dir_path + "/fingerprints.npy")
-    translation = np.load(dir_path + "/translation.npy")
-    rotation = np.load(dir_path + "/rotation.npy")
-    
     output_dir = "/tmp/siamese_finger_model/" # directory where the model will be saved
     
-    nbr_of_images = np.shape(finger_data)[0] # number of images to use from the original data set
-    
-    finger_data = util.reshape_grayscale_data(finger_data)
-    generator = data_generator(finger_data, finger_id, person_id, translation, rotation, nbr_of_images) # initialize data generator
+    # Load fingerprint data and create a data_generator instance if one 
+    # does not exist, otherwise load existing data_generator
+    if not os.path.exists(dir_path + "/generator_data.pk1"):
+        with open('generator_data.pk1', 'wb') as output:
+            # Load fingerprint labels and data from file with names
+            finger_id = np.load(dir_path + "/finger_id.npy")
+            person_id = np.load(dir_path + "/person_id.npy")
+            finger_data = np.load(dir_path + "/fingerprints.npy")
+            translation = np.load(dir_path + "/translation.npy")
+            rotation = np.load(dir_path + "/rotation.npy")
+            nbr_of_images = np.shape(finger_data)[0] # number of images to use from the original data set
+            finger_data = util.reshape_grayscale_data(finger_data)
+            generator = data_generator(finger_data, finger_id, person_id, translation, rotation, nbr_of_images) # initialize data generator
+            pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
+    else:
+        # Load generator
+        with open('generator_data.pk1', 'rb') as input:
+            generator = pickle.load(input)
     
     # parameters for training
     batch_size_train = 5
@@ -47,7 +56,7 @@ def main(unused_argv):
     learning_rate = 0.00001
     momentum = 0.9
 
-    image_dims = np.shape(finger_data)
+    image_dims = np.shape(generator.images)
     placeholder_dims = [batch_size_train, image_dims[1], image_dims[2], image_dims[3]]
     
     # parameters for validation
@@ -56,8 +65,7 @@ def main(unused_argv):
     # parameters for evaluation
     nbr_of_eval_pairs = 5
     eval_itr = 10
-    threshold = 0.15
-    
+    threshold = 0.15    
     tf.reset_default_graph()
     
     # if models exists use the existing one otherwise create a new one
@@ -147,8 +155,13 @@ def main(unused_argv):
         summary_op = tf.summary.merge([summary_op, x_image, filter1, hist_conv1, hist_conv2, hist_bias1, hist_bias2,summary_val_loss])
         # Summary setup
         writer = tf.summary.FileWriter(output_dir + "/summary", graph=tf.get_default_graph())
-            
+          
+#        counter = 0
+#        data_size = batch_size
+        precision_over_time = []
+        thresh_step = 0.05
         
+        # Training loop
         for i in range(1,train_iter + 1):
 #            b_l, b_r, b_sim = generator.gen_match_batch(batch_size_train)
             b_l, b_r, b_sim = generator.gen_batch(batch_size_train)
@@ -161,7 +174,13 @@ def main(unused_argv):
                 print("Iteration %d: train loss = %.5f" % (i, train_loss_value))
                 print("Iteration %d: val loss = %.5f" % (i,val_loss_value))
             writer.add_summary(summary, i)
-        
+            precision, false_pos, false_neg, recall, fnr, fpr = sme.get_eval_diagnostics(left_o,right_o, b_sim,threshold)
+                                                                                                    
+            if false_pos > false_neg:
+                threshold -= thresh_step
+            else:
+                threshold += thresh_step   
+            precision_over_time.append(precision)
 #        graph = tf.get_default_graph()
 #        kernel_var = graph.get_tensor_by_name("conv_layer_1/bias:0")
 #        kernel_var_after_init = sess.run(kernel_var)
@@ -171,9 +190,15 @@ def main(unused_argv):
         save_path = tf.train.Saver().save(sess,output_dir)
         print("Trained model saved in path: %s" % save_path)
     
-    # Only run this if the final network is to be evaluated    
+        # Only run this if the final network is to be evaluated    
     sme.evaluate_siamese_network(generator,nbr_of_eval_pairs,eval_itr,threshold,output_dir)
 
-
+    # Plot precision over time
+    time = list(range(len(precision_over_time)))
+    plt.plot(time, precision_over_time)
+    plt.show()
+    
+    print("Current threshold: %f" % threshold)
+    
 if __name__ == "__main__":
     tf.app.run()
