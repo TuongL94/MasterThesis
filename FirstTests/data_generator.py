@@ -8,14 +8,14 @@ Created on Wed Jan 24 15:24:03 2018
 import numpy as np
 import random
 import utilities as util
-
+import math
 
 class data_generator:
 
-    def __init__(self, images, labels,train_size):
+    def __init__(self, images, labels,data_size):
         self.nbr_of_classes = len(np.unique(labels))
-        self.labels = labels[0:train_size]
-        self.images = images[0:train_size,:,:,:]
+        self.labels = labels[0:data_size]
+        self.images = images[0:data_size,:,:,:]
         
         # Sort images so that they come in 0..9
         # This is maybe better to do before pasing to this function
@@ -23,10 +23,75 @@ class data_generator:
         self.labels.sort()
         self.digit = []
         for i in range(self.nbr_of_classes):
-            self.digit.append(np.where(self.labels == i)[0][0])
+            self.shift_idx.append(np.where(self.labels == i)[0][0])
         self.digit.append(len(self.labels) - 1)
+        
+        self.all_match, self.all_no_match = self.all_combinations()
+        percentage = 0.9
+        self.match_train, self.match_val= self.two_split_array(self.all_match,percentage)        
+        self.no_match_train, self.no_match_val = self.two_split_array(self.all_no_match,percentage)
+        
 
-    def gen_pair_batch(self,batch_size):
+    def all_combinations(self):
+        match = [] # matching pair indices
+        no_match = [] # non-matching pair indices 
+        
+        for i in range(len(self.digit)-1):
+            for k in range(self.digit[i+1]-self.digit[i]):
+                for j in range(self.digit[i]+k+1, self.digit[i+1]):
+
+                    if self.labels[i]+k == self.labels[j]:
+                        match.append([self.digit[i]+k, j])
+                    else:
+                        no_match.append([self.digit[i]+k, j])
+                    
+                for n in range(self.digit[i+1], self.images.shape[0]):
+                    no_match.append([self.digit[i]+k, n])
+            
+        no_match = np.array(no_match)
+        np.random.shuffle(no_match)
+        return match,no_match
+    
+    def gen_batch(self, batch_size, training = 1):
+        """ Generates a batch with matched and non-matched pairs of images.
+        
+        Input:
+        batch_size - the size of the batch
+        training - parameter to determine if the generated batch should be used for training,
+        if training is set to 1 the batch is used for training otherwise it is used for validation.
+        Returns: three numpy arrays where the first two contain one image from randomly selected image pairs respectively.
+        The last array indicates if corresponding pairs in the first two arrays are matching or non-matching
+        pairs, if the pairs match the corresponding element in the last array is 1, otherwise 0.
+        """
+        left = []
+        right = []
+        sim = []
+        
+        if training == 1:
+            current_matching_set = self.match_train
+            current_non_matching_set = self.no_match_train
+        else:
+            current_matching_set = self.match_val
+            current_non_matching_set = self.no_match_val
+            
+        switch_match = 0
+        for i in range(batch_size):
+            if switch_match == 0:
+                rnd_match = current_matching_set[random.randint(0,len(current_matching_set)-1)]
+                util.rand_assign_pair(left,right,self.images[rnd_match[0]],self.images[rnd_match[1]])
+                sim.append([1])
+                switch_match = 1
+            else:
+                rnd_no_match = current_non_matching_set[random.randint(0,len(current_non_matching_set)-1)]
+                util.rand_assign_pair(left,right,self.images[rnd_no_match[0]],self.images[rnd_no_match[1]])
+                sim.append([0])
+                switch_match = 0
+        
+        left, right, sim =  util.shuffle_data([left, right, sim])    
+        
+        return np.array(left), np.array(right), np.array(sim)
+
+    def gen_eval_batch(self,batch_size):
         left = []
         right = []
         sim = []
@@ -89,3 +154,11 @@ class data_generator:
         shuffled_data_list = util.shuffle_data(data_list)
             
         return np.array(shuffled_data_list[0]),np.array(shuffled_data_list[1]),shuffled_data_list[2]
+    
+    def two_split_array(self,input_array,percentage):
+        length = len(input_array)
+        split_ind = math.floor(length*percentage)
+        
+        first_split = input_array[0:split_ind+1]
+        second_split = input_array[split_ind+1:]
+        return first_split,second_split

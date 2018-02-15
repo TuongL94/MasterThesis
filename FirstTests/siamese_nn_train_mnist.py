@@ -12,6 +12,9 @@ import numpy as np
 import tensorflow as tf
 import os 
 import utilities as util
+import siamese_nn_eval_mnist as sme
+import matplotlib.pyplot as plt
+import pickle
 
 
 def main(unused_argv):
@@ -24,17 +27,25 @@ def main(unused_argv):
     one is created.
     
     """
-    
-    # Load mnist training and eval data and perform necessary data reshape
-    mnist = tf.contrib.learn.datasets.load_dataset("mnist")
-    train_data = util.reshape_grayscale_data(mnist.train.images) # Returns np.array
-    train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
-    
+        
+    dir_path = os.path.dirname(os.path.realpath(__file__))
     output_dir = "/tmp/siamese_mnist_model/" # directory where the model will be saved
-    
-    nbr_of_training_images = 55000 # number of images to use from the training data set
-    
-    generator = data_generator(train_data,train_labels,nbr_of_training_images) # initialize data generator
+        
+    # Load mnist data and create a data_generator instance if one 
+    # does not exist, otherwise load existing data_generator
+    if not os.path.exists(dir_path + "/generator_data.pk1"):
+        with open('generator_data.pk1', 'wb') as output:
+            # Load mnist training and eval data and perform necessary data reshape
+            mnist = tf.contrib.learn.datasets.load_dataset("mnist")
+            train_data = util.reshape_grayscale_data(mnist.train.images) # Returns np.array
+            train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
+            nbr_of_images = np.shape(train_data)[0] # number of images to use from the original data set
+            generator = data_generator(train_data,train_labels,nbr_of_images) # initialize data generator
+            pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
+    else:
+        # Load generator
+        with open('generator_data.pk1', 'rb') as input:
+            generator = pickle.load(input)
     
     # parameters for training
     batch_size = 100
@@ -42,11 +53,16 @@ def main(unused_argv):
     learning_rate = 0.00000001
     momentum = 0.99
     
-    image_dims = np.shape(train_data)
+    image_dims = np.shape(generator.images)
     placeholder_dims = [batch_size, image_dims[1], image_dims[2], image_dims[3]] 
     
+    # parameters for validation
+    batch_size_val = 100
+
     # parameters for evaluation
     nbr_of_eval_pairs = 5000
+    eval_itr = 10
+    threshold = 0.15 
     
     tf.reset_default_graph()
     
@@ -56,17 +72,24 @@ def main(unused_argv):
         is_model_new = True
 
          # create placeholders
-        left,right,label,left_eval,right_eval = sm.placeholder_inputs(placeholder_dims,nbr_of_eval_pairs)
+#        left,right,label,left_eval,right_eval = sm.placeholder_inputs(placeholder_dims,nbr_of_eval_pairs)
             
+        left,right,label,left_val,right_val,label_val,left_eval,right_eval = sm.placeholder_inputs(placeholder_dims,nbr_of_eval_pairs,batch_size_val)
+        
         left_output = sm.inference(left)            
         right_output = sm.inference(right)
         left_eval_output = sm.inference(left_eval)            
         right_eval_output = sm.inference(right_eval)
+        left_val_output = sm.inference(left_val)
+        right_val_output = sm.inference(right_val)
         
         margin = tf.constant(2.0)
-        loss = sm.contrastive_loss(left_output,right_output,label,margin)
+        train_loss = sm.contrastive_loss(left_output,right_output,label,margin)
         
-        tf.add_to_collection("loss",loss)
+        val_loss = sm.contrastive_loss(left_val_output,right_val_output,label_val,margin)
+        
+        tf.add_to_collection("train_loss",train_loss)
+        tf.add_to_collection("val_loss",val_loss)
         tf.add_to_collection("left_output",left_output)
         tf.add_to_collection("right_output",right_output)
         tf.add_to_collection("left_eval_output",left_eval_output)
@@ -82,13 +105,18 @@ def main(unused_argv):
         left = g.get_tensor_by_name("left:0")
         right = g.get_tensor_by_name("right:0")
         label = g.get_tensor_by_name("label:0")
-        loss = tf.get_collection("loss")[0]
+        train_loss = tf.get_collection("train_loss")[0]
         left_output = tf.get_collection("left_output")[0]
         right_output = tf.get_collection("right_output")[0]
         
+        left_val = g.get_tensor_by_name("left_val:0")
+        right_val = g.get_tensor_by_name("right_val:0")
+        label_val = g.get_tensor_by_name("label_val:0")
+        val_loss = tf.get_collection("val_loss")[0]
+        
     with tf.Session() as sess:
         if is_model_new:
-            train_op = sm.training(loss, learning_rate, momentum)
+            train_op = sm.training(train_loss, learning_rate, momentum)
             sess.run(tf.global_variables_initializer()) # initialize all trainable parameters
             tf.add_to_collection("train_op",train_op)
         else:
@@ -115,22 +143,35 @@ def main(unused_argv):
         hist_bias1 = tf.summary.histogram("hist_bias1", bias_conv1)
         bias_conv2 = graph.get_tensor_by_name("conv_layer_2/bias:0")
         hist_bias2 = tf.summary.histogram("hist_bias2", bias_conv2)
-            
-        summary_op = tf.summary.scalar('training_loss', loss)
+        
+        summary_op = tf.summary.scalar('training_loss', train_loss)
+        summary_val_loss = tf.summary.scalar("validation_loss",val_loss)
         x_image = tf.summary.image('input', left)
-        summary_op = tf.summary.merge([summary_op, x_image, filter1, hist_conv1, hist_conv2, hist_bias1, hist_bias2])
+        summary_op = tf.summary.merge([summary_op, x_image, filter1, hist_conv1, hist_conv2, hist_bias1, hist_bias2,summary_val_loss])
         # Summary setup
         writer = tf.summary.FileWriter(output_dir + "/summary", graph=tf.get_default_graph())
         
+        precision_over_time = []
+        thresh_step = 0.05
+        
         for i in range(1,train_iter + 1):
-            b_l, b_r, b_sim = generator.gen_pair_batch(batch_size)
-            _,loss_value,left_o,right_o,summary = sess.run([train_op, loss, left_output, right_output, summary_op],feed_dict={left:b_l, right:b_r, label:b_sim})
+            b_l, b_r, b_sim = generator.gen_eval_batch(batch_size)
+            b_val_l, b_val_r, b_val_sim = generator.gen_batch(batch_size_val,training = 0)
+            _,train_loss_value, val_loss_value,left_o,right_o, summary = sess.run([train_op, train_loss, val_loss, left_output, right_output, summary_op],feed_dict={left:b_l, right:b_r, label:b_sim, left_val:b_val_l, right_val:b_val_r,label_val:b_val_sim})
 #            print(left_o)
 #            print(right_o)
             if i % 100 == 0:
-                print("Iteration %d: loss = %.5f" % (i, loss_value))
+                print("Iteration %d: loss = %.5f" % (i, train_loss_value))
+                print("Iteration %d: val loss = %.5f" % (i,val_loss_value))
                 
             writer.add_summary(summary, i)
+            precision, false_pos, false_neg, recall, fnr, fpr = sme.get_eval_diagnostics(left_o,right_o, b_sim,threshold)
+            
+            if false_pos > false_neg:
+                threshold -= thresh_step
+            else:
+                threshold += thresh_step   
+            precision_over_time.append(precision)
 #        graph = tf.get_default_graph()
 #        kernel_var = graph.get_tensor_by_name("conv_layer_1/bias:0")
 #        kernel_var_after_init = sess.run(kernel_var)
@@ -139,7 +180,15 @@ def main(unused_argv):
         
         save_path = tf.train.Saver().save(sess,output_dir)
         print("Trained model saved in path: %s" % save_path)
-    
+        
+        # Plot precision over time
+        time = list(range(len(precision_over_time)))
+        plt.plot(time, precision_over_time)
+        plt.show()
+        print("Current threshold: %f" % threshold)
+        
+    # Only run this if the final network is to be evaluated    
+    sme.evaluate_siamese_network(generator,nbr_of_eval_pairs,eval_itr,threshold,output_dir)
     
 if __name__ == "__main__":
     tf.app.run()
