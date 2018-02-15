@@ -70,7 +70,7 @@ def evaluate_siamese_network(generator, nbr_of_eval_pairs, eval_itr, threshold,o
     output_dir - the directory of the siamese model
     """
     
-    left,right,sim = generator.prep_eval_match(nbr_of_eval_pairs)
+#    left,right,sim = generator.gen_eval_batch(nbr_of_eval_pairs)
 
     tf.reset_default_graph()
     
@@ -91,7 +91,7 @@ def evaluate_siamese_network(generator, nbr_of_eval_pairs, eval_itr, threshold,o
         with tf.Session() as sess:
             saver.restore(sess, tf.train.latest_checkpoint(output_dir))
             for i in range(eval_itr):
-                left,right,sim = generator.prep_eval_match(nbr_of_eval_pairs)
+                left,right,sim = generator.gen_eval_batch(nbr_of_eval_pairs)
                 left_o,right_o= sess.run([left_eval_inference,right_eval_inference],feed_dict = {left_eval:left, right_eval:right})
                 if i == 0:
                     left_full = left_o

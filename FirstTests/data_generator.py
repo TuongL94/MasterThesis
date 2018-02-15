@@ -23,7 +23,7 @@ class data_generator:
         self.labels.sort()
         self.digit = []
         for i in range(self.nbr_of_classes):
-            self.shift_idx.append(np.where(self.labels == i)[0][0])
+            self.digit.append(np.where(self.labels == i)[0][0])
         self.digit.append(len(self.labels) - 1)
         
         self.all_match, self.all_no_match = self.all_combinations()
@@ -45,7 +45,7 @@ class data_generator:
                     else:
                         no_match.append([self.digit[i]+k, j])
                     
-                for n in range(self.digit[i+1], self.images.shape[0]):
+                for n in range(self.digit[i+1], np.shape(self.images)[0]):
                     no_match.append([self.digit[i]+k, n])
             
         no_match = np.array(no_match)
@@ -153,7 +153,7 @@ class data_generator:
         data_list = [left,right,sim]
         shuffled_data_list = util.shuffle_data(data_list)
             
-        return np.array(shuffled_data_list[0]),np.array(shuffled_data_list[1]),shuffled_data_list[2]
+        return np.array(shuffled_data_list[0]),np.array(shuffled_data_list[1]),np.array(shuffled_data_list[2])
     
     def two_split_array(self,input_array,percentage):
         length = len(input_array)
