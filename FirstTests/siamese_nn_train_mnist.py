@@ -39,9 +39,12 @@ def main(unused_argv):
             mnist = tf.contrib.learn.datasets.load_dataset("mnist")
             train_data = util.reshape_grayscale_data(mnist.train.images) # Returns np.array
             train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
-#            nbr_of_images = np.shape(train_data)[0] # number of images to use from the original data set
-            nbr_of_images = 10000
-            generator = data_generator(train_data,train_labels,nbr_of_images) # initialize data generator
+            val_data = util.reshape_grayscale_data(mnist.validation.images)
+            val_labels = np.asarray(mnist.validation.labels, dtype=np.int32)
+            test_data = util.reshape_grayscale_data(mnist.test.images)
+            test_labels = np.asarray(mnist.test.labels, dtype=np.int32)
+            data_sizes = [10000,len(val_labels), len(test_labels)] # number of samples to use from each data set
+            generator = data_generator(train_data,train_labels,val_data,val_labels,test_data,test_labels,data_sizes) # initialize data generator
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
         # Load generator
@@ -49,7 +52,7 @@ def main(unused_argv):
             generator = pickle.load(input)
     
     # parameters for training
-    batch_size = 100
+    batch_size = 50
     train_iter = 2000
     learning_rate = 0.0001
     momentum = 0.99
@@ -133,22 +136,23 @@ def main(unused_argv):
         conv1_layer = graph.get_tensor_by_name("conv_layer_1/kernel:0")
         nbr_of_filters_conv1 = sess.run(tf.shape(conv1_layer)[-1])
 
-        conv2_layer = graph.get_tensor_by_name("conv_layer_2/kernel:0")
+#        conv2_layer = graph.get_tensor_by_name("conv_layer_2/kernel:0")
         hist_conv1 = tf.summary.histogram("hist_conv1", conv1_layer)
-        hist_conv2 = tf.summary.histogram("hist_conv2", conv2_layer)
+#        hist_conv2 = tf.summary.histogram("hist_conv2", conv2_layer)
         conv1_layer = tf.transpose(conv1_layer, perm = [3,0,1,2])
         filter1 = tf.summary.image('Filter_1', conv1_layer, max_outputs=nbr_of_filters_conv1)
 #        conv2_layer = tf.transpose(conv2_layer, perm = [3,0,1,2])
 #        filter2 = tf.summary.image('Filter_2', conv2_layer, max_outputs=32)
         bias_conv1 = graph.get_tensor_by_name("conv_layer_1/bias:0")
         hist_bias1 = tf.summary.histogram("hist_bias1", bias_conv1)
-        bias_conv2 = graph.get_tensor_by_name("conv_layer_2/bias:0")
-        hist_bias2 = tf.summary.histogram("hist_bias2", bias_conv2)
+#        bias_conv2 = graph.get_tensor_by_name("conv_layer_2/bias:0")
+#        hist_bias2 = tf.summary.histogram("hist_bias2", bias_conv2)
         
         summary_op = tf.summary.scalar('training_loss', train_loss)
         summary_val_loss = tf.summary.scalar("validation_loss",val_loss)
         x_image = tf.summary.image('input', left)
-        summary_op = tf.summary.merge([summary_op, x_image, filter1, hist_conv1, hist_conv2, hist_bias1, hist_bias2,summary_val_loss])
+#        summary_op = tf.summary.merge([summary_op, x_image, filter1, hist_conv1, hist_conv2, hist_bias1, hist_bias2,summary_val_loss])
+        summary_op = tf.summary.merge([summary_op, x_image, filter1, hist_conv1, hist_bias1,summary_val_loss])
         # Summary setup
         writer = tf.summary.FileWriter(output_dir + "/summary", graph=tf.get_default_graph())
         
@@ -189,7 +193,7 @@ def main(unused_argv):
         print("Current threshold: %f" % threshold)
         
     # Only run this if the final network is to be evaluated    
-    sme.evaluate_siamese_network(generator,nbr_of_eval_pairs,eval_itr,threshold,output_dir)
+#    sme.evaluate_siamese_network(generator,nbr_of_eval_pairs,eval_itr,threshold,output_dir)
     
 if __name__ == "__main__":
     tf.app.run()
