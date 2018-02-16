@@ -50,8 +50,8 @@ def main(unused_argv):
     
     # parameters for training
     batch_size = 1000
-    train_iter = 2000
-    learning_rate = 0.001
+    train_iter = 5000
+    learning_rate = 0.01
     momentum = 0.99
     
     image_dims = np.shape(generator.images)
@@ -84,7 +84,7 @@ def main(unused_argv):
         left_val_output = sm.inference(left_val)
         right_val_output = sm.inference(right_val)
         
-        margin = tf.constant(2.0)
+        margin = tf.constant(4.0)
         train_loss = sm.contrastive_loss(left_output,right_output,label,margin)
         
         val_loss = sm.contrastive_loss(left_val_output,right_val_output,label_val,margin)
@@ -154,7 +154,7 @@ def main(unused_argv):
         writer = tf.summary.FileWriter(output_dir + "/summary", graph=tf.get_default_graph())
         
         precision_over_time = []
-        thresh_step = 0.05
+        thresh_step = 0.005
         
         for i in range(1,train_iter + 1):
             b_l, b_r, b_sim = generator.gen_batch(batch_size)
@@ -192,6 +192,7 @@ def main(unused_argv):
     # Only run this if the final network is to be evaluated    
 #    sme.evaluate_siamese_network(generator,nbr_of_eval_pairs,eval_itr,threshold,output_dir)
 #    sme.evaluate_siamese_network(generator,nbr_of_eval_pairs,eval_itr,0.5,output_dir)
+    sme.main(None)
     
 if __name__ == "__main__":
     tf.app.run()

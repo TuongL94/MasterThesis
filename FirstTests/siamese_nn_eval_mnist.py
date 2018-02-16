@@ -119,7 +119,7 @@ def main(unused_argv):
     
     # Set parameters for evaluation
     eval_itr = 1
-    threshold = 0.45
+    threshold = 0.35
     nbr_of_images = 10000
     
     dir_path = os.path.dirname(os.path.realpath(__file__))
