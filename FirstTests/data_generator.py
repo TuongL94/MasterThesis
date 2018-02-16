@@ -89,3 +89,4 @@ class data_generator:
         shuffled_data_list = util.shuffle_data(data_list)
             
         return np.array(shuffled_data_list[0]),np.array(shuffled_data_list[1]),shuffled_data_list[2]
+    

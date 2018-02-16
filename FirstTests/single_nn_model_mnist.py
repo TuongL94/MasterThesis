@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Jan 24 13:55:36 2018
+Created on Wed Feb 15 8:55:36 2018
 
-@author: Tuong Lam
+@author: Tuong Lam & Simon Nilsson
 """
 
 from __future__ import absolute_import
@@ -32,8 +32,8 @@ def inference(input):
     # Convolutional Layer 2 and pooling layer 2
     conv2 = tf.layers.conv2d(
             inputs = pool1,
-            filters = 64,
-            kernel_size = [1,1],
+            filters = 10,
+            kernel_size = [3,3],
             padding = "same",
             activation = tf.nn.relu,
             reuse = tf.AUTO_REUSE,
@@ -49,11 +49,15 @@ def inference(input):
     net = tf.layers.dense(
             inputs = net,
             units = 1024,
-            activation = tf.nn.relu,
-            reuse = tf.AUTO_REUSE)
+            reuse = tf.AUTO_REUSE,
+            activation = tf.nn.relu)
     net = tf.layers.dropout(
             inputs = net, 
             rate = 0.4)
+    
+    # Logits Layer
+    net = tf.layers.dense(inputs = net, units = 10)
+    
     return net
     
     
@@ -98,10 +102,8 @@ def placeholder_inputs(dims,nbr_of_eval_pairs):
     left_eval - placeholder for left input to siamese network for evaluation
     right_eval - placeholder for right input to siamese network for evaluation
     """
-    left = tf.placeholder(tf.float32, dims, name="left")
-    right = tf.placeholder(tf.float32, dims, name="right")
+    data = tf.placeholder(tf.float32, dims, name="data")
     label = tf.placeholder(tf.float32, [dims[0], 1], name="label") # 1 if same, 0 if different
-    left_eval = tf.placeholder(tf.float32, [nbr_of_eval_pairs, dims[1], dims[2], dims[3]], name="left_eval")
-    right_eval = tf.placeholder(tf.float32, [nbr_of_eval_pairs, dims[1], dims[2], dims[3]], name="right_eval")
-    return left,right,label,left_eval,right_eval
+    eval_data = tf.placeholder(tf.float32, [nbr_of_eval_pairs, dims[1], dims[2], dims[3]], name="data_eval")
+    return data,label,eval_data
     

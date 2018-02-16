@@ -10,28 +10,31 @@ import scipy.linalg as sl
 import tensorflow as tf
 import os 
 import utilities as util
+from data_generator import data_generator
 
 
 def evaluate_mnist_siamese_network(left_pairs_o,right_pairs_o,sim_labels,threshold):
-    matching = np.zeros(len(sim_labels))
+    matching = np.zeros((len(sim_labels),1))
     l2_normalized_diff = util.l2_normalize(left_pairs_o-right_pairs_o)
     false_pos = 0
     false_neg = 0
+    sim = np.array(sim_labels)
     p = np.sum(sim_labels)
     n = len(sim_labels) - p
     for i in range(len(sim_labels)):
+#        print(sl.norm(l2_normalized_diff[i,:]))
         if sl.norm(l2_normalized_diff[i,:]) < threshold:
             matching[i] = 1
-            if sim_labels[i] == [0]:
+            if sim[i] == [0]:
                 false_pos = false_pos + 1
         else:
-            if sim_labels[i] == [1]:
+            if sim[i] == [1]:
                 false_neg = false_neg + 1
     
-    precision = np.sum((matching == sim_labels))/len(sim_labels)
+    precision = np.sum((matching == sim))/len(sim_labels)
     tp = 0
     for i in range(len(sim_labels)):
-        if matching[i] == 1 and sim_labels[i] == 1:
+        if matching[i] == 1 and sim[i] == 1:
             tp += 1
     recall = tp/p
     fnr = 1 - recall
@@ -52,9 +55,13 @@ def main(unused_argv):
     eval_data = util.reshape_grayscale_data(mnist.test.images) # Returns np.array
     eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
 
-    left,right,sim = util.prep_eval_data_pair(eval_data,eval_labels)
-    
+#    left,right,sim = util.prep_eval_data_pair(eval_data,eval_labels)
 #    left,right,sim = util.prep_eval_data(eval_data,eval_labels)
+    
+    nbr_images = len(eval_labels)
+    batch_size = 5000
+    generator = data_generator(eval_data, eval_labels, nbr_images)
+    left, right, sim = generator.gen_pair_batch(batch_size)
     
     output_dir = "/tmp/siamese_mnist_model/" # directory where the model is saved
     
@@ -78,7 +85,7 @@ def main(unused_argv):
             saver.restore(sess, tf.train.latest_checkpoint(output_dir))
             left_o,right_o= sess.run([left_eval_inference,right_eval_inference],feed_dict = {left_eval:left, right_eval:right})
 
-            precision, false_pos, false_neg, recall, fnr, fpr = evaluate_mnist_siamese_network(left_o,right_o,sim,0.5)
+            precision, false_pos, false_neg, recall, fnr, fpr = evaluate_mnist_siamese_network(left_o,right_o,sim,0.50)
             print("Precision: %f " % precision)
             print("# False positive: %d " % false_pos)
             print("# False negative: %d " % false_neg)
