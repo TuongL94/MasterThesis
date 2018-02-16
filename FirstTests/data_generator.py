@@ -26,27 +26,34 @@ class data_generator:
             self.digit.append(np.where(self.labels == i)[0][0])
         self.digit.append(len(self.labels) - 1)
         
-        self.all_match, self.all_no_match = self.all_combinations()
+        self.all_match, self.all_no_match = self.all_combinations_equal()
         percentage = 0.9
         self.match_train, self.match_val= self.two_split_array(self.all_match,percentage)        
         self.no_match_train, self.no_match_val = self.two_split_array(self.all_no_match,percentage)
         
 
-    def all_combinations(self):
+    def all_combinations_equal(self):
         match = [] # matching pair indices
         no_match = [] # non-matching pair indices 
         
         for i in range(len(self.digit)-1):
             for k in range(self.digit[i+1]-self.digit[i]):
                 for j in range(self.digit[i]+k+1, self.digit[i+1]):
-
-                    if self.labels[i]+k == self.labels[j]:
-                        match.append([self.digit[i]+k, j])
-                    else:
-                        no_match.append([self.digit[i]+k, j])
+                    match.append([self.digit[i]+k, j])
+#                    if self.labels[i] == self.labels[j]:
+#                        match.append([self.digit[i]+k, j])
+#                    else:
+#                        no_match.append([self.digit[i]+k, j])
                     
-                for n in range(self.digit[i+1], np.shape(self.images)[0]):
-                    no_match.append([self.digit[i]+k, n])
+#                for n in range(self.digit[i+1], np.shape(self.images)[0]):
+#                    no_match.append([self.digit[i]+k, n])
+                    # Generate equal amount of non matching pairs randomly
+                    while True:
+                        rnd_non_match = random.randint(0,9)
+                        if not rnd_non_match == i:
+                            break
+                    rnd_digit = random.randint(self.digit[rnd_non_match],self.digit[rnd_non_match+1])
+                    no_match.append([self.digit[i]+k, rnd_digit])
             
         no_match = np.array(no_match)
         np.random.shuffle(no_match)

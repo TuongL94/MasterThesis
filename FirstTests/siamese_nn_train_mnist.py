@@ -40,7 +40,7 @@ def main(unused_argv):
             train_data = util.reshape_grayscale_data(mnist.train.images) # Returns np.array
             train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
 #            nbr_of_images = np.shape(train_data)[0] # number of images to use from the original data set
-            nbr_of_images = 10000
+            nbr_of_images = 20000
             generator = data_generator(train_data,train_labels,nbr_of_images) # initialize data generator
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
@@ -58,12 +58,12 @@ def main(unused_argv):
     placeholder_dims = [batch_size, image_dims[1], image_dims[2], image_dims[3]] 
     
     # parameters for validation
-    batch_size_val = 100
+    batch_size_val = 1000
 
     # parameters for evaluation
-    nbr_of_eval_pairs = 100
-    eval_itr = 10
-    threshold = 0.15 
+    nbr_of_eval_pairs = 10000
+    eval_itr = 1
+    threshold = 0.5 
     
     tf.reset_default_graph()
     
@@ -75,7 +75,7 @@ def main(unused_argv):
          # create placeholders
 #        left,right,label,left_eval,right_eval = sm.placeholder_inputs(placeholder_dims,nbr_of_eval_pairs)
             
-        left,right,label,left_val,right_val,label_val,left_eval,right_eval = sm.placeholder_inputs(placeholder_dims,nbr_of_eval_pairs,batch_size_val)
+        left,right,label,left_val,right_val,label_val,left_eval,right_eval = sm.placeholder_inputs(placeholder_dims,batch_size_val,nbr_of_eval_pairs)
         
         left_output = sm.inference(left)            
         right_output = sm.inference(right)
@@ -190,7 +190,8 @@ def main(unused_argv):
         print("Current threshold: %f" % threshold)
         
     # Only run this if the final network is to be evaluated    
-    sme.evaluate_siamese_network(generator,nbr_of_eval_pairs,eval_itr,threshold,output_dir)
+#    sme.evaluate_siamese_network(generator,nbr_of_eval_pairs,eval_itr,threshold,output_dir)
+#    sme.evaluate_siamese_network(generator,nbr_of_eval_pairs,eval_itr,0.5,output_dir)
     
 if __name__ == "__main__":
     tf.app.run()

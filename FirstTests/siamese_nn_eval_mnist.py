@@ -11,6 +11,7 @@ import tensorflow as tf
 import os 
 import utilities as util
 from data_generator import data_generator
+import pickle
 
 
 def get_eval_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold):
@@ -110,6 +111,44 @@ def evaluate_siamese_network(generator, nbr_of_eval_pairs, eval_itr, threshold,o
             print("# Recall: %f " % recall)
             print("# Miss rate/false negative rate: %f " % fnr)
             print("# fall-out/false positive rate: %f " % fpr)
+    
+
+
+def main(unused_argv):
+    ''' Runs evaluation on mnist's evaluation data set '''
+    
+    # Set parameters for evaluation
+    eval_itr = 1
+    threshold = 0.45
+    nbr_of_images = 10000
+    
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    output_dir = "/tmp/siamese_mnist_model/"
+    #Load Evaluation data and set up generator
+    if not os.path.exists(dir_path + "/generator_data_eval.pk1"):
+        with open('generator_data_eval.pk1', 'wb') as output:
+            # Load mnist training and eval data and perform necessary data reshape
+            mnist = tf.contrib.learn.datasets.load_dataset("mnist")
+            eval_data = util.reshape_grayscale_data(mnist.test.images) # Returns np.array
+            eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
+            generator = data_generator(eval_data,eval_labels,nbr_of_images) # initialize data generator
+            pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
+    else:
+        # Load generator
+        with open('generator_data_eval.pk1', 'rb') as input:
+            generator = pickle.load(input)
+    
+    evaluate_siamese_network(generator, nbr_of_images, eval_itr, threshold, output_dir)
+    
+    
+    
+if __name__ == "__main__":
+    tf.app.run()
+    
+    
+    
+    
+    
     
     
     
