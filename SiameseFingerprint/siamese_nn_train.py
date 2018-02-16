@@ -51,8 +51,8 @@ def main(unused_argv):
             generator = pickle.load(input)
     
     # parameters for training
-    batch_size_train = 5
-    train_iter = 20
+    batch_size_train = 100
+    train_iter = 300
     learning_rate = 0.00001
     momentum = 0.9
 
@@ -60,10 +60,10 @@ def main(unused_argv):
     placeholder_dims = [batch_size_train, image_dims[1], image_dims[2], image_dims[3]]
     
     # parameters for validation
-    batch_size_val = 5
+    batch_size_val = 100
     
     # parameters for evaluation
-    nbr_of_eval_pairs = 5
+    nbr_of_eval_pairs = 100
     eval_itr = 10
     threshold = 0.15    
     tf.reset_default_graph()
@@ -189,15 +189,15 @@ def main(unused_argv):
         
         save_path = tf.train.Saver().save(sess,output_dir)
         print("Trained model saved in path: %s" % save_path)
+        
+        # Plot precision over time
+        time = list(range(len(precision_over_time)))
+        plt.plot(time, precision_over_time)
+        plt.show()
     
-        # Only run this if the final network is to be evaluated    
+    # Only run this if the final network is to be evaluated    
     sme.evaluate_siamese_network(generator,nbr_of_eval_pairs,eval_itr,threshold,output_dir)
 
-    # Plot precision over time
-    time = list(range(len(precision_over_time)))
-    plt.plot(time, precision_over_time)
-    plt.show()
-    
     print("Current threshold: %f" % threshold)
     
 if __name__ == "__main__":
