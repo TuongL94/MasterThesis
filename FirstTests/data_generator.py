@@ -63,4 +63,3 @@ class data_generator:
         left_pairs = np.take(data,pair_list[:,0],axis=0)
         right_pairs = np.take(data,pair_list[:,1],axis=0)
         return left_pairs,right_pairs
-        

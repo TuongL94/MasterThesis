@@ -90,13 +90,13 @@ def placeholder_inputs(image_dims,batch_sizes):
     left_test - placeholder for left input to siamese network for testing
     right_test - placeholder for right input to siamese network for testing
     """
-    left_train = tf.placeholder(tf.float32, [batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="left_train")
-    right_train = tf.placeholder(tf.float32,[batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="right_train")
-    label_train = tf.placeholder(tf.float32, [batch_sizes[0], 1], name="label_train") # 1 if same, 0 if different
+    left_train = tf.placeholder(tf.float32, [2*batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="left_train")
+    right_train = tf.placeholder(tf.float32,[2*batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="right_train")
+    label_train = tf.placeholder(tf.float32, [2*batch_sizes[0]], name="label_train") # 1 if same, 0 if different
     
     left_val = tf.placeholder(tf.float32,[batch_sizes[1],image_dims[0],image_dims[1],image_dims[2]], name="left_val")
     right_val = tf.placeholder(tf.float32, [batch_sizes[1],image_dims[0],image_dims[1],image_dims[2]], name="right_val")
-    label_val = tf.placeholder(tf.float32, [batch_sizes[1], 1], name="label_val") # 1 if same, 0 if different
+    label_val = tf.placeholder(tf.float32, [batch_sizes[1]], name="label_val") # 1 if same, 0 if different
     
     left_test = tf.placeholder(tf.float32, [batch_sizes[2],image_dims[0],image_dims[1],image_dims[2]], name="left_test")
     right_test = tf.placeholder(tf.float32, [batch_sizes[2],image_dims[0],image_dims[1],image_dims[2]], name="right_test")
