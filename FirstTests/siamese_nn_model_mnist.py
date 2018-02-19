@@ -47,7 +47,6 @@ def inference(input):
     net = tf.layers.flatten(pool1)
     return net
     
-    
 def l2_loss(input_1,input_2):
     return tf.linalg.norm([input_1,input_2])
     
@@ -72,31 +71,34 @@ def training(loss, learning_rate, momentum):
     train_op = optimizer.minimize(loss,global_step = global_step)
     return train_op
     
-def placeholder_inputs(dims, nbr_of_val_pairs, nbr_of_eval_pairs):
+def placeholder_inputs(image_dims,batch_sizes):
     """ Creates placeholders for siamese neural network.
     
     This method returns placeholders for inputs to the siamese network in both
-    training and evaluation, it also returns a placeholder for ground truth of 
-    image pairs.
+    training, validation and testing. It also returns a placeholder for ground truth of 
+    image pairs for training and validation.
     Input:
-    dims - list of following structure: [batch_size height width 1] (the 1 is for grayscale images)
-    nbr_of_eval_pairs - number of image pairs to use for evaluation
+    image_dims - list of following structure: [height width 1] (the 1 is for grayscale images)
+    batch_sizes - list of batch sizes for training,validation and testing respectively 
     Returns:
-    left - placeholder for left input to siamese network for training
-    right - placeholder for right input to siamese network for training
-    label - placeholder for ground truths of image pairs for training
-    left_eval - placeholder for left input to siamese network for evaluation
-    right_eval - placeholder for right input to siamese network for evaluation
+    left_train - placeholder for left input to siamese network for training
+    right_train - placeholder for right input to siamese network for training
+    label_train - placeholder for ground truths of image pairs for training
+    left_val - placeholder for left input to siamese network for validation
+    right_val - placeholder for right input to siamese network for validation
+    label_val - placeholder for ground truths of image pairs for validation
+    left_test - placeholder for left input to siamese network for testing
+    right_test - placeholder for right input to siamese network for testing
     """
-    left = tf.placeholder(tf.float32, dims, name="left")
-    right = tf.placeholder(tf.float32, dims, name="right")
-    label = tf.placeholder(tf.float32, [dims[0], 1], name="label") # 1 if same, 0 if different
+    left_train = tf.placeholder(tf.float32, [batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="left_train")
+    right_train = tf.placeholder(tf.float32,[batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="right_train")
+    label_train = tf.placeholder(tf.float32, [batch_sizes[0], 1], name="label_train") # 1 if same, 0 if different
     
-    left_val = tf.placeholder(tf.float32, [nbr_of_val_pairs, dims[1], dims[2], dims[3]], name="left_val")
-    right_val = tf.placeholder(tf.float32, [nbr_of_val_pairs, dims[1], dims[2], dims[3]], name="right_val")
-    label_val = tf.placeholder(tf.float32, [nbr_of_val_pairs, 1], name="label_val") # 1 if same, 0 if different
+    left_val = tf.placeholder(tf.float32,[batch_sizes[1],image_dims[0],image_dims[1],image_dims[2]], name="left_val")
+    right_val = tf.placeholder(tf.float32, [batch_sizes[1],image_dims[0],image_dims[1],image_dims[2]], name="right_val")
+    label_val = tf.placeholder(tf.float32, [batch_sizes[1], 1], name="label_val") # 1 if same, 0 if different
     
-    left_eval = tf.placeholder(tf.float32, [nbr_of_eval_pairs, dims[1], dims[2], dims[3]], name="left_eval")
-    right_eval = tf.placeholder(tf.float32, [nbr_of_eval_pairs, dims[1], dims[2], dims[3]], name="right_eval")
-    return left,right,label,left_val,right_val,label_val,left_eval,right_eval
+    left_test = tf.placeholder(tf.float32, [batch_sizes[2],image_dims[0],image_dims[1],image_dims[2]], name="left_test")
+    right_test = tf.placeholder(tf.float32, [batch_sizes[2],image_dims[0],image_dims[1],image_dims[2]], name="right_test")
+    return left_train,right_train,label_train,left_val,right_val,label_val,left_test,right_test
     

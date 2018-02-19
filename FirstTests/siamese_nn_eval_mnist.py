@@ -11,8 +11,8 @@ import tensorflow as tf
 import os 
 import utilities as util
 
-def get_eval_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold):
-    """ Computes and returns evaluation metrics.
+def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold):
+    """ Computes and returns evaluation metrics from testing.
     
     Input:
     left_pairs_o - numpy array with rows corresponding to arrays obtained from inference step in the siamese network
@@ -55,23 +55,20 @@ def get_eval_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold):
     
     return precision, false_pos, false_neg, recall, fnr, fpr
  
-def evaluate_siamese_network(generator, nbr_of_eval_pairs, eval_itr, threshold,output_dir):
+def evaluate_siamese_network(generator,batch_size_test,threshold,output_dir):
     """ This method is used to evaluate a siamese network for fingerprint datasets.
     
-    The model is defined in the file siamese_nn_model.py and trained in 
-    the file siamese_nn_train.py. Evaluation will only be performed if
+    The model is defined in the file siamese_nn_model_mnist.py and trained in 
+    the file siamese_nn_train_mnist.py. Evaluation will only be performed if
     a model exists. The method will print evaluation metrics.
     
     Input:
     generator - an instance of a data_generator object used in training
-    nbr_of_eval_pairs - batch size for the evaluation placeholder
-    eval_itr - number of evaluation iterations
+    batch_size_test - batch size for the test placeholder
     threshold - distance threshold (2-norm) for the decision stage
     output_dir - the directory of the siamese model
     """
     
-#    left,right,sim = generator.gen_eval_batch(nbr_of_eval_pairs)
-
     tf.reset_default_graph()
     
     if not os.path.exists(output_dir + ".meta"):
@@ -82,27 +79,61 @@ def evaluate_siamese_network(generator, nbr_of_eval_pairs, eval_itr, threshold,o
         print("Using existing model in the directory " + output_dir + " for evaluation")        
         saver = tf.train.import_meta_graph(output_dir + ".meta")        
         g = tf.get_default_graph()
-        left_eval = g.get_tensor_by_name("left_eval:0")
-        right_eval = g.get_tensor_by_name("right_eval:0")
+        left_test = g.get_tensor_by_name("left_test:0")
+        right_test = g.get_tensor_by_name("right_test:0")
         
-        left_eval_inference = tf.get_collection("left_eval_output")[0]
-        right_eval_inference = tf.get_collection("right_eval_output")[0]
+        left_test_inference = tf.get_collection("left_test_output")[0]
+        right_test_inference = tf.get_collection("right_test_output")[0]
+        
+        handle= g.get_tensor_by_name("handle:0")
         
         with tf.Session() as sess:
             saver.restore(sess, tf.train.latest_checkpoint(output_dir))
-            for i in range(eval_itr):
-                left,right,sim = generator.gen_eval_batch(nbr_of_eval_pairs)
-                left_o,right_o= sess.run([left_eval_inference,right_eval_inference],feed_dict = {left_eval:left, right_eval:right})
+            
+            test_match_dataset = tf.data.Dataset.from_tensor_slices(generator.all_match_test)
+            test_match_dataset = test_match_dataset.repeat()
+            test_match_dataset = test_match_dataset.batch(batch_size_test)
+            test_match_dataset_length = np.shape(generator.all_match_test)[0]
+        
+            test_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.all_non_match_test)
+            test_non_match_dataset = test_non_match_dataset.repeat()
+            test_non_match_dataset = test_non_match_dataset.batch(batch_size_test)
+            test_non_match_dataset_length = np.shape(generator.all_non_match_test)[0]
+            
+            test_match_iterator = test_match_dataset.make_one_shot_iterator()
+            test_match_handle = sess.run(test_match_iterator.string_handle())
+        
+            test_non_match_iterator = test_non_match_dataset.make_one_shot_iterator()
+            test_non_match_handle = sess.run(test_non_match_iterator.string_handle())
+            
+            iterator = tf.data.Iterator.from_string_handle(handle, test_match_dataset.output_types)
+            next_element = iterator.get_next()
+            
+            sim_full = np.vstack(np.ones(test_match_dataset_length),np.zeros(test_non_match_dataset_length))
+            
+            for i in range(test_match_dataset_length/batch_size_test):
+                test_batch = sess.run(next_element,feed_dict={handle:test_match_handle})
+                b_l_test,b_r_test = generator.get_pairs(generator.all_match_test,test_batch) 
+                left_o,right_o = sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_l_test, right_test:b_r_test})
                 if i == 0:
                     left_full = left_o
                     right_full = right_o
-                    sim_full = sim
                 else:
                     left_full = np.vstack((left_full,left_o))
                     right_full = np.vstack((right_full,right_o))
-                    sim_full = np.vstack((sim_full, sim))
-                
-            precision, false_pos, false_neg, recall, fnr, fpr = get_eval_diagnostics(left_full,right_full,sim_full,threshold)
+                    
+            for i in range(test_non_match_dataset_length/batch_size_test):
+                test_batch = sess.run(next_element,feed_dict={handle:test_non_match_handle})
+                b_l_test,b_r_test = generator.get_pairs(generator.all_non_match_test,test_batch) 
+                left_o,right_o = sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_l_test, right_test:b_r_test})
+                if i == 0:
+                    left_full = left_o
+                    right_full = right_o
+                else:
+                    left_full = np.vstack((left_full,left_o))
+                    right_full = np.vstack((right_full,right_o))     
+            
+            precision, false_pos, false_neg, recall, fnr, fpr = get_test_diagnostics(left_full,right_full,sim_full,threshold)
 
             print("Precision: %f " % precision)
             print("# False positive: %d " % false_pos)
@@ -113,7 +144,3 @@ def evaluate_siamese_network(generator, nbr_of_eval_pairs, eval_itr, threshold,o
     
     
     
-    
-    
-
-        

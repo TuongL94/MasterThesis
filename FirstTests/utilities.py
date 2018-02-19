@@ -47,32 +47,6 @@ def reshape_grayscale_data(input_data, *dims):
         input_data_moded = input_data.reshape((nbr_of_images,dim,dim,1))
     return input_data_moded
 
-#def prep_eval_data(eval_data,eval_labels):
-#    """ Generates pairs from evaluation data to use for similarity networks.
-#    
-#    The method generates pairs by cutting the evaluation data in two halves
-#    and pairing corresponding elements of the two halves. Labels for generated
-#    pairs are constructed by comparing the labels from the original evaluation
-#    labels.
-#    Input:
-#    eval_data - 4D evaluation data
-#    eval_labels - labels of evaluation data
-#    Returns: evaluation pairs and corresponding labels
-#    """
-#    dims = np.shape(eval_data)
-#    nbr_of_image_pairs = int(dims[0]/2)
-#    
-#    left = []
-#    right = []
-#    sim = np.zeros(nbr_of_image_pairs)
-#    for i in range(nbr_of_image_pairs):
-#        left.append(eval_data[i,:,:,:])
-#        right.append(eval_data[nbr_of_image_pairs+i,:,:,:])
-#        if(eval_labels[i] == eval_labels[nbr_of_image_pairs + i]):
-#            sim[i] = 1
-#            
-#    return np.array(left),np.array(right),sim
-
 def shuffle_data(data_list):
     """ Shuffles all elements in the specified list, the permutation is the same for all elements of the list.
     
@@ -91,7 +65,6 @@ def shuffle_data(data_list):
             shuffled_data_list[j].append(data_list[j][i])
     
     return shuffled_data_list
-
 
 def rand_assign_pair(left,right,image_1,image_2):
     """ Appends images of an image pair randomly to two lists.
