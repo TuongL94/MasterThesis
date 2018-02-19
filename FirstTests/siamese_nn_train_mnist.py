@@ -2,7 +2,7 @@
 """
 Created on Mon Jan 29 13:44:22 2018
 
-@author: Tuong Lam
+@author: Tuong Lam & Simon Nilsson
 """
 
 from data_generator import data_generator
@@ -37,7 +37,9 @@ def main(unused_argv):
         with open('generator_data.pk1', 'wb') as output:
             # Load mnist training and eval data and perform necessary data reshape
             mnist = tf.contrib.learn.datasets.load_dataset("mnist")
-            train_data = util.reshape_grayscale_data(mnist.train.images) # Returns np.array
+#            train_data_small = util.reshape_grayscale_data(mnist.train.images) # Returns np.array
+            '''Use resized_images to use fingerprint resolution mnist (192,192)'''
+            train_data = np.load(dir_path + "/resized_train_mnist.npy")
             train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
 #            nbr_of_images = np.shape(train_data)[0] # number of images to use from the original data set
             nbr_of_images = 20000
@@ -49,19 +51,19 @@ def main(unused_argv):
             generator = pickle.load(input)
     
     # parameters for training
-    batch_size = 1000
-    train_iter = 5000
-    learning_rate = 0.01
+    batch_size = 100
+    train_iter = 250
+    learning_rate = 0.001
     momentum = 0.99
     
     image_dims = np.shape(generator.images)
     placeholder_dims = [batch_size, image_dims[1], image_dims[2], image_dims[3]] 
     
     # parameters for validation
-    batch_size_val = 1000
+    batch_size_val = 100
 
     # parameters for evaluation
-    nbr_of_eval_pairs = 10000
+    nbr_of_eval_pairs = 100
     eval_itr = 1
     threshold = 0.5 
     
@@ -192,7 +194,7 @@ def main(unused_argv):
     # Only run this if the final network is to be evaluated    
 #    sme.evaluate_siamese_network(generator,nbr_of_eval_pairs,eval_itr,threshold,output_dir)
 #    sme.evaluate_siamese_network(generator,nbr_of_eval_pairs,eval_itr,0.5,output_dir)
-    sme.main(None)
+#    sme.main(None)
     
 if __name__ == "__main__":
     tf.app.run()
