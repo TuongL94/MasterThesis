@@ -130,9 +130,9 @@ def main(unused_argv):
         with open('generator_data_eval.pk1', 'wb') as output:
             # Load mnist training and eval data and perform necessary data reshape
             mnist = tf.contrib.learn.datasets.load_dataset("mnist")
-#            eval_data = util.reshape_grayscale_data(mnist.test.images) # Returns np.array
+            eval_data = util.reshape_grayscale_data(mnist.test.images) # Returns np.array
             '''Use resized_images to use fingerprint resolution mnist (192,192)'''
-            eval_data = np.load(dir_path + "/resized_test_mnist.npy")
+#            eval_data = np.load(dir_path + "/resized_test_mnist.npy")
             eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
             generator = data_generator(eval_data,eval_labels,nbr_of_images) # initialize data generator
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
