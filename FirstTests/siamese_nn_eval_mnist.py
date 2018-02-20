@@ -118,9 +118,10 @@ def main(unused_argv):
     ''' Runs evaluation on mnist's evaluation data set '''
     
     # Set parameters for evaluation
-    eval_itr = 1
-    threshold = 0.35
+    eval_itr = 10
+    threshold = 0.5
     nbr_of_images = 10000
+    batch_size = 100
     
     dir_path = os.path.dirname(os.path.realpath(__file__))
     output_dir = "/tmp/siamese_mnist_model/"
@@ -130,6 +131,8 @@ def main(unused_argv):
             # Load mnist training and eval data and perform necessary data reshape
             mnist = tf.contrib.learn.datasets.load_dataset("mnist")
             eval_data = util.reshape_grayscale_data(mnist.test.images) # Returns np.array
+            '''Use resized_images to use fingerprint resolution mnist (192,192)'''
+#            eval_data = np.load(dir_path + "/resized_test_mnist.npy")
             eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
             generator = data_generator(eval_data,eval_labels,nbr_of_images) # initialize data generator
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
@@ -138,7 +141,7 @@ def main(unused_argv):
         with open('generator_data_eval.pk1', 'rb') as input:
             generator = pickle.load(input)
     
-    evaluate_siamese_network(generator, nbr_of_images, eval_itr, threshold, output_dir)
+    evaluate_siamese_network(generator, batch_size, eval_itr, threshold, output_dir)
     
     
     
