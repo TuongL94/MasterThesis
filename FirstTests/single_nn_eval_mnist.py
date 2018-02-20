@@ -6,18 +6,24 @@ Created on Thur Feb 15 18:25:36 2018
 """
 
 import numpy as np
-#import scipy.linalg as sl
 import tensorflow as tf
 import os 
 import utilities as util
-#from data_generator import data_generator
-#from single_nn_train_mnist import batch_mnist
 import single_nn_train_mnist as sm
 
 
+#def evaluate_mnist_siamese_network(eval_o,eval_labels):
+#    nbr_correct = 0
+#    estimated_digits = eval_o[0].argmax(axis=1)
+#    for i in range(len(estimated_digits)):
+#        if estimated_digits[i] == eval_labels[i]:
+#            nbr_correct += 1
+#    precision = nbr_correct/len(eval_labels)
+#    return precision
+
 def evaluate_mnist_siamese_network(eval_o,eval_labels):
     nbr_correct = 0
-    estimated_digits = eval_o[0].argmax(axis=1)
+    estimated_digits = eval_o.argmax(axis=1)
     for i in range(len(estimated_digits)):
         if estimated_digits[i] == eval_labels[i]:
             nbr_correct += 1
@@ -36,11 +42,7 @@ def main(unused_argv):
     mnist = tf.contrib.learn.datasets.load_dataset("mnist")
     eval_data = util.reshape_grayscale_data(mnist.test.images) # Returns np.array
     eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
-
-#    left,right,sim = util.prep_eval_data_pair(eval_data,eval_labels)
-#    left,right,sim = util.prep_eval_data(eval_data,eval_labels)
     
-    nbr_images = len(eval_labels)
     batch_size = 10000
     
     output_dir = "/tmp/single_mnist_model/" # directory where the model is saved
@@ -57,21 +59,17 @@ def main(unused_argv):
         g = tf.get_default_graph()
         eval_data_place = g.get_tensor_by_name("data_eval:0")
         
-        eval_output = tf.get_collection("eval_output")[0]
+        test_output = tf.get_collection("test_output")[0]
+        softmax_layer = tf.nn.softmax(test_output,axis=0)
         
         with tf.Session() as sess:
             saver.restore(sess, tf.train.latest_checkpoint(output_dir))
             counter = 0
-            b_data, b_labels = sm.batch_mnist(batch_size, counter, eval_labels, eval_data)
-            eval_o = sess.run([eval_output],feed_dict = {eval_data_place:b_data})
+            b_data,_ = sm.batch_mnist(batch_size, counter, eval_labels, eval_data)
+            eval_o,prob = sess.run([test_output,softmax_layer],feed_dict = {eval_data_place:b_data})
 
-            precision = evaluate_mnist_siamese_network(eval_o, b_labels)
+            precision = evaluate_mnist_siamese_network(prob, eval_labels)
             print("Precision: %f " % precision)
-#            print("# False positive: %d " % false_pos)
-#            print("# False negative: %d " % false_neg)
-#            print("# Recall: %f " % recall)
-#            print("# Miss rate/false negative rate: %f " % fnr)
-#            print("# fall-out/false positive rate: %f " % fpr)
       
 if __name__ == "__main__":
     tf.app.run()
