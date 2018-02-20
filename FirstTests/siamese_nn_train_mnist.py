@@ -37,7 +37,7 @@ def main(unused_argv):
         with open('generator_data.pk1', 'wb') as output:
             # Load mnist training and eval data and perform necessary data reshape
             mnist = tf.contrib.learn.datasets.load_dataset("mnist")
-            train_data_small = util.reshape_grayscale_data(mnist.train.images) # Returns np.array
+            train_data = util.reshape_grayscale_data(mnist.train.images) # Returns np.array
             '''Use resized_images to use fingerprint resolution mnist (192,192)'''
 #            train_data = np.load(dir_path + "/resized_train_mnist.npy")
             train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
