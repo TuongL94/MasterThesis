@@ -28,7 +28,7 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold):
     fnr - false negative rate (false negative/total number of positive examples)
     fpr - false positive rate (false positive/total number of negative examples)
     """
-    matching = np.zeros(len(sim_labels))
+    matching = np.zeros(len(sim_labels),dtype=np.int32)
     l2_normalized_diff = util.l2_normalize(left_pairs_o-right_pairs_o)
     false_pos = 0
     false_neg = 0

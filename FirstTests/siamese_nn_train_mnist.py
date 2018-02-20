@@ -42,7 +42,7 @@ def main(unused_argv):
             val_labels = np.asarray(mnist.validation.labels, dtype=np.int32)
             test_data = util.reshape_grayscale_data(mnist.test.images)
             test_labels = np.asarray(mnist.test.labels, dtype=np.int32)
-            data_sizes = [1000,1000,1000] # number of samples to use from each data set
+            data_sizes = [5000,100,100] # number of samples to use from each data set
             generator = data_generator(train_data,train_labels,val_data,val_labels,test_data,test_labels,data_sizes) # initialize data generator
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
@@ -51,9 +51,9 @@ def main(unused_argv):
             generator = pickle.load(input)
     
     # parameters for training
-    batch_size_train = 1000
-    train_iter = 5000
-    learning_rate = 0.000001
+    batch_size_train = 300
+    train_iter = 10000
+    learning_rate = 0.00001
     momentum = 0.99
         
     # parameters for validation
@@ -61,7 +61,7 @@ def main(unused_argv):
 
     # parameters for testing
     batch_size_test = 50
-    threshold = 0.3
+    threshold = 0.7
     
     dims = np.shape(generator.train_data)
     batch_sizes = [batch_size_train,batch_size_val,batch_size_test]
@@ -160,24 +160,24 @@ def main(unused_argv):
         thresh_step = 0.05
         
         train_match_dataset = tf.data.Dataset.from_tensor_slices(generator.all_match_train)
-        train_match_dataset = train_match_dataset.shuffle(buffer_size=np.shape(generator.all_match_train)[0])
+#        train_match_dataset = train_match_dataset.shuffle(buffer_size=np.shape(generator.all_match_train)[0])
         train_match_dataset = train_match_dataset.repeat()
-        train_match_dataset = train_match_dataset.batch(batch_size_train)
+        train_match_dataset = train_match_dataset.batch(int(batch_size_train/2))
         
         train_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.all_non_match_train)
-        train_non_match_dataset = train_non_match_dataset.shuffle(buffer_size=np.shape(generator.all_non_match_train)[0])
+#        train_non_match_dataset = train_non_match_dataset.shuffle(buffer_size=np.shape(generator.all_non_match_train)[0])
         train_non_match_dataset = train_non_match_dataset.repeat()
-        train_non_match_dataset = train_non_match_dataset.batch(batch_size_train)
+        train_non_match_dataset = train_non_match_dataset.batch(int((batch_size_train+1)/2))
         
-        val_match_dataset = tf.data.Dataset.from_tensor_slices(generator.all_match_val)
-        val_match_dataset = val_match_dataset.shuffle(buffer_size=np.shape(generator.all_match_val)[0])
-        val_match_dataset = val_match_dataset.repeat()
-        val_match_dataset = val_match_dataset.batch(batch_size_val)
-        
-        val_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.all_non_match_val)
-        val_non_match_dataset = val_non_match_dataset.shuffle(buffer_size=np.shape(generator.all_non_match_val)[0])
-        val_non_match_dataset = val_non_match_dataset.repeat()
-        val_non_match_dataset = val_non_match_dataset.batch(batch_size_val)
+#        val_match_dataset = tf.data.Dataset.from_tensor_slices(generator.all_match_val)
+#        val_match_dataset = val_match_dataset.shuffle(buffer_size=np.shape(generator.all_match_val)[0])
+#        val_match_dataset = val_match_dataset.repeat()
+#        val_match_dataset = val_match_dataset.batch(batch_size_val)
+#        
+#        val_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.all_non_match_val)
+#        val_non_match_dataset = val_non_match_dataset.shuffle(buffer_size=np.shape(generator.all_non_match_val)[0])
+#        val_non_match_dataset = val_non_match_dataset.repeat()
+#        val_non_match_dataset = val_non_match_dataset.batch(batch_size_val)
         
         train_match_iterator = train_match_dataset.make_one_shot_iterator()
         train_match_handle = sess.run(train_match_iterator.string_handle())
@@ -199,18 +199,18 @@ def main(unused_argv):
 #            if is_matching:
                 train_batch_matching = sess.run(next_element,feed_dict={handle:train_match_handle})
 #                val_batch_matching = sess.run(next_element,feed_dict={handle:val_match_handle})
-                b_sim_train_matching = np.ones(batch_size_train)
+                b_sim_train_matching = np.ones(np.shape(train_batch_matching)[0],dtype=np.int32)
 #                b_sim_val_matching = np.ones(batch_size_val)
 #                is_matching = False
 #            else:
                 train_batch_non_matching = sess.run(next_element,feed_dict={handle:train_non_match_handle})
 #                val_batch_non_matching = sess.run(next_element,feed_dict={handle:val_non_match_handle})
-                b_sim_train_non_matching = np.zeros(batch_size_train)
+                b_sim_train_non_matching = np.zeros(np.shape(train_batch_non_matching)[0],dtype=np.int32)
 #                b_sim_val_non_matching = np.zeros(batch_size_val)
 #                is_matching = True
                 train_batch = np.append(train_batch_matching,train_batch_non_matching,axis=0)
                 b_sim_train = np.append(b_sim_train_matching,b_sim_train_non_matching,axis=0)
-                permutation = np.random.permutation(batch_size_train*2)
+                permutation = np.random.permutation(batch_size_train)
                 train_batch = np.take(train_batch,permutation,axis=0)
                 b_sim_train = np.take(b_sim_train,permutation,axis=0)
                 
@@ -223,6 +223,7 @@ def main(unused_argv):
 #                    print("Iteration %d: val loss = %.5f" % (i,val_loss_value))
                     
                 writer.add_summary(summary, i)
+                
                 precision, false_pos, false_neg, recall, fnr, fpr = sme.get_test_diagnostics(left_o,right_o, b_sim_train,threshold)
                 
                 if false_pos > false_neg:

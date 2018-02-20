@@ -17,7 +17,7 @@ def inference(input):
     # Convolutional layer 1
     conv1 = tf.layers.conv2d(
             inputs = input_layer,
-            filters = 8,
+            filters = 32,
             kernel_size = [5, 5], 
             padding = "same",
             activation = tf.nn.relu,
@@ -29,22 +29,36 @@ def inference(input):
                                      pool_size = [2,2], 
                                      strides = 2)
     
-#    # Convolutional Layer 2 and pooling layer 2
-#    conv2 = tf.layers.conv2d(
-#            inputs = pool1,
-#            filters = 4,
-#            kernel_size = [5,5],
-#            padding = "same",
-#            activation = tf.nn.relu,
-#            reuse = tf.AUTO_REUSE,
-#            name="conv_layer_2")
-#            
-#    pool2 = tf.layers.max_pooling2d(
-#            inputs = conv2, 
-#            pool_size = [2,2],
-#            strides = 2)
+    # Convolutional Layer 2 and pooling layer 2
+    conv2 = tf.layers.conv2d(
+            inputs = pool1,
+            filters = 64,
+            kernel_size = [1,1],
+            padding = "same",
+            activation = tf.nn.relu,
+            reuse = tf.AUTO_REUSE,
+            name="conv_layer_2")
+            
+    pool2 = tf.layers.max_pooling2d(
+            inputs = conv2, 
+            pool_size = [2,2],
+            strides = 2)
     
-    net = tf.layers.flatten(pool1)
+    net = tf.layers.flatten(pool2)
+    
+    net = tf.layers.dense(
+            inputs = net,
+            units = 1024,
+            activation = tf.nn.relu,
+            reuse = tf.AUTO_REUSE)
+    
+    net = tf.layers.dropout(
+            inputs = net, 
+            rate = 0.4)
+    
+
+    
+#    net = tf.layers.flatten(pool1)
     return net
     
 def l2_loss(input_1,input_2):
@@ -90,9 +104,9 @@ def placeholder_inputs(image_dims,batch_sizes):
     left_test - placeholder for left input to siamese network for testing
     right_test - placeholder for right input to siamese network for testing
     """
-    left_train = tf.placeholder(tf.float32, [2*batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="left_train")
-    right_train = tf.placeholder(tf.float32,[2*batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="right_train")
-    label_train = tf.placeholder(tf.float32, [2*batch_sizes[0]], name="label_train") # 1 if same, 0 if different
+    left_train = tf.placeholder(tf.float32, [batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="left_train")
+    right_train = tf.placeholder(tf.float32,[batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="right_train")
+    label_train = tf.placeholder(tf.float32, [batch_sizes[0]], name="label_train") # 1 if same, 0 if different
     
     left_val = tf.placeholder(tf.float32,[batch_sizes[1],image_dims[0],image_dims[1],image_dims[2]], name="left_val")
     right_val = tf.placeholder(tf.float32, [batch_sizes[1],image_dims[0],image_dims[1],image_dims[2]], name="right_val")
