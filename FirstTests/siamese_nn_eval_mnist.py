@@ -118,16 +118,16 @@ def main(unused_argv):
     ''' Runs evaluation on mnist's evaluation data set '''
     
     # Set parameters for evaluation
-    eval_itr = 10
-    threshold = 0.5
-    nbr_of_images = 10000
+    eval_itr = 100
+    threshold = 0.43
+    nbr_of_images = 1000
     batch_size = 100
     
     dir_path = os.path.dirname(os.path.realpath(__file__))
     output_dir = "/tmp/siamese_mnist_model/"
     #Load Evaluation data and set up generator
-    if not os.path.exists(dir_path + "/generator_data_eval.pk1"):
-        with open('generator_data_eval.pk1', 'wb') as output:
+    if not os.path.exists(dir_path + "/generator_data_eval_resized.pk1"):
+        with open('generator_data_eval_resized.pk1', 'wb') as output:
             # Load mnist training and eval data and perform necessary data reshape
             mnist = tf.contrib.learn.datasets.load_dataset("mnist")
 #            eval_data = util.reshape_grayscale_data(mnist.test.images) # Returns np.array
@@ -138,7 +138,7 @@ def main(unused_argv):
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
         # Load generator
-        with open('generator_data_eval.pk1', 'rb') as input:
+        with open('generator_data_eval_resized.pk1', 'rb') as input:
             generator = pickle.load(input)
     
     evaluate_siamese_network(generator, batch_size, eval_itr, threshold, output_dir)

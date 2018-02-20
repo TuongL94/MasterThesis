@@ -33,26 +33,26 @@ def main(unused_argv):
         
     # Load mnist data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
-    if not os.path.exists(dir_path + "/generator_data.pk1"):
-        with open('generator_data.pk1', 'wb') as output:
+    if not os.path.exists(dir_path + "/generator_data_resized.pk1"):
+        with open('generator_data_resized.pk1', 'wb') as output:
             # Load mnist training and eval data and perform necessary data reshape
             mnist = tf.contrib.learn.datasets.load_dataset("mnist")
-#            train_data_small = util.reshape_grayscale_data(mnist.train.images) # Returns np.array
+#            train_data = util.reshape_grayscale_data(mnist.train.images) # Returns np.array
             '''Use resized_images to use fingerprint resolution mnist (192,192)'''
             train_data = np.load(dir_path + "/resized_train_mnist.npy")
             train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
 #            nbr_of_images = np.shape(train_data)[0] # number of images to use from the original data set
-            nbr_of_images = 20000
+            nbr_of_images = 3000
             generator = data_generator(train_data,train_labels,nbr_of_images) # initialize data generator
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
         # Load generator
-        with open('generator_data.pk1', 'rb') as input:
+        with open('generator_data_resized.pk1', 'rb') as input:
             generator = pickle.load(input)
     
     # parameters for training
     batch_size = 100
-    train_iter = 250
+    train_iter = 1000
     learning_rate = 0.001
     momentum = 0.99
     

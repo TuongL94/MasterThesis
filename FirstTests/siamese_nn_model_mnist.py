@@ -74,15 +74,15 @@ def inference(input):
             pool_size = [2,2],
             strides = 2)
     
-#    # Convolutional Layer 5 and pooling layer 5
-#    conv5 = tf.layers.conv2d(
-#            inputs = pool4,
-#            filters = 32,
-#            kernel_size = [3,3],
-#            padding = "same",
-#            activation = tf.nn.relu,
-#            reuse = tf.AUTO_REUSE,
-#            name="conv_layer_5")
+    # Convolutional Layer 5 and pooling layer 5
+    conv5 = tf.layers.conv2d(
+            inputs = pool4,
+            filters = 32,
+            kernel_size = [3,3],
+            padding = "same",
+            activation = tf.nn.relu,
+            reuse = tf.AUTO_REUSE,
+            name="conv_layer_5")
 #            
 #    pool5 = tf.layers.max_pooling2d(
 #            inputs = conv5, 
@@ -119,7 +119,7 @@ def inference(input):
 #            pool_size = [2,2],
 #            strides = 1)
     
-    flatt = tf.layers.flatten(pool4)
+    flatt = tf.layers.flatten(conv5)
     
     dense1 = tf.layers.dense(
             inputs = flatt,
@@ -127,6 +127,7 @@ def inference(input):
             activation = tf.nn.relu,
             reuse = tf.AUTO_REUSE,
             name = "dense_1")
+    
     dropout1 = tf.layers.dropout(
             inputs = dense1, 
             rate = 0.4)
