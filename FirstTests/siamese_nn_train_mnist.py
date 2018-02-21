@@ -246,11 +246,11 @@ def main(unused_argv):
                     threshold += thresh_step   
                 precision_over_time.append(precision)
                     
-                if i % 100 == 0:
-                    print("Iteration %d: loss = %.5f" % (i, train_loss_value))
+            if i % 100 == 0:
+                print("Iteration %d: loss = %.5f" % (i, train_loss_value))
 #                    print("Iteration %d: val loss = %.5f" % (i,val_loss_value))
-                    
-                writer.add_summary(summary, i)
+                
+            writer.add_summary(summary, i)
                 
 #        graph = tf.get_default_graph()
 #        kernel_var = graph.get_tensor_by_name("conv_layer_1/bias:0")
