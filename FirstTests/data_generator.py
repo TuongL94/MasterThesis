@@ -46,27 +46,24 @@ class data_generator:
         self.all_match_val, self.all_non_match_val = self.all_combinations(self.val_data,self.val_breakpoints)
         self.all_match_test, self.all_non_match_test = self.all_combinations(self.test_data,self.test_breakpoints)
         
-
-    def all_combinations_equal(self):
+    def all_combinations_equal(self,data,data_breakpoints):
         match = [] # matching pair indices
         no_match = [] # non-matching pair indices 
         
-        for i in range(len(self.digit)-1):
-            for k in range(self.digit[i+1]-self.digit[i]):
-                for j in range(self.digit[i]+k+1, self.digit[i+1]):
-                    match.append([self.digit[i]+k, j])
+        for i in range(len(data_breakpoints)-1):
+            for k in range(data_breakpoints[i+1]-data_breakpoints[i]):
+                for j in range(data_breakpoints[i]+k+1, data_breakpoints[i+1]):
+                    match.append([data_breakpoints[i]+k, j])
                     
                     # Generate equal amount of non matching pairs randomly
                     while True:
                         rnd_non_match = random.randint(0,9)
                         if not rnd_non_match == i:
                             break
-                    rnd_digit = random.randint(self.digit[rnd_non_match],self.digit[rnd_non_match+1])
-                    no_match.append([self.digit[i]+k, rnd_digit])
+                    rnd_digit = random.randint(data_breakpoints[rnd_non_match],data_breakpoints[rnd_non_match+1])
+                    no_match.append([data_breakpoints[i]+k, rnd_digit])
             
-        no_match = np.array(no_match)
-        np.random.shuffle(no_match)
-        return match,no_match
+        return np.array(match),np.random.shuffle(np.array(no_match))
     
     def all_combinations(self,data,data_breakpoints):
         match = [] # matching pair indices
