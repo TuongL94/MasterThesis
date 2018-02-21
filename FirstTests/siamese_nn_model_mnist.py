@@ -33,7 +33,7 @@ def inference(input):
     conv2 = tf.layers.conv2d(
             inputs = pool1,
             filters = 64,
-            kernel_size = [1,1],
+            kernel_size = [5,5],
             padding = "same",
             activation = tf.nn.relu,
             reuse = tf.AUTO_REUSE,
@@ -50,20 +50,14 @@ def inference(input):
             inputs = net,
             units = 1024,
             activation = tf.nn.relu,
-            reuse = tf.AUTO_REUSE)
+            reuse = tf.AUTO_REUSE,
+            name = "dense_layer_1")
     
     net = tf.layers.dropout(
             inputs = net, 
             rate = 0.4)
-    
-
-    
-#    net = tf.layers.flatten(pool1)
     return net
-    
-def l2_loss(input_1,input_2):
-    return tf.linalg.norm([input_1,input_2])
-    
+      
 def contrastive_loss(input_1,input_2,label,margin):
     """ Computes the contrastive loss between two vectors
     
@@ -78,7 +72,6 @@ def contrastive_loss(input_1,input_2,label,margin):
     max_sq = tf.square(tf.maximum(margin-d_sq,0))
     return tf.reduce_mean(label*d_sq + (1-label)*max_sq)/2
         
-
 def training(loss, learning_rate, momentum):
     global_step = tf.Variable(0, trainable = False)
     optimizer = tf.train.MomentumOptimizer(learning_rate,momentum, use_nesterov=True)
@@ -106,11 +99,11 @@ def placeholder_inputs(image_dims,batch_sizes):
     """
     left_train = tf.placeholder(tf.float32, [batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="left_train")
     right_train = tf.placeholder(tf.float32,[batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="right_train")
-    label_train = tf.placeholder(tf.float32, [batch_sizes[0]], name="label_train") # 1 if same, 0 if different
+    label_train = tf.placeholder(tf.float32, [batch_sizes[0],1], name="label_train") # 1 if same, 0 if different
     
     left_val = tf.placeholder(tf.float32,[batch_sizes[1],image_dims[0],image_dims[1],image_dims[2]], name="left_val")
     right_val = tf.placeholder(tf.float32, [batch_sizes[1],image_dims[0],image_dims[1],image_dims[2]], name="right_val")
-    label_val = tf.placeholder(tf.float32, [batch_sizes[1]], name="label_val") # 1 if same, 0 if different
+    label_val = tf.placeholder(tf.float32, [batch_sizes[1],1], name="label_val") # 1 if same, 0 if different
     
     left_test = tf.placeholder(tf.float32, [batch_sizes[2],image_dims[0],image_dims[1],image_dims[2]], name="left_test")
     right_test = tf.placeholder(tf.float32, [batch_sizes[2],image_dims[0],image_dims[1],image_dims[2]], name="right_test")

@@ -10,6 +10,7 @@ import scipy.linalg as sl
 import tensorflow as tf
 import os 
 import utilities as util
+import pickle
 
 def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold):
     """ Computes and returns evaluation metrics from testing.
@@ -44,7 +45,7 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold):
             if sim_labels[i] == 1:
                 false_neg = false_neg + 1
     
-    precision = np.sum((matching == sim_labels))/len(sim_labels)
+    precision = np.sum((matching == sim_labels.T))/len(sim_labels)
     tp = 0
     for i in range(len(sim_labels)):
         if matching[i] == 1 and sim_labels[i] == 1:
@@ -91,12 +92,10 @@ def evaluate_siamese_network(generator,batch_size_test,threshold,output_dir):
             saver.restore(sess, tf.train.latest_checkpoint(output_dir))
             
             test_match_dataset = tf.data.Dataset.from_tensor_slices(generator.all_match_test)
-            test_match_dataset = test_match_dataset.repeat()
             test_match_dataset = test_match_dataset.batch(batch_size_test)
             test_match_dataset_length = np.shape(generator.all_match_test)[0]
         
             test_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.all_non_match_test)
-            test_non_match_dataset = test_non_match_dataset.repeat()
             test_non_match_dataset = test_non_match_dataset.batch(batch_size_test)
             test_non_match_dataset_length = np.shape(generator.all_non_match_test)[0]
             
@@ -109,9 +108,8 @@ def evaluate_siamese_network(generator,batch_size_test,threshold,output_dir):
             iterator = tf.data.Iterator.from_string_handle(handle, test_match_dataset.output_types)
             next_element = iterator.get_next()
             
-            sim_full = np.hstack((np.ones(batch_size_test*int(test_match_dataset_length/batch_size_test)),np.zeros(batch_size_test*int(test_non_match_dataset_length/batch_size_test))))
-#            left_full = np.array([])
-#            right_full = np.array([])
+            sim_full = np.vstack((np.ones((batch_size_test*int(test_match_dataset_length/batch_size_test),1)),np.zeros((batch_size_test*int(test_non_match_dataset_length/batch_size_test),1))))
+            
             for i in range(int(test_match_dataset_length/batch_size_test)):
                 test_batch = sess.run(next_element,feed_dict={handle:test_match_handle})
                 b_l_test,b_r_test = generator.get_pairs(generator.test_data,test_batch) 
@@ -140,4 +138,20 @@ def evaluate_siamese_network(generator,batch_size_test,threshold,output_dir):
             print("# fall-out/false positive rate: %f " % fpr)
     
     
+def main(unused_argv):
+    ''' Runs evaluation on mnist's evaluation data set '''
     
+    # Set parameters for evaluation
+    threshold = 0.35
+    batch_size = 50
+    
+    output_dir = "/tmp/siamese_mnist_model/"
+    
+    # Load generator
+    with open('generator_data.pk1', 'rb') as input:
+        generator = pickle.load(input)
+    
+    evaluate_siamese_network(generator, batch_size, threshold, output_dir)
+    
+if __name__ == "__main__":
+    tf.app.run()
