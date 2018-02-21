@@ -6,7 +6,6 @@ Created on Wed Jan 24 15:24:03 2018
 """
 
 import numpy as np
-import utilities as util
 
 class data_generator:
 
@@ -64,43 +63,3 @@ class data_generator:
         left_pairs = np.take(data,pair_list[:,0],axis=0)
         right_pairs = np.take(data,pair_list[:,1],axis=0)
         return left_pairs,right_pairs
-
-    def gen_batch(self,batch_size,training=1):
-        """ Generates a batch with matched and non-matched pairs of images.
-        
-        Input:
-        batch_size - the size of the batch
-        training - parameter to determine if the generated batch should be used for training,
-        if training is set to 1 the batch is used for training otherwise it is used for validation.
-        Returns: three numpy arrays where the first two contain one image from randomly selected image pairs respectively.
-        The last array indicates if corresponding pairs in the first two arrays are matching or non-matching
-        pairs, if the pairs match the corresponding element in the last array is 1, otherwise 0.
-        """
-        left = []
-        right = []
-        sim = []
-#        sim = np.zeros(batch_size)
-        
-        if training == 1:
-            current_matching_set = self.all_match_train
-            current_non_matching_set = self.all_non_match_train
-        else:
-            current_matching_set = self.all_match_val
-            current_non_matching_set = self.all_non_match_val
-            
-        switch_match = 0
-        for i in range(batch_size):
-            if switch_match == 0:
-                rnd_match = current_matching_set[np.random.randint(0,len(current_matching_set)-1)]
-                util.rand_assign_pair(left,right,self.train_data[rnd_match[0]],self.train_data[rnd_match[1]])
-                sim.append([1])
-                switch_match = 1
-            else:
-                rnd_no_match = current_non_matching_set[np.random.randint(0,len(current_non_matching_set)-1)]
-                util.rand_assign_pair(left,right,self.train_data[rnd_no_match[0]],self.train_data[rnd_no_match[1]])
-                sim.append([0])
-                switch_match = 0
-        
-        left, right, sim =  util.shuffle_data([left, right, sim])    
-        
-        return np.array(left), np.array(right), np.array(sim)

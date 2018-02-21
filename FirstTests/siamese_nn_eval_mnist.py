@@ -57,7 +57,7 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold):
     return precision, false_pos, false_neg, recall, fnr, fpr
  
 def evaluate_siamese_network(generator,batch_size_test,threshold,output_dir):
-    """ This method is used to evaluate a siamese network for fingerprint datasets.
+    """ This method is used to evaluate a siamese network for mnist dataset.
     
     The model is defined in the file siamese_nn_model_mnist.py and trained in 
     the file siamese_nn_train_mnist.py. Evaluation will only be performed if
@@ -95,7 +95,9 @@ def evaluate_siamese_network(generator,batch_size_test,threshold,output_dir):
             test_match_dataset = test_match_dataset.batch(batch_size_test)
             test_match_dataset_length = np.shape(generator.all_match_test)[0]
         
-            test_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.all_non_match_test)
+#            test_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.all_non_match_test)
+            test_non_match_dataset_length = np.shape(generator.all_non_match_test)[0]
+            test_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.all_non_match_val[0:int(test_non_match_dataset_length/10)])
             test_non_match_dataset = test_non_match_dataset.batch(batch_size_test)
             test_non_match_dataset_length = np.shape(generator.all_non_match_test)[0]
             
@@ -108,8 +110,9 @@ def evaluate_siamese_network(generator,batch_size_test,threshold,output_dir):
             iterator = tf.data.Iterator.from_string_handle(handle, test_match_dataset.output_types)
             next_element = iterator.get_next()
             
-            sim_full = np.vstack((np.ones((batch_size_test*int(test_match_dataset_length/batch_size_test),1)),np.zeros((batch_size_test*int(test_non_match_dataset_length/batch_size_test),1))))
-            
+            sim_full = np.vstack((np.ones((batch_size_test*int(test_match_dataset_length/batch_size_test),1)),np.zeros((batch_size_test*int((int(test_non_match_dataset_length/10))/batch_size_test),1))))
+#            sim_full = np.vstack((np.ones((batch_size_test*int(test_match_dataset_length/batch_size_test),1)),np.zeros((batch_size_test*int(int(test_non_match_dataset_length/10)/batch_size_test),1))))
+
             for i in range(int(test_match_dataset_length/batch_size_test)):
                 test_batch = sess.run(next_element,feed_dict={handle:test_match_handle})
                 b_l_test,b_r_test = generator.get_pairs(generator.test_data,test_batch) 
@@ -121,7 +124,7 @@ def evaluate_siamese_network(generator,batch_size_test,threshold,output_dir):
                     left_full = np.vstack((left_full,left_o))
                     right_full = np.vstack((right_full,right_o))
                     
-            for i in range(int(test_non_match_dataset_length/batch_size_test)):
+            for i in range(int(int(test_non_match_dataset_length/10)/batch_size_test)):
                 test_batch = sess.run(next_element,feed_dict={handle:test_non_match_handle})
                 b_l_test,b_r_test = generator.get_pairs(generator.test_data,test_batch) 
                 left_o,right_o = sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_l_test, right_test:b_r_test})
@@ -139,19 +142,21 @@ def evaluate_siamese_network(generator,batch_size_test,threshold,output_dir):
     
     
 def main(unused_argv):
-    ''' Runs evaluation on mnist's evaluation data set '''
+   """ Runs evaluation on mnist siamese network
+   
+   """
     
-    # Set parameters for evaluation
-    threshold = 0.35
-    batch_size = 50
+   # Set parameters for evaluation
+   threshold = 0.475
+   batch_size = 1000
     
-    output_dir = "/tmp/siamese_mnist_model/"
+   output_dir = "/tmp/siamese_mnist_model/"
     
     # Load generator
-    with open('generator_data.pk1', 'rb') as input:
-        generator = pickle.load(input)
+   with open('generator_data.pk1', 'rb') as input:
+       generator = pickle.load(input)
     
-    evaluate_siamese_network(generator, batch_size, threshold, output_dir)
+   evaluate_siamese_network(generator, batch_size, threshold, output_dir)
     
 if __name__ == "__main__":
     tf.app.run()
