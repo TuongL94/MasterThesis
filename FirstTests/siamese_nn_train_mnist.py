@@ -2,7 +2,7 @@
 """
 Created on Mon Jan 29 13:44:22 2018
 
-@author: Tuong Lam
+@author: Tuong Lam & Simon Nilsson
 """
 
 from data_generator import data_generator
@@ -26,10 +26,8 @@ def rotate(data):
 def main(unused_argv):
     """ This method is used to train a siamese network for the mnist dataset.
     
-    The model is defined in the file siamese_nn_model_mnist.py. The class
-    data_generator is used to generate batches for training, validation and 
-    testing. When training is completed the model is saved in the file
-    /tmp/siamese_mnist_model/.
+    The model is defined in the file siamese_nn_model_mnist.py. When training
+    is completed the model is saved in the file /tmp/siamese_mnist_model/.
     If a model exists it will be used for further training, otherwise a new
     one is created.
     
@@ -49,7 +47,7 @@ def main(unused_argv):
             val_labels = np.asarray(mnist.validation.labels, dtype=np.int32)
             test_data = util.reshape_grayscale_data(mnist.test.images)
             test_labels = np.asarray(mnist.test.labels, dtype=np.int32)
-            data_sizes = [100,100,100] # number of samples to use from each data set
+            data_sizes = [1000,200,1000] # number of samples to use from each data set
             '''Use resized_images to use fingerprint resolution mnist (192,192)'''
 #            train_data = np.load(dir_path + "/resized_train_mnist.npy")
 #            val_data = np.load(dir_path + "/resized_val_mnist.npy")
@@ -65,15 +63,16 @@ def main(unused_argv):
     
     # parameters for training
     batch_size_train = 1000
-    train_iter = 300
+    train_iter = 500
     learning_rate = 0.001
     momentum = 0.99
         
     # parameters for validation
-    batch_size_val = 10
+    batch_size_val = 1000
 
     # parameters for testing
-    batch_size_test = 100
+    batch_size_test = 1000
+
     threshold = 0.5
     
     dims = np.shape(generator.train_data[0])
@@ -107,6 +106,8 @@ def main(unused_argv):
         tf.add_to_collection("val_loss",val_loss)
         tf.add_to_collection("left_train_output",left_train_output)
         tf.add_to_collection("right_train_output",right_train_output)
+        tf.add_to_collection("left_val_output",left_val_output)
+        tf.add_to_collection("right_val_output",right_val_output)
         tf.add_to_collection("left_test_output",left_test_output)
         tf.add_to_collection("right_test_output",right_test_output)
         
@@ -117,6 +118,7 @@ def main(unused_argv):
         
         saver = tf.train.import_meta_graph(output_dir + ".meta")
         g = tf.get_default_graph()
+        
         left_train = g.get_tensor_by_name("left_train:0")
         right_train = g.get_tensor_by_name("right_train:0")
         label_train = g.get_tensor_by_name("label_train:0")
@@ -128,6 +130,8 @@ def main(unused_argv):
         right_val = g.get_tensor_by_name("right_val:0")
         label_val = g.get_tensor_by_name("label_val:0")
         val_loss = tf.get_collection("val_loss")[0]
+        left_val_output = tf.get_collection("left_val_output")[0]
+        right_val_output = tf.get_collection("right_val_output")[0]
         
         handle= g.get_tensor_by_name("handle:0")
     with tf.Session() as sess:
@@ -154,6 +158,7 @@ def main(unused_argv):
 #        hist_conv2 = tf.summary.histogram("hist_conv2", conv2_layer)
         conv1_layer = tf.transpose(conv1_layer, perm = [3,0,1,2])
         filter1 = tf.summary.image('Filter_1', conv1_layer, max_outputs=nbr_of_filters_conv1)
+        conv1_layer = tf.transpose(conv1_layer, perm = [1,2,3,0])
 #        conv2_layer = tf.transpose(conv2_layer, perm = [3,0,1,2])
 #        filter2 = tf.summary.image('Filter_2', conv2_layer, max_outputs=32)
         bias_conv1 = graph.get_tensor_by_name("conv_layer_1/bias:0")
@@ -170,7 +175,7 @@ def main(unused_argv):
         writer = tf.summary.FileWriter(output_dir + "/summary", graph=tf.get_default_graph())
         
         precision_over_time = []
-        thresh_step = 0.05
+        thresh_step = 0.005
         
         train_match_dataset = tf.data.Dataset.from_tensor_slices(generator.all_match_train)
 #        train_match_dataset = train_match_dataset.map(lambda x: x**2)
@@ -183,12 +188,16 @@ def main(unused_argv):
         train_non_match_dataset = train_non_match_dataset.repeat()
         train_non_match_dataset = train_non_match_dataset.batch(int((batch_size_train+1)/2))
         
+        val_match_dataset_length = np.shape(generator.all_match_val)[0]
         val_match_dataset = tf.data.Dataset.from_tensor_slices(generator.all_match_val)
-        val_match_dataset = val_match_dataset.shuffle(buffer_size=np.shape(generator.all_match_val)[0])
+        val_match_dataset = val_match_dataset.shuffle(buffer_size = val_match_dataset_length)
+        val_match_dataset = val_match_dataset.repeat()
         val_match_dataset = val_match_dataset.batch(batch_size_val)
         
-        val_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.all_non_match_val)
-        val_non_match_dataset = val_non_match_dataset.shuffle(buffer_size=np.shape(generator.all_non_match_val)[0])
+        val_non_match_dataset_length = np.shape(generator.all_non_match_val)[0]
+        val_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.all_non_match_val[0:int(val_non_match_dataset_length/10)])
+        val_non_match_dataset = val_non_match_dataset.shuffle(buffer_size = val_non_match_dataset_length)
+        val_non_match_dataset = val_non_match_dataset.repeat()
         val_non_match_dataset = val_non_match_dataset.batch(batch_size_val)
         
         train_match_iterator = train_match_dataset.make_one_shot_iterator()
@@ -207,61 +216,60 @@ def main(unused_argv):
         next_element = iterator.get_next()
         
         for i in range(1,train_iter + 1):
-#            if is_matching:
-                train_batch_matching = sess.run(next_element,feed_dict={handle:train_match_handle})
-#                val_batch_matching = sess.run(next_element,feed_dict={handle:val_match_handle})
-                b_sim_train_matching = np.ones((np.shape(train_batch_matching)[0],1),dtype=np.int32)
-#                b_sim_val_matching = np.ones(batch_size_val)
-#                is_matching = False
-#            else:
-                train_batch_non_matching = sess.run(next_element,feed_dict={handle:train_non_match_handle})
-#                val_batch_non_matching = sess.run(next_element,feed_dict={handle:val_non_match_handle})
-                b_sim_train_non_matching = np.zeros((np.shape(train_batch_non_matching)[0],1),dtype=np.int32)
-#                b_sim_val_non_matching = np.zeros(batch_size_val)
-#                is_matching = True
-                
-                train_batch = np.append(train_batch_matching,train_batch_non_matching,axis=0)
-                b_sim_train = np.append(b_sim_train_matching,b_sim_train_non_matching,axis=0)
-                permutation = np.random.permutation(batch_size_train)
-                train_batch = np.take(train_batch,permutation,axis=0)
-                b_sim_train = np.take(b_sim_train,permutation,axis=0)
-                
-                # Randomize rotation of batch
-#                rnd = np.random.random()
-#                if rnd < 0.25:
-#                    b_l_train,b_r_train = generator.get_pairs(generator.train_data,train_batch)
-#                elif rnd < 0.5:
-#                    b_l_train,b_r_train = generator.get_pairs(generator.train_data_90,train_batch)
-#                elif rnd < 0.75:
-#                    b_l_train,b_r_train = generator.get_pairs(generator.train_data_180,train_batch)
-#                else:
-#                    b_l_train,b_r_train = generator.get_pairs(generator.train_data_270,train_batch)
-                
-                rnd_rotation = np.random.randint(0,generator.rotation_res-1)
-                b_l_train,b_r_train = generator.get_pairs(generator.train_data[rnd_rotation],train_batch)
+            train_batch_matching = sess.run(next_element,feed_dict={handle:train_match_handle})
+            b_sim_train_matching = np.ones((np.shape(train_batch_matching)[0],1),dtype=np.int32)
+            train_batch_non_matching = sess.run(next_element,feed_dict={handle:train_non_match_handle})
+            b_sim_train_non_matching = np.zeros((np.shape(train_batch_non_matching)[0],1),dtype=np.int32)
+            
+            train_batch = np.append(train_batch_matching,train_batch_non_matching,axis=0)
+            b_sim_train = np.append(b_sim_train_matching,b_sim_train_non_matching,axis=0)
+            permutation = np.random.permutation(batch_size_train)
+            train_batch = np.take(train_batch,permutation,axis=0)
+            b_sim_train = np.take(b_sim_train,permutation,axis=0)
+            
+            # Randomize rotation of batch              
+            rnd_rotation = np.random.randint(0,generator.rotation_res-1)
+            b_l_train,b_r_train = generator.get_pairs(generator.train_data[rnd_rotation],train_batch)
+            # Train
+            _,train_loss_value,left_full,right_full,summary = sess.run([train_op, train_loss,left_train_output,right_train_output,summary_op],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train})
+            
+            # Use validation data set to tune hyperparameters (Classification threshold)
+            if i % 50 == 0:
+                b_sim_val_matching = np.ones((batch_size_val*int(val_match_dataset_length/batch_size_val),1))
+                b_sim_val_non_matching = np.zeros((batch_size_val*int((int(val_non_match_dataset_length/10)+1)/batch_size_val),1))
+                b_sim_val = np.append(b_sim_val_matching,b_sim_val_non_matching,axis=0)
+                for j in range(int(val_match_dataset_length/batch_size_val)):
+                    val_batch_matching = sess.run(next_element,feed_dict={handle:val_match_handle})
+                    b_l_val,b_r_val = generator.get_pairs(generator.val_data,val_batch_matching) 
+                    left_o,right_o = sess.run([left_val_output,right_val_output],feed_dict = {left_val:b_l_val, right_val:b_r_val})
+                    if j == 0:
+                        left_full = left_o
+                        right_full = right_o
+                    else:
+                        left_full = np.vstack((left_full,left_o))
+                        right_full = np.vstack((right_full,right_o))
                     
-#                b_l_val,b_r_val = generator.get_pairs(generator.val_data,val_batch)
-                # Rotate batch
-#                b_l_val,b_r_val = generator.get_pairs(generator.val_data,val_batch)
-                # Rotate batch
-#                b_l_train = tf.contrib.image.rotate(b_l_train, pi).eval() 
-#                b_r_train = tf.contrib.image.rotate(b_r_train, pi).eval() 
+                for k in range(int((int(val_non_match_dataset_length/10)+1)/batch_size_val)):
+                    val_batch_non_matching = sess.run(next_element,feed_dict={handle:val_non_match_handle})
+                    b_l_val,b_r_val = generator.get_pairs(generator.val_data,val_batch_non_matching) 
+                    left_o,right_o = sess.run([left_val_output,right_val_output],feed_dict = {left_val:b_l_val, right_val:b_r_val})
+                    left_full = np.vstack((left_full,left_o))
+                    right_full = np.vstack((right_full,right_o)) 
                 
-                _,train_loss_value,left_o,right_o,summary = sess.run([train_op, train_loss, left_train_output, right_train_output,summary_op],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train})
-                if i % 100 == 0:
-                    print("Iteration %d: loss = %.5f" % (i, train_loss_value))
-#                    print("Iteration %d: val loss = %.5f" % (i,val_loss_value))
-                    
-                writer.add_summary(summary, i)
-                
-                precision, false_pos, false_neg, recall, fnr, fpr = sme.get_test_diagnostics(left_o,right_o, b_sim_train,threshold)
-                
+                precision, false_pos, false_neg, recall, fnr, fpr = sme.get_test_diagnostics(left_full,right_full, b_sim_val,threshold)
+            
                 if false_pos > false_neg:
                     threshold -= thresh_step
                 else:
                     threshold += thresh_step
                 precision_over_time.append(precision)
-            
+                    
+            if i % 100 == 0:
+                print("Iteration %d: loss = %.5f" % (i, train_loss_value))
+#                    print("Iteration %d: val loss = %.5f" % (i,val_loss_value))
+                
+            writer.add_summary(summary, i)
+                
 #        graph = tf.get_default_graph()
 #        kernel_var = graph.get_tensor_by_name("conv_layer_1/bias:0")
 #        kernel_var_after_init = sess.run(kernel_var)

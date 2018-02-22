@@ -17,7 +17,7 @@ def inference(input):
     # Convolutional layer 1
     conv1 = tf.layers.conv2d(
             inputs = input_layer,
-            filters = 32,
+            filters = 16,
             kernel_size = [5, 5], 
             padding = "same",
             activation = tf.nn.relu,
@@ -32,7 +32,7 @@ def inference(input):
     # Convolutional Layer 2 and pooling layer 2
     conv2 = tf.layers.conv2d(
             inputs = pool1,
-            filters = 64,
+            filters = 16,
             kernel_size = [5,5],
             padding = "same",
             activation = tf.nn.relu,

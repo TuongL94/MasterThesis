@@ -7,9 +7,9 @@ Created on Wed Jan 24 15:24:03 2018
 
 import numpy as np
 import utilities as util
-#from PIL import Image
 import tensorflow as tf
 from math import pi
+import random
 
 class data_generator:
 
@@ -57,11 +57,27 @@ class data_generator:
         with sess.as_default():
             for i in range(1,rotation_res):
                 self.train_data.append(list(tf.contrib.image.rotate(np.array(original_train_images), pi/i).eval()))
-#            self.train_data_90 = list(tf.contrib.image.rotate(np.array(self.train_data), pi/4).eval())
-#            self.train_data_180 = list(tf.contrib.image.rotate(np.array(self.train_data), pi).eval())
-#            self.train_data_270 = list(tf.contrib.image.rotate(np.array(self.train_data), 3*pi/4).eval())
-
         
+
+    def all_combinations_equal(self,data,data_breakpoints):
+        match = [] # matching pair indices
+        no_match = [] # non-matching pair indices 
+        
+        for i in range(len(data_breakpoints)-1):
+            for k in range(data_breakpoints[i+1]-data_breakpoints[i]):
+                for j in range(data_breakpoints[i]+k+1, data_breakpoints[i+1]):
+                    match.append([data_breakpoints[i]+k, j])
+                    
+                    # Generate equal amount of non matching pairs randomly
+                    while True:
+                        rnd_non_match = random.randint(0,9)
+                        if not rnd_non_match == i:
+                            break
+                    rnd_digit = random.randint(data_breakpoints[rnd_non_match],data_breakpoints[rnd_non_match+1])
+                    no_match.append([data_breakpoints[i]+k, rnd_digit])
+            
+        return np.array(match),np.random.shuffle(np.array(no_match))
+    
     def all_combinations(self,data,data_breakpoints):
         match = [] # matching pair indices
         no_match = [] # non-matching pair indices 
@@ -80,43 +96,3 @@ class data_generator:
         left_pairs = np.take(data,pair_list[:,0],axis=0)
         right_pairs = np.take(data,pair_list[:,1],axis=0)
         return left_pairs,right_pairs
-
-    def gen_batch(self,batch_size,training=1):
-        """ Generates a batch with matched and non-matched pairs of images.
-        
-        Input:
-        batch_size - the size of the batch
-        training - parameter to determine if the generated batch should be used for training,
-        if training is set to 1 the batch is used for training otherwise it is used for validation.
-        Returns: three numpy arrays where the first two contain one image from randomly selected image pairs respectively.
-        The last array indicates if corresponding pairs in the first two arrays are matching or non-matching
-        pairs, if the pairs match the corresponding element in the last array is 1, otherwise 0.
-        """
-        left = []
-        right = []
-        sim = []
-#        sim = np.zeros(batch_size)
-        
-        if training == 1:
-            current_matching_set = self.all_match_train
-            current_non_matching_set = self.all_non_match_train
-        else:
-            current_matching_set = self.all_match_val
-            current_non_matching_set = self.all_non_match_val
-            
-        switch_match = 0
-        for i in range(batch_size):
-            if switch_match == 0:
-                rnd_match = current_matching_set[np.random.randint(0,len(current_matching_set)-1)]
-                util.rand_assign_pair(left,right,self.train_data[rnd_match[0]],self.train_data[rnd_match[1]])
-                sim.append([1])
-                switch_match = 1
-            else:
-                rnd_no_match = current_non_matching_set[np.random.randint(0,len(current_non_matching_set)-1)]
-                util.rand_assign_pair(left,right,self.train_data[rnd_no_match[0]],self.train_data[rnd_no_match[1]])
-                sim.append([0])
-                switch_match = 0
-        
-        left, right, sim =  util.shuffle_data([left, right, sim])    
-        
-        return np.array(left), np.array(right), np.array(sim)
