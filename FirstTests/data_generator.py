@@ -7,10 +7,13 @@ Created on Wed Jan 24 15:24:03 2018
 
 import numpy as np
 import utilities as util
+#from PIL import Image
+import tensorflow as tf
+from math import pi
 
 class data_generator:
 
-    def __init__(self,train_data,train_labels,val_data,val_labels,test_data,test_labels,data_sizes):
+    def __init__(self, train_data, train_labels, val_data, val_labels, test_data, test_labels,data_sizes, rotation_res):
         self.nbr_of_classes = len(np.unique(train_labels))
         self.train_data = train_data[0:data_sizes[0],:,:,:]
         self.train_labels = train_labels[0:data_sizes[0]]
@@ -45,6 +48,19 @@ class data_generator:
         self.all_match_train, self.all_non_match_train = self.all_combinations(self.train_data,self.train_breakpoints)
         self.all_match_val, self.all_non_match_val = self.all_combinations(self.val_data,self.val_breakpoints)
         self.all_match_test, self.all_non_match_test = self.all_combinations(self.test_data,self.test_breakpoints)
+        
+        # Create rotated training set with 90 degree steps
+        original_train_images = self.train_data
+        self.train_data = [self.train_data]
+        self.rotation_res = rotation_res
+        sess = tf.Session()
+        with sess.as_default():
+            for i in range(1,rotation_res):
+                self.train_data.append(list(tf.contrib.image.rotate(np.array(original_train_images), pi/i).eval()))
+#            self.train_data_90 = list(tf.contrib.image.rotate(np.array(self.train_data), pi/4).eval())
+#            self.train_data_180 = list(tf.contrib.image.rotate(np.array(self.train_data), pi).eval())
+#            self.train_data_270 = list(tf.contrib.image.rotate(np.array(self.train_data), 3*pi/4).eval())
+
         
     def all_combinations(self,data,data_breakpoints):
         match = [] # matching pair indices

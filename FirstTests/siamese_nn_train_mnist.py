@@ -17,6 +17,12 @@ import matplotlib.pyplot as plt
 import pickle
 
 
+def rotate(data):
+    data = tf.contrib.image.rotate(data, 3.14)
+    tf.cast(data, tf.float32)
+    return data
+
+
 def main(unused_argv):
     """ This method is used to train a siamese network for the mnist dataset.
     
@@ -31,7 +37,7 @@ def main(unused_argv):
         
     dir_path = os.path.dirname(os.path.realpath(__file__))
     output_dir = "/tmp/siamese_mnist_model/" # directory where the model will be saved
-        
+    
     # Load mnist data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
     if not os.path.exists(dir_path + "/generator_data.pk1"):
@@ -43,8 +49,14 @@ def main(unused_argv):
             val_labels = np.asarray(mnist.validation.labels, dtype=np.int32)
             test_data = util.reshape_grayscale_data(mnist.test.images)
             test_labels = np.asarray(mnist.test.labels, dtype=np.int32)
-            data_sizes = [1000,100,100] # number of samples to use from each data set
-            generator = data_generator(train_data,train_labels,val_data,val_labels,test_data,test_labels,data_sizes) # initialize data generator
+            data_sizes = [100,100,100] # number of samples to use from each data set
+            '''Use resized_images to use fingerprint resolution mnist (192,192)'''
+#            train_data = np.load(dir_path + "/resized_train_mnist.npy")
+#            val_data = np.load(dir_path + "/resized_val_mnist.npy")
+#            test_data = np.load(dir_path + "/resized_test_mnist.npy")
+            
+            rotation_res = 4    # Set number of rotations; equally spaced
+            generator = data_generator(train_data,train_labels,val_data,val_labels,test_data,test_labels,data_sizes,rotation_res) # initialize data generator
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
         # Load generator
@@ -53,18 +65,18 @@ def main(unused_argv):
     
     # parameters for training
     batch_size_train = 1000
-    train_iter = 1000
+    train_iter = 300
     learning_rate = 0.001
     momentum = 0.99
         
     # parameters for validation
-    batch_size_val = 50
+    batch_size_val = 10
 
     # parameters for testing
-    batch_size_test = 50
+    batch_size_test = 100
     threshold = 0.5
     
-    dims = np.shape(generator.train_data)
+    dims = np.shape(generator.train_data[0])
     batch_sizes = [batch_size_train,batch_size_val,batch_size_test]
     image_dims = [dims[1],dims[2],dims[3]] 
     
@@ -161,6 +173,7 @@ def main(unused_argv):
         thresh_step = 0.05
         
         train_match_dataset = tf.data.Dataset.from_tensor_slices(generator.all_match_train)
+#        train_match_dataset = train_match_dataset.map(lambda x: x**2)
         train_match_dataset = train_match_dataset.shuffle(buffer_size=np.shape(generator.all_match_train)[0])
         train_match_dataset = train_match_dataset.repeat()
         train_match_dataset = train_match_dataset.batch(int(batch_size_train/2))
@@ -213,8 +226,27 @@ def main(unused_argv):
                 train_batch = np.take(train_batch,permutation,axis=0)
                 b_sim_train = np.take(b_sim_train,permutation,axis=0)
                 
-                b_l_train,b_r_train = generator.get_pairs(generator.train_data,train_batch)
+                # Randomize rotation of batch
+#                rnd = np.random.random()
+#                if rnd < 0.25:
+#                    b_l_train,b_r_train = generator.get_pairs(generator.train_data,train_batch)
+#                elif rnd < 0.5:
+#                    b_l_train,b_r_train = generator.get_pairs(generator.train_data_90,train_batch)
+#                elif rnd < 0.75:
+#                    b_l_train,b_r_train = generator.get_pairs(generator.train_data_180,train_batch)
+#                else:
+#                    b_l_train,b_r_train = generator.get_pairs(generator.train_data_270,train_batch)
+                
+                rnd_rotation = np.random.randint(0,generator.rotation_res-1)
+                b_l_train,b_r_train = generator.get_pairs(generator.train_data[rnd_rotation],train_batch)
+                    
 #                b_l_val,b_r_val = generator.get_pairs(generator.val_data,val_batch)
+                # Rotate batch
+#                b_l_val,b_r_val = generator.get_pairs(generator.val_data,val_batch)
+                # Rotate batch
+#                b_l_train = tf.contrib.image.rotate(b_l_train, pi).eval() 
+#                b_r_train = tf.contrib.image.rotate(b_r_train, pi).eval() 
+                
                 _,train_loss_value,left_o,right_o,summary = sess.run([train_op, train_loss, left_train_output, right_train_output,summary_op],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train})
                 if i % 100 == 0:
                     print("Iteration %d: loss = %.5f" % (i, train_loss_value))
@@ -227,7 +259,7 @@ def main(unused_argv):
                 if false_pos > false_neg:
                     threshold -= thresh_step
                 else:
-                    threshold += thresh_step   
+                    threshold += thresh_step
                 precision_over_time.append(precision)
             
 #        graph = tf.get_default_graph()
@@ -244,9 +276,10 @@ def main(unused_argv):
         plt.plot(time, precision_over_time)
         plt.show()
         print("Current threshold: %f" % threshold)
+        print("Final precision: %f" % precision_over_time[-1])
         
     # Only run this if the final network is to be evaluated    
-    sme.main()
+    sme.main(None)
     
 if __name__ == "__main__":
     tf.app.run()
