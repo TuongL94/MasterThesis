@@ -96,7 +96,6 @@ def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_
             test_match_dataset = test_match_dataset.batch(batch_size)
             test_match_dataset_length = np.shape(generator.match_test)[0]
         
-#            test_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.all_no_match_test)
             test_non_match_dataset_length = np.shape(generator.match_test)[0]
 #            test_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_test[0:int(test_non_match_dataset_length/10)])
             test_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_test)
@@ -121,25 +120,24 @@ def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_
             for i in range(eval_itr):
                 #            for i in range(int(test_match_dataset_length/batch_size_test)):
                 test_batch = sess.run(next_element,feed_dict={handle:test_match_handle})
-                b_l_test,b_r_test = generator.get_pairs(generator.test_data,test_batch)
-#                left,right,sim = generator.prep_eval_match(batch_size)
-                left_o,right_o= sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_l_test, right_test:b_r_test})
-                if i == 0:
-                    left_full = left_o
-                    right_full = right_o
-#                    sim_full = sim
-                else:
-                    left_full = np.vstack((left_full,left_o))
-                    right_full = np.vstack((right_full,right_o))
-#                    sim_full = np.vstack((sim_full, sim))
+                for j in range(generator.rotation_res):
+                    b_l_test,b_r_test = generator.get_pairs(generator.test_data[j],test_batch)
+                    left_o,right_o= sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_l_test, right_test:b_r_test})
+                    if i == 0 and j == 0:
+                        left_full = left_o
+                        right_full = right_o
+                    else:
+                        left_full = np.vstack((left_full,left_o))
+                        right_full = np.vstack((right_full,right_o))
                     
             for i in range(eval_itr):
 #            for i in range(int(int(test_non_match_dataset_length/10)/batch_size_test)):
                 test_batch = sess.run(next_element,feed_dict={handle:test_non_match_handle})
-                b_l_test,b_r_test = generator.get_pairs(generator.test_data,test_batch) 
-                left_o,right_o = sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_l_test, right_test:b_r_test})
-                left_full = np.vstack((left_full,left_o))
-                right_full = np.vstack((right_full,right_o))   
+                for j in range(generator.rotation_res):
+                    b_l_test,b_r_test = generator.get_pairs(generator.test_data[j],test_batch) 
+                    left_o,right_o = sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_l_test, right_test:b_r_test})
+                    left_full = np.vstack((left_full,left_o))
+                    right_full = np.vstack((right_full,right_o))   
                 
             precision, false_pos, false_neg, recall, fnr, fpr = get_test_diagnostics(left_full,right_full,sim_full,threshold)
 
@@ -154,9 +152,9 @@ def main(unused_argv):
    """ Runs evaluation on mnist siamese network"""
     
     # Set parameters for evaluation
-   threshold = 0.15
-   batch_size = 100
-   eval_itr = 4
+   threshold = 0.5
+   batch_size = 50
+   eval_itr = 1
     
    output_dir = "/tmp/siamese_finger_model/"
     
