@@ -17,12 +17,6 @@ import matplotlib.pyplot as plt
 import pickle
 
 
-def rotate(data):
-    data = tf.contrib.image.rotate(data, 3.14)
-    tf.cast(data, tf.float32)
-    return data
-
-
 def main(unused_argv):
     """ This method is used to train a siamese network for the mnist dataset.
     
@@ -47,7 +41,7 @@ def main(unused_argv):
             val_labels = np.asarray(mnist.validation.labels, dtype=np.int32)
             test_data = util.reshape_grayscale_data(mnist.test.images)
             test_labels = np.asarray(mnist.test.labels, dtype=np.int32)
-            data_sizes = [1000,200,1000] # number of samples to use from each data set
+            data_sizes = [2000,300,1000] # number of samples to use from each data set
             '''Use resized_images to use fingerprint resolution mnist (192,192)'''
 #            train_data = np.load(dir_path + "/resized_train_mnist.npy")
 #            val_data = np.load(dir_path + "/resized_val_mnist.npy")
@@ -63,8 +57,8 @@ def main(unused_argv):
     
     # parameters for training
     batch_size_train = 1000
-    train_iter = 500
-    learning_rate = 0.001
+    train_iter = 20000
+    learning_rate = 0.0005
     momentum = 0.99
         
     # parameters for validation
@@ -228,7 +222,7 @@ def main(unused_argv):
             b_sim_train = np.take(b_sim_train,permutation,axis=0)
             
             # Randomize rotation of batch              
-            rnd_rotation = np.random.randint(0,generator.rotation_res-1)
+            rnd_rotation = np.random.randint(0,generator.rotation_res)
             b_l_train,b_r_train = generator.get_pairs(generator.train_data[rnd_rotation],train_batch)
             # Train
             _,train_loss_value,left_full,right_full,summary = sess.run([train_op, train_loss,left_train_output,right_train_output,summary_op],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train})

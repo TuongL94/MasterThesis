@@ -9,10 +9,11 @@ import numpy as np
 import random
 import utilities as util
 import math
+import tensorflow as tf
 
 class data_generator:
     
-    def __init__(self, images, finger_id, person_id, translation, rotation, data_size):
+    def __init__(self, images, finger_id, person_id, translation, rotation, data_size, rotation_res):
         """ Initializes an instance of a data_generator class
         
         The data_generator contain attributes referring to the input data.
@@ -26,36 +27,102 @@ class data_generator:
         rotation - numpy array containing rotation of images given in degrees
         data_size - amount of data one wants to use from original data 
         """
-        self.finger_id = finger_id[0:data_size]
-        self.person_id = person_id[0:data_size]
-        self.images = images[0:data_size,:,:,:]
-        self.translation = translation[0:data_size]
-        self.rotation = rotation[0:data_size]
-        self.shift_idx = [] # list with indices where fingerId changes
+#        self.finger_id = finger_id[0:data_size]
+#        self.person_id = person_id[0:data_size]
+#        self.images = images[0:data_size,:,:,:]
+#        self.translation = translation[0:data_size]
+#        self.rotation = rotation[0:data_size]
+#        self.breakpoints = [] # list with indices where fingerId changes
 
-        idx_counter = 0
-        nbr_of_persons = person_id[-1]
-        for i in range(nbr_of_persons):
-            finger_counter = 0
-            while idx_counter < len(person_id):
-                if not i+1 == self.person_id[idx_counter]:
-                    break
-                if not finger_counter == self.finger_id[idx_counter]:
-                    finger_counter = self.finger_id[idx_counter]
-                    self.shift_idx.append(idx_counter)
-                
-                idx_counter += 1
-                
-        self.shift_idx.append(len(self.person_id) - 1)
+        # Split fingerprint data into training, validation and testing sets
+        percentages = [0.8,0.1]
+        self.train_data, self.val_data, self.test_data = self.three_split_array(images[0:data_size,:,:,:], percentages)
+        self.train_finger_id, self.val_finger_id, self.test_finger_id = self.three_split_array(finger_id[0:data_size], percentages)
+        self.train_person_id, self.val_person_id, self.test_person_id= self.three_split_array(person_id[0:data_size], percentages)
+        self.train_translation, self.val_translation, self.test_translation= self.three_split_array(translation[0:data_size], percentages)
+        self.train_rotation, self.val_rotation, self.test_rotation= self.three_split_array(rotation[0:data_size], percentages)
+        
+
+        # Breakpoints for training data 
+        self.breakpoints_train = self.get_breakpoints(self.train_person_id, self.train_finger_id)
+        
+        # Breakpoints for validation data 
+        self.breakpoints_val= self.get_breakpoints(self.val_person_id, self.val_finger_id)
+        
+        # Breakpoints for test data 
+        self.breakpoints_test= self.get_breakpoints(self.test_person_id, self.test_finger_id)
+        
+        
+        
+#        idx_counter = 0
+#        nbr_of_persons = self.person_id[-1]
+#        for i in range(nbr_of_persons):
+#            finger_counter = 0
+#            while idx_counter < len(self.person_id):
+#                if not i+1 == self.person_id[idx_counter]:
+#                    break
+#                if not finger_counter == self.finger_id[idx_counter]:
+#                    finger_counter = self.finger_id[idx_counter]
+#                    self.breakpoints.append(idx_counter)
+#                
+#                idx_counter += 1
+#                
+#        self.breakpoints.append(len(self.person_id) - 1)
         
 #        self.match_train, self.no_match_train = self.gen_pair_indices(5,80,training = True)
 #        self.match_eval, self.no_match_eval = self.gen_pair_indices(5,80,training = False)
         
-        self.all_match, self.all_no_match = self.all_combinations(5, 80)
-        percentages = [0.8,0.1]
-        self.match_train, self.match_val, self.match_eval = self.three_split_array(self.all_match,percentages)        
-        self.no_match_train, self.no_match_val , self.no_match_eval = self.three_split_array(self.all_no_match,percentages)
+        # All combinations of training data
+        self.match_train, self.no_match_train = self.all_combinations(self.breakpoints_train, self.train_rotation, self.train_translation, 5, 80)
         
+        # All combinations of training data
+        self.match_val, self.no_match_val= self.all_combinations(self.breakpoints_val, self.val_rotation, self.val_translation, 5, 80)
+        
+        # All combinations of training data
+        self.match_test, self.no_match_test= self.all_combinations(self.breakpoints_test, self.test_rotation, self.test_translation, 5, 80)
+        
+#        self.all_match, self.all_no_match = self.all_combinations(5, 80)
+#        percentages = [0.8,0.1]
+#        self.match_train, self.match_val, self.match_test = self.three_split_array(self.all_match,percentages)        
+        # This will make us train on images in the test and validation set (we still get pairs that are not trained on)
+#        self.no_match_train, self.no_match_val, self.no_match_test = self.three_split_array(self.all_no_match,percentages)
+        
+        # Create rotated training set with 90 degree steps
+        original_train_data = self.train_data
+        self.train_data = [self.train_data]
+        self.rotation_res = rotation_res
+        sess = tf.Session()
+        with sess.as_default():
+            for i in range(1,rotation_res):
+                self.train_data.append(list(tf.contrib.image.rotate(np.array(original_train_data), math.pi/i).eval()))
+    
+    
+    def get_breakpoints(self, person_id, finger_id):
+        breakpoints = []
+        idx_counter = 0
+        nbr_of_persons = person_id[-1]
+        for i in range(person_id[0], nbr_of_persons+1):
+            finger_counter = 0
+            while idx_counter < len(person_id):
+                if not i == person_id[idx_counter]:
+                    break
+                if not finger_counter == finger_id[idx_counter]:
+                    finger_counter = finger_id[idx_counter]
+                    breakpoints.append(idx_counter)
+                
+                idx_counter += 1
+                
+        breakpoints.append(len(person_id) - 1)
+        
+        return breakpoints
+    
+    
+    def get_pairs(self,data,pair_list):
+        left_pairs = np.take(data,pair_list[:,0],axis=0)
+        right_pairs = np.take(data,pair_list[:,1],axis=0)
+        return left_pairs, right_pairs
+    
+    
     def is_rotation_similar(self,angle_1,angle_2,rotation_diff):
         """ Checks if two angles differ by at most rotation_diff in absolute value.
         
@@ -128,10 +195,10 @@ class data_generator:
         no_match = [] # non-matching pair indices 
         
         if training:
-            for i in range(len(self.shift_idx)-1):
-                template_trans = self.translation[self.shift_idx[i]]
-                template_rot = self.rotation[self.shift_idx[i]]
-                for j in range(self.shift_idx[i]+1, self.shift_idx[i+1]):
+            for i in range(len(self.breakpoints)-1):
+                template_trans = self.translation[self.breakpoints[i]]
+                template_rot = self.rotation[self.breakpoints[i]]
+                for j in range(self.breakpoints[i]+1, self.breakpoints[i+1]):
                     rot_cand = self.rotation[j]
                     trans_cand = self.translation[j]
                     translation_match = False
@@ -144,14 +211,14 @@ class data_generator:
                     # if rotation and translation is similar the images related to the corresponding
                     # shift indices are considered similar
                     if translation_match and rotation_match:
-                        match.append([self.shift_idx[i], j])
+                        match.append([self.breakpoints[i], j])
                     else:
-                        no_match.append([self.shift_idx[i], j])
+                        no_match.append([self.breakpoints[i], j])
         else:
-            for i in range(len(self.shift_idx)-1):
-                template_trans = self.translation[self.shift_idx[i]+1]
-                template_rot = self.rotation[self.shift_idx[i]+1]
-                for j in range(self.shift_idx[i]+2, self.shift_idx[i+1]):
+            for i in range(len(self.breakpoints)-1):
+                template_trans = self.translation[self.breakpoints[i]+1]
+                template_rot = self.rotation[self.breakpoints[i]+1]
+                for j in range(self.breakpoints[i]+2, self.breakpoints[i+1]):
                     rot_cand = self.rotation[j]
                     trans_cand = self.translation[j]
                     translation_match = False
@@ -161,26 +228,26 @@ class data_generator:
                         translation_match = self.is_translation_similar(template_trans,trans_cand,translation_diff)
                     
                     if translation_match and rotation_match:
-                        match.append([self.shift_idx[i]+1, j])
+                        match.append([self.breakpoints[i]+1, j])
                     else:
-                        no_match.append([self.shift_idx[i]+1, j])
+                        no_match.append([self.breakpoints[i]+1, j])
     
         # Shuffle no_match's columns so that it contains different non-matching fingers 
         no_match = np.array(no_match)
         np.random.shuffle(no_match)
         return match,no_match
     
-    def all_combinations(self, rotation_diff, translation_diff):
+    def all_combinations(self, breakpoints, rotation, translation, rotation_diff, translation_diff):
         match = [] # matching pair indices
         no_match = [] # non-matching pair indices 
         
-        for i in range(len(self.shift_idx)-1):
-            for k in range(self.shift_idx[i+1]-self.shift_idx[i]):
-                template_trans = self.translation[self.shift_idx[i]+k]
-                template_rot = self.rotation[self.shift_idx[i]+k]
-                for j in range(self.shift_idx[i]+k+1, self.shift_idx[i+1]):
-                    rot_cand = self.rotation[j]
-                    trans_cand = self.translation[j]
+        for i in range(len(breakpoints)-1):
+            for k in range(breakpoints[i+1]-breakpoints[i]):
+                template_trans = translation[breakpoints[i]+k]
+                template_rot = rotation[breakpoints[i]+k]
+                for j in range(breakpoints[i]+k+1, breakpoints[i+1]):
+                    rot_cand = rotation[j]
+                    trans_cand = translation[j]
                     translation_match = False
                     rotation_match = self.is_rotation_similar(template_rot,rot_cand,rotation_diff)
                     
@@ -191,23 +258,56 @@ class data_generator:
                     # if rotation and translation is similar the images related to the corresponding
                     # shift indices are considered similar
                     if translation_match and rotation_match:
-                        match.append([self.shift_idx[i]+k, j])
+                        match.append([breakpoints[i]+k, j])
                     else:
-                        no_match.append([self.shift_idx[i]+k, j])
+                        no_match.append([breakpoints[i]+k, j])
                     
-                for n in range(self.shift_idx[i+1], self.images.shape[0]):
-                    no_match.append([self.shift_idx[i]+k, n])
+                for n in range(breakpoints[i+1], rotation.shape[0]):
+                    no_match.append([breakpoints[i]+k, n])
             
             
-        no_match = np.array(no_match)
+        no_match = np.array(no_match,dtype='int32')
         np.random.shuffle(no_match)
         return match,no_match
+    
+#    def all_combinations(self, rotation_diff, translation_diff):
+#        match = [] # matching pair indices
+#        no_match = [] # non-matching pair indices 
+#        
+#        for i in range(len(self.breakpoints)-1):
+#            for k in range(self.breakpoints[i+1]-self.breakpoints[i]):
+#                template_trans = self.translation[self.breakpoints[i]+k]
+#                template_rot = self.rotation[self.breakpoints[i]+k]
+#                for j in range(self.breakpoints[i]+k+1, self.breakpoints[i+1]):
+#                    rot_cand = self.rotation[j]
+#                    trans_cand = self.translation[j]
+#                    translation_match = False
+#                    rotation_match = self.is_rotation_similar(template_rot,rot_cand,rotation_diff)
+#                    
+#                    # if rotation is sufficiently similar check translation
+#                    if rotation_match:
+#                        translation_match = self.is_translation_similar(template_trans,trans_cand,translation_diff)
+#                    
+#                    # if rotation and translation is similar the images related to the corresponding
+#                    # shift indices are considered similar
+#                    if translation_match and rotation_match:
+#                        match.append([self.breakpoints[i]+k, j])
+#                    else:
+#                        no_match.append([self.breakpoints[i]+k, j])
+#                    
+#                    for n in range(self.breakpoints[i+1], self.images.shape[0]):
+#                        no_match.append([self.breakpoints[i]+k, n])
+#            
+#            
+#        no_match = np.array(no_match)
+#        np.random.shuffle(no_match)
+#        return match,no_match
 
 #    def __init__(self, images, finger_id, person_id, train_size):
 #        self.finger_id = finger_id[0:train_size]
 #        self.person_id = person_id[0:train_size]
 #        self.images = images[0:train_size,:,:,:]
-#        self.shift_idx = []
+#        self.breakpoints = []
 #        idx_counter = 0
 #        nbr_of_persons = person_id[-1]
 #        for i in range(nbr_of_persons):
@@ -217,11 +317,11 @@ class data_generator:
 #                    break
 #                if not finger_counter == self.finger_id[idx_counter]:
 #                    finger_counter = self.finger_id[idx_counter]
-#                    self.shift_idx.append(idx_counter)
+#                    self.breakpoints.append(idx_counter)
 #                
 #                idx_counter += 1
 #                
-#        self.shift_idx.append(len(self.person_id) - 1)
+#        self.breakpoints.append(len(self.person_id) - 1)
 
 #    def gen_pair_batch(self,batch_size):
 #        left = []
@@ -233,19 +333,19 @@ class data_generator:
 #        for i in range(nbr_fingerprints):
 #            nbr_each_fingerprint = int(batch_size/nbr_fingerprints/2);
 #            for j in range(nbr_each_fingerprint):
-#                l = random.randint(self.shift_idx[i], self.shift_idx[i+1])
-#                r = random.randint(self.shift_idx[i], self.shift_idx[i+1])
+#                l = random.randint(self.breakpoints[i], self.breakpoints[i+1])
+#                r = random.randint(self.breakpoints[i], self.breakpoints[i+1])
 #                left.append(self.images[l])
 #                right.append(self.images[r])
 #                sim.append([1])
 #                count += 1
 #            for j in range(nbr_each_fingerprint):
 #                # Generate random index of current digit i
-#                rnd_current_finger = random.randint(self.shift_idx[i], self.shift_idx[i+1])
+#                rnd_current_finger = random.randint(self.breakpoints[i], self.breakpoints[i+1])
 #                # Generate random index of digit not being i
 #                while True:
-#                    rnd_other_finger = random.randint(self.shift_idx[0], self.shift_idx[-1])
-#                    if not self.shift_idx[i] <= rnd_other_finger <= self.shift_idx[i+1]:
+#                    rnd_other_finger = random.randint(self.breakpoints[0], self.breakpoints[-1])
+#                    if not self.breakpoints[i] <= rnd_other_finger <= self.breakpoints[i+1]:
 #                        break
 #                    
 #                util.rand_assign_pair(left,right,self.images[rnd_current_finger],self.images[rnd_other_finger])
@@ -256,7 +356,7 @@ class data_generator:
 #        # Make matching pairs every second time
 #        mat = 0
 #        while count < batch_size:
-#            left_tmp,right_tmp,sim_tmp = util.generate_pair(self.images,self.shift_idx,mat)
+#            left_tmp,right_tmp,sim_tmp = util.generate_pair(self.images,self.breakpoints,mat)
 #            left.append(left_tmp)
 #            right.append(right_tmp)
 #            sim.append(sim_tmp)
@@ -281,7 +381,7 @@ class data_generator:
 #        mat = 0
 #        count = 0
 #        while count < nbr_of_image_pairs:
-#            left_tmp,right_tmp,sim_tmp = util.generate_pair(self.images,self.shift_idx,mat)
+#            left_tmp,right_tmp,sim_tmp = util.generate_pair(self.images,self.breakpoints,mat)
 #            left.append(left_tmp)
 #            right.append(right_tmp)
 #            sim.append(sim_tmp)

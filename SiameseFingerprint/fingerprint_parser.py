@@ -51,11 +51,11 @@ def main(argv):
     person_id, finger_id, fingerprints, translation, rotation = fingerprint_parser(argv[0],argv[1])
     
     # convert to numpy arrays and corrects scaling 
-    person_id = np.array(person_id)
-    finger_id = np.array(finger_id)
-    fingerprints = np.array(fingerprints)/255
-    translation = np.array(translation)/256
-    rotation = np.array(rotation)/65536*360 
+    person_id = np.array(person_id,dtype='int32')
+    finger_id = np.array(finger_id,dtype='int32')
+    fingerprints = np.array(fingerprints,dtype='float32')/255
+    translation = np.array(translation,dtype='float32')/256
+    rotation = np.array(rotation,dtype='float32')/65536*360 
 
     # save paths
     filename_1 = dir_path + "/person_id"
