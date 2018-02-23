@@ -154,7 +154,7 @@ def main(unused_argv):
    """ Runs evaluation on mnist siamese network"""
     
     # Set parameters for evaluation
-   threshold = 0.6
+   threshold = 0.15
    batch_size = 100
    eval_itr = 4
     

@@ -41,9 +41,9 @@ def main(unused_argv):
             translation = np.load(dir_path + "/translation.npy")
             rotation = np.load(dir_path + "/rotation.npy")
 #            nbr_of_images = np.shape(finger_data)[0] # number of images to use from the original data set
-            nbr_of_images = 1000
+            nbr_of_images = 5616
             finger_data = util.reshape_grayscale_data(finger_data)
-            rotation_res = 4
+            rotation_res = 10
             generator = data_generator(finger_data, finger_id, person_id, translation, rotation, nbr_of_images, rotation_res) # initialize data generator
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
@@ -53,7 +53,7 @@ def main(unused_argv):
     
     # parameters for training
     batch_size_train = 100
-    train_iter = 300
+    train_iter = 30
     learning_rate = 0.00001
     momentum = 0.9
    
@@ -79,23 +79,22 @@ def main(unused_argv):
         left_train,right_train,label_train,left_val,right_val,label_val,left_test,right_test = sm.placeholder_inputs(image_dims,batch_sizes)
         handle = tf.placeholder(tf.string, shape=[],name="handle")
             
-        left_output = sm.inference(left_train)            
-        right_output = sm.inference(right_train)
+        left_train_output = sm.inference(left_train)            
+        right_train_output = sm.inference(right_train)
+        left_val_output = sm.inference(left_val)
+        right_val_output = sm.inference(right_val)
         left_test_output = sm.inference(left_test)
         right_test_output = sm.inference(right_test)
         
-        left_val_output = sm.inference(left_val)
-        right_val_output = sm.inference(right_val)
-        
         margin = tf.constant(4.0) # margin for contrastive loss
-        train_loss = sm.contrastive_loss(left_output,right_output,label_train,margin)
+        train_loss = sm.contrastive_loss(left_train_output,right_train_output,label_train,margin)
         
         val_loss = sm.contrastive_loss(left_val_output,right_val_output,label_val,margin)
         
         tf.add_to_collection("train_loss",train_loss)
         tf.add_to_collection("val_loss",val_loss)
-        tf.add_to_collection("left_output",left_output)
-        tf.add_to_collection("right_output",right_output)
+        tf.add_to_collection("left_val_output",left_val_output)
+        tf.add_to_collection("right_val_output",right_val_output)
         tf.add_to_collection("left_test_output",left_test_output)
         tf.add_to_collection("right_test_output",right_test_output)
         
@@ -110,8 +109,8 @@ def main(unused_argv):
         right_train = g.get_tensor_by_name("right_train:0")
         label_train = g.get_tensor_by_name("label_train:0")
         train_loss = tf.get_collection("train_loss")[0]
-        left_output = tf.get_collection("left_output")[0]
-        right_output = tf.get_collection("right_output")[0]
+        left_val_output = tf.get_collection("left_val_output")[0]
+        right_val_output = tf.get_collection("right_val_output")[0]
         
         left_val = g.get_tensor_by_name("left_val:0")
         right_val = g.get_tensor_by_name("right_val:0")
@@ -220,7 +219,7 @@ def main(unused_argv):
             rnd_rotation = np.random.randint(0,generator.rotation_res)
             b_l_train,b_r_train = generator.get_pairs(generator.train_data[rnd_rotation],train_batch)
             
-            _,train_loss_value, left_o,right_o, summary = sess.run([train_op, train_loss, left_output, right_output, summary_op],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train})
+            _,train_loss_value, summary = sess.run([train_op, train_loss, summary_op],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train})
 
              # Use validation data set to tune hyperparameters (Classification threshold)
             if i % 50 == 0:
