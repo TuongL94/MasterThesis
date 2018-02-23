@@ -17,7 +17,7 @@ def inference(input):
     # Convolutional layer 1
     conv1 = tf.layers.conv2d(
             inputs = input_layer,
-            filters = 64,
+            filters = 32,
             kernel_size = [7,7], 
             padding = "same",
             activation = tf.nn.relu,
@@ -34,7 +34,7 @@ def inference(input):
     # Convolutional Layer 2 and pooling layer 2
     conv2 = tf.layers.conv2d(
             inputs = pool1,
-            filters = 5,
+            filters = 32,
             kernel_size = [5,5],
             padding = "same",
             activation = tf.nn.relu,
@@ -49,35 +49,43 @@ def inference(input):
             strides = 2)
     
     # Convolutional Layer 3
-#    conv3 = tf.layers.conv2d(
-#            inputs = pool2,
-#            filters = 64,
-#            kernel_size = [5,5],
-##             padding = "same",
-#            activation = tf.nn.relu,
-#            reuse = tf.AUTO_REUSE,
-#            name="conv_layer_3")
-#            
-#    
-#    # Convolutional Layer 4
-#    conv4 = tf.layers.conv2d(
-#            inputs = conv3,
-#            filters = 64,
-#            kernel_size = [3,3],
-##             padding = "same",
-#            activation = tf.nn.relu,
-#            reuse = tf.AUTO_REUSE,
-#            name="conv_layer_4")
+    conv3 = tf.layers.conv2d(
+            inputs = pool2,
+            filters = 16,
+            kernel_size = [3,3],
+#            padding = "same",
+            activation = tf.nn.relu,
+            reuse = tf.AUTO_REUSE,
+            name="conv_layer_3")
             
-#    pool3 = tf.layers.max_pooling2d(
-#            inputs = conv4, 
-#            pool_size = [2,2],
-#            strides = 2)
+    pool2 = tf.layers.max_pooling2d(
+        inputs = conv3, 
+        pool_size = [2,2],
+        strides = 2)
+    
+    # Convolutional Layer 4
+    conv4 = tf.layers.conv2d(
+            inputs = conv3,
+            filters = 16,
+            kernel_size = [3,3],
+#             padding = "same",
+            activation = tf.nn.relu,
+            reuse = tf.AUTO_REUSE,
+            name="conv_layer_4")
+            
+    pool4 = tf.layers.max_pooling2d(
+            inputs = conv4, 
+            pool_size = [2,2],
+            strides = 2)
     
 
-    net = tf.layers.flatten(pool2)
+    net = tf.layers.flatten(pool4)
     
     net = tf.layers.dense(net,1000,activation = tf.nn.relu, reuse = tf.AUTO_REUSE,name="dense_layer_1")
+    
+    net = tf.layers.dropout(
+            inputs = net,
+            rate = 0.4)
      
     return net
     

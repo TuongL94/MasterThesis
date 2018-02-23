@@ -57,19 +57,28 @@ class data_generator:
         
         # Create rotated training set with 90 degree steps
         original_train_data = self.train_data
+        original_val_data = self.val_data
+        original_test_data = self.test_data
         self.train_data = [self.train_data]
+        self.val_data = [self.val_data]
+        self.test_data = [self.test_data]
         self.rotation_res = rotation_res
         
-        dims = np.shape(original_train_data)
-        holder = tf.placeholder(tf.float32,shape=[dims[0],dims[1],dims[2],dims[3]])
-#        angle = tf.placeholder(tf.float32,shape=[])
-#        rotated_images = tf.contrib.image.rotate(holder,angle)
-        sess = tf.Session()
+        train_dims = np.shape(original_train_data)
+        val_dims = np.shape(original_val_data)
+        test_dims = np.shape(original_test_data)
+        train_holder = tf.placeholder(tf.float32,shape=[train_dims[0],train_dims[1],train_dims[2],train_dims[3]])
+        val_holder = tf.placeholder(tf.float32,shape=[val_dims[0],val_dims[1],val_dims[2],val_dims[3]])
+        test_holder = tf.placeholder(tf.float32,shape=[test_dims[0],test_dims[1],test_dims[2],test_dims[3]])
         with tf.Session() as sess:
             for i in range(1,rotation_res):
                 angle = 2*math.pi/i
-                rotated_images = sess.run(tf.contrib.image.rotate(holder,angle), feed_dict={holder:original_train_data})
-                self.train_data.append(rotated_images)
+                rotated_train_images = sess.run(tf.contrib.image.rotate(train_holder,angle), feed_dict={train_holder:original_train_data})
+                rotated_val_images = sess.run(tf.contrib.image.rotate(val_holder,angle), feed_dict={val_holder:original_val_data})
+                rotated_test_images = sess.run(tf.contrib.image.rotate(test_holder,angle), feed_dict={test_holder:original_test_data})
+                self.train_data.append(rotated_train_images)
+                self.val_data.append(rotated_val_images)
+                self.test_data.append(rotated_test_images)
     
     def get_breakpoints(self, person_id, finger_id):
         breakpoints = []
