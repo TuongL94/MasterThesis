@@ -11,41 +11,68 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-def inference(input):
+def conv_relu_fixed(input,kernel,bias,trainable = False):
+    # Create variable named "weight".
+    weight = tf.get_variable("weight", initializer = kernel,
+        trainable = trainable)
+    # Create variable named "bias".
+    bias = tf.get_variable("bias", initializer = bias,
+        trainable = trainable)
+    conv = tf.nn.conv2d(input, weight,
+        strides=[1, 1, 1, 1], padding='SAME')
+    return tf.nn.relu(conv + bias)
+
+def conv_relu(input,kernel_shape,bias_shape):
+    # Create variable named "weight".
+    weight = tf.get_variable("weight",shape=kernel_shape,
+        trainable = True)
+    # Create variable named "bias".
+    bias = tf.get_variable("bias",shape=bias_shape,
+        trainable = True)
+    conv = tf.nn.conv2d(input, weight,
+        strides=[1, 1, 1, 1], padding='SAME')
+    return tf.nn.relu(conv + bias)
+
+def inference(input,*transfer):
     input_layer = input
     
     # Convolutional layer 1
-    conv1 = tf.layers.conv2d(
-            inputs = input_layer,
-            filters = 16,
-            kernel_size = [5, 5], 
-            padding = "same",
-            activation = tf.nn.relu,
-            reuse = tf.AUTO_REUSE,
-            name="conv_layer_1")
-    
+    with tf.variable_scope("conv1"):
+        if len(transfer) == 1:
+            conv1 = conv_relu_fixed(
+                    input_layer,
+                    transfer[0][0],
+                    transfer[0][1])
+        else:
+            conv1 = conv_relu(
+                    input_layer,
+                    [5,5,1,32],
+                    [32])
+
     # Pooling layer 1
-    pool1 = tf.layers.max_pooling2d(inputs = conv1, 
-                                     pool_size = [2,2], 
-                                     strides = 2)
+    pool1 = tf.nn.max_pool(
+            value = conv1,
+            ksize = [1,2,2,1], 
+            strides = [1,2,2,1],
+            padding = "SAME")
     
-    # Convolutional Layer 2 and pooling layer 2
-    conv2 = tf.layers.conv2d(
-            inputs = pool1,
-            filters = 16,
-            kernel_size = [5,5],
-            padding = "same",
-            activation = tf.nn.relu,
-            reuse = tf.AUTO_REUSE,
-            name="conv_layer_2")
+    # Convolutional layer 2
+    with tf.variable_scope("conv2"):
+        conv2 = conv_relu(
+                pool1,
+                [5,5,32,64],
+                [64])
             
-    pool2 = tf.layers.max_pooling2d(
-            inputs = conv2, 
-            pool_size = [2,2],
-            strides = 2)
-    
+    # Pooling layer 2
+    pool2 = tf.nn.max_pool(
+            value = conv2,
+            ksize = [1,2,2,1], 
+            strides = [1,2,2,1],
+            padding = "SAME")
+
     net = tf.layers.flatten(pool2)
     
+    # Fully connected layer 1
     net = tf.layers.dense(
             inputs = net,
             units = 1024,

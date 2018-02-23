@@ -11,16 +11,6 @@ import os
 import utilities as util
 import single_nn_train_mnist as sm
 
-
-#def evaluate_mnist_siamese_network(eval_o,eval_labels):
-#    nbr_correct = 0
-#    estimated_digits = eval_o[0].argmax(axis=1)
-#    for i in range(len(estimated_digits)):
-#        if estimated_digits[i] == eval_labels[i]:
-#            nbr_correct += 1
-#    precision = nbr_correct/len(eval_labels)
-#    return precision
-
 def evaluate_mnist_siamese_network(eval_o,eval_labels):
     nbr_correct = 0
     estimated_digits = eval_o.argmax(axis=1)
@@ -31,10 +21,10 @@ def evaluate_mnist_siamese_network(eval_o,eval_labels):
     return precision
 
 def main(unused_argv):
-    """ This method is used to evaluate a siamese network for the mnist dataset.
+    """ This method is used to evaluate a classification for the mnist dataset.
     
-    The model is defined in the file siamese_nn_model_mnist.py and trained in 
-    the file siamese_nn_train_mnist.py. Evaluation will only be performed if
+    The model is defined in the file single_nn_model_mnist.py and trained in 
+    the file single_nn_train_mnist.py. Evaluation will only be performed if
     a model exists.
     
     """

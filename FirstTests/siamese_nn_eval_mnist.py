@@ -147,7 +147,7 @@ def main(unused_argv):
    """
     
    # Set parameters for evaluation
-   threshold = 0.475
+   threshold = 0.5
    batch_size = 1000
     
    output_dir = "/tmp/siamese_mnist_model/"

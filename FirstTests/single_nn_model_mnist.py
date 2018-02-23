@@ -11,38 +11,44 @@ from __future__ import print_function
 
 import tensorflow as tf
 
+def conv_relu(input, kernel_shape, bias_shape):
+    # Create variable named "weight".
+    weights = tf.get_variable("weight", kernel_shape,
+        trainable = True)
+    # Create variable named "bias".
+    biases = tf.get_variable("bias", bias_shape,
+        trainable = True)
+    conv = tf.nn.conv2d(input, weights,
+        strides=[1, 1, 1, 1], padding='SAME')
+    return tf.nn.relu(conv + biases)
+
 def inference(input):
-    input_layer = input
     
     # Convolutional layer 1
-    conv1 = tf.layers.conv2d(
-            inputs = input_layer,
-            filters = 32,
-            kernel_size = [5, 5], 
-            padding = "same",
-            reuse = tf.AUTO_REUSE,
-            activation = tf.nn.relu,
-            name = "conv_layer_1")
+    with tf.variable_scope("conv1"):
+        conv1 = conv_relu(
+                input,
+                [5,5,1,32],
+                [32])
     
     # Pooling layer 1
-    pool1 = tf.layers.max_pooling2d(inputs = conv1, 
-                                     pool_size = [2,2], 
-                                     strides = 2)
-    
-    # Convolutional Layer 2 and pooling layer 2
-    conv2 = tf.layers.conv2d(
-            inputs = pool1,
-            filters = 64,
-            kernel_size = [5,5],
-            padding = "same",
-            reuse = tf.AUTO_REUSE,
-            activation = tf.nn.relu,
-            name = "conv_layer_2")
-            
-    pool2 = tf.layers.max_pooling2d(
-            inputs = conv2, 
-            pool_size = [2,2],
-            strides = 2)
+    pool1 = tf.nn.max_pool(
+            value = conv1,
+            ksize = [1,2,2,1], 
+            strides = [1,2,2,1],
+            padding = "SAME")
+        
+    with tf.variable_scope("conv2"):
+        conv2 = conv_relu(
+                pool1,
+                [5,5,32,64],
+                [64])   
+        
+    pool2 = tf.nn.max_pool(
+            value = conv2, 
+            ksize= [1,2,2,1],
+            strides = [1,2,2,1],
+            padding = "SAME")
     
     net = tf.layers.flatten(pool2)
     

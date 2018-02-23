@@ -18,7 +18,6 @@ def batch_mnist(batch_size, counter, train_labels, train_data):
     b_labels = train_labels[counter:counter+batch_size]
     return b_data,b_labels
     
-
 def main(unused_argv):
     
     # Load mnist training and eval data and perform necessary data reshape
@@ -48,21 +47,22 @@ def main(unused_argv):
     if not os.path.exists(output_dir + ".meta"):
         print("No previous model exists, creating a new one.")
         is_model_new = True
-
+        
          # create placeholders
         data,label,test_data = sm.placeholder_inputs(placeholder_dims,batch_size_test)
-            
-        train_output = sm.inference(data)            
-        test_output = sm.inference(test_data)
+        
+        with tf.variable_scope("inference",reuse = tf.AUTO_REUSE):
+            train_output = sm.inference(data)
+            test_output = sm.inference(test_data)
+
         onehot_labels = tf.one_hot(indices = tf.cast(label, tf.int32), depth = 10)
         onehot_labels = tf.squeeze(onehot_labels)
         loss = tf.losses.softmax_cross_entropy(onehot_labels = onehot_labels, logits = train_output)
         
         tf.add_to_collection("loss",loss)
-        tf.add_to_collection("train_output",train_output)
         tf.add_to_collection("test_output",test_output)
+
         saver = tf.train.Saver()
-        
     else:
         print("Using existing model in the directory " + output_dir)
         is_model_new = False
@@ -84,20 +84,19 @@ def main(unused_argv):
             train_op = tf.get_collection("train_op")[0]
             
         graph = tf.get_default_graph()
-        conv1_layer = graph.get_tensor_by_name("conv_layer_1/kernel:0")
-        nbr_of_filters_conv1 = sess.run(tf.shape(conv1_layer)[-1])
 
-        conv2_layer = graph.get_tensor_by_name("conv_layer_2/kernel:0")
+        conv1_layer = graph.get_tensor_by_name("inference/conv1/weight:0")
+        nbr_of_filters_conv1 = sess.run(tf.shape(conv1_layer)[-1])
         hist_conv1 = tf.summary.histogram("hist_conv1", conv1_layer)
-        hist_conv2 = tf.summary.histogram("hist_conv2", conv2_layer)
         conv1_layer = tf.transpose(conv1_layer, perm = [3,0,1,2])
         filter1 = tf.summary.image('Filter_1', conv1_layer, max_outputs=nbr_of_filters_conv1)
-        conv1_layer = tf.transpose(conv1_layer, perm = [1,2,3,0])
-#        conv2_layer = tf.transpose(conv2_layer, perm = [3,0,1,2])
-#        filter2 = tf.summary.image('Filter_2', conv2_layer, max_outputs=32)
-        bias_conv1 = graph.get_tensor_by_name("conv_layer_1/bias:0")
+
+        conv2_layer = graph.get_tensor_by_name("inference/conv2/weight:0")
+        hist_conv2 = tf.summary.histogram("hist_conv2", conv2_layer)
+        
+        bias_conv1 = graph.get_tensor_by_name("inference/conv1/bias:0")
         hist_bias1 = tf.summary.histogram("hist_bias1", bias_conv1)
-        bias_conv2 = graph.get_tensor_by_name("conv_layer_2/bias:0")
+        bias_conv2 = graph.get_tensor_by_name("inference/conv2/bias:0")
         hist_bias2 = tf.summary.histogram("hist_bias2", bias_conv2)
             
         summary_op = tf.summary.scalar('training_loss', loss)
@@ -109,13 +108,13 @@ def main(unused_argv):
         counter = 0
         for i in range(1,train_iter + 1):
             b_data, b_labels = batch_mnist(batch_size, counter, mnist_train_labels, mnist_train_data)
-            _,loss_value,train_o,summary = sess.run([train_op, loss, train_output,summary_op],feed_dict={data:b_data, label:b_labels})
+            _,loss_value,summary = sess.run([train_op, loss,summary_op],feed_dict={data:b_data, label:b_labels})
             if i % 100 == 0:
                 print("Iteration %d: loss = %.5f" % (i, loss_value))
                 
             writer.add_summary(summary, i)
             counter = (counter + batch_size) % nbr_of_training_images
-
+                
         save_path = tf.train.Saver().save(sess,output_dir)
         print("Trained model saved in path: %s" % save_path)
     
