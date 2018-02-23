@@ -120,6 +120,7 @@ def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_
             for i in range(eval_itr):
                 #            for i in range(int(test_match_dataset_length/batch_size_test)):
                 test_batch = sess.run(next_element,feed_dict={handle:test_match_handle})
+
                 for j in range(generator.rotation_res):
                     b_l_test,b_r_test = generator.get_pairs(generator.test_data[j],test_batch)
                     left_o,right_o= sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_l_test, right_test:b_r_test})
@@ -129,7 +130,7 @@ def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_
                     else:
                         left_full = np.vstack((left_full,left_o))
                         right_full = np.vstack((right_full,right_o))
-                    
+
             for i in range(eval_itr):
 #            for i in range(int(int(test_non_match_dataset_length/10)/batch_size_test)):
                 test_batch = sess.run(next_element,feed_dict={handle:test_non_match_handle})
@@ -138,6 +139,7 @@ def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_
                     left_o,right_o = sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_l_test, right_test:b_r_test})
                     left_full = np.vstack((left_full,left_o))
                     right_full = np.vstack((right_full,right_o))   
+
                 
             precision, false_pos, false_neg, recall, fnr, fpr = get_test_diagnostics(left_full,right_full,sim_full,threshold)
 

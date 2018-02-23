@@ -46,14 +46,26 @@ class data_generator:
         rot_diff = 2.5
         trans_diff = 10
         
+#        # All combinations of training data
+#        self.match_train, self.no_match_train = self.all_combinations(self.breakpoints_train, self.train_rotation, self.train_translation, rot_diff, trans_diff)
+#        
+#        # All combinations of training data
+#        self.match_val, self.no_match_val= self.all_combinations(self.breakpoints_val, self.val_rotation, self.val_translation, rot_diff, trans_diff)
+#        
+#        # All combinations of training data
+#        self.match_test, self.no_match_test= self.all_combinations(self.breakpoints_test, self.test_rotation, self.test_translation, rot_diff, trans_diff)
+        
+        '''Make easy matching and non matching sets'''
+        margin_trans = 100
+        margin_rot = 20
         # All combinations of training data
-        self.match_train, self.no_match_train = self.all_combinations(self.breakpoints_train, self.train_rotation, self.train_translation, rot_diff, trans_diff)
+        self.match_train, self.no_match_train = self.all_combinations_easy(self.breakpoints_train, self.train_rotation, self.train_translation, rot_diff, trans_diff, margin_rot, margin_trans)
         
         # All combinations of training data
-        self.match_val, self.no_match_val= self.all_combinations(self.breakpoints_val, self.val_rotation, self.val_translation, rot_diff, trans_diff)
+        self.match_val, self.no_match_val= self.all_combinations_easy(self.breakpoints_val, self.val_rotation, self.val_translation, rot_diff, trans_diff, margin_rot, margin_trans)
         
         # All combinations of training data
-        self.match_test, self.no_match_test= self.all_combinations(self.breakpoints_test, self.test_rotation, self.test_translation, rot_diff, trans_diff)
+        self.match_test, self.no_match_test= self.all_combinations_easy(self.breakpoints_test, self.test_rotation, self.test_translation, rot_diff, trans_diff, margin_rot, margin_trans)
         
         # Create rotated training set with 90 degree steps
         original_train_data = self.train_data
@@ -176,6 +188,42 @@ class data_generator:
                     # breakpoint indices are considered similar
                     if translation_match and rotation_match:
                         match.append([breakpoints[i]+k, j])
+                    else:
+                        no_match.append([breakpoints[i]+k, j])
+                    
+                for n in range(breakpoints[i+1], rotation.shape[0]):
+                    no_match.append([breakpoints[i]+k, n])
+            
+        return np.array(match,dtype="int32"),np.array(no_match,dtype="int32")
+    
+    def all_combinations_easy(self, breakpoints, rotation, translation, rotation_diff, translation_diff, margin_rot, margin_trans):
+        match = [] # matching pair indices
+        no_match = [] # non-matching pair indices 
+        
+        for i in range(len(breakpoints)-1):
+            for k in range(breakpoints[i+1]-breakpoints[i]):
+                template_trans = translation[breakpoints[i]+k]
+                template_rot = rotation[breakpoints[i]+k]
+                for j in range(breakpoints[i]+k+1, breakpoints[i+1]):
+                    rot_cand = rotation[j]
+                    trans_cand = translation[j]
+                    translation_match = False
+                    translation_margin = False
+                    rotation_match = self.is_rotation_similar(template_rot,rot_cand,rotation_diff)
+                    rotation_margin = self.is_rotation_similar(template_rot,rot_cand,margin_rot)
+                    
+                    # if rotation is sufficiently similar check translation
+                    if rotation_match:
+                        translation_match = self.is_translation_similar(template_trans,trans_cand,translation_diff)
+                    elif rotation_margin:
+                        translation_margin = self.is_translation_similar(template_trans,trans_cand,margin_trans)
+                    
+                    # if rotation and translation is similar the images related to the corresponding
+                    # breakpoint indices are considered similar
+                    if translation_match and rotation_match:
+                        match.append([breakpoints[i]+k, j])
+                    elif rotation_margin and translation_margin:
+                        continue
                     else:
                         no_match.append([breakpoints[i]+k, j])
                     
