@@ -121,7 +121,7 @@ def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_
             for i in range(eval_itr):
                 #            for i in range(int(test_match_dataset_length/batch_size_test)):
                 test_batch = sess.run(next_element,feed_dict={handle:test_match_handle})
-                b_l_test,b_r_test = generator.get_pairs(generator.test_data,test_batch)
+                b_l_test,b_r_test = generator.get_pairs(generator.test_data[0],test_batch)
 #                left,right,sim = generator.prep_eval_match(batch_size)
                 left_o,right_o= sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_l_test, right_test:b_r_test})
                 if i == 0:
@@ -136,7 +136,7 @@ def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_
             for i in range(eval_itr):
 #            for i in range(int(int(test_non_match_dataset_length/10)/batch_size_test)):
                 test_batch = sess.run(next_element,feed_dict={handle:test_non_match_handle})
-                b_l_test,b_r_test = generator.get_pairs(generator.test_data,test_batch) 
+                b_l_test,b_r_test = generator.get_pairs(generator.test_data[0],test_batch) 
                 left_o,right_o = sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_l_test, right_test:b_r_test})
                 left_full = np.vstack((left_full,left_o))
                 right_full = np.vstack((right_full,right_o))   
@@ -154,9 +154,9 @@ def main(unused_argv):
    """ Runs evaluation on mnist siamese network"""
     
     # Set parameters for evaluation
-   threshold = 0.15
-   batch_size = 100
-   eval_itr = 4
+   threshold = 0.4
+   batch_size = 50
+   eval_itr = 1
     
    output_dir = "/tmp/siamese_finger_model/"
     

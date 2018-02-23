@@ -43,7 +43,7 @@ def main(unused_argv):
 #            nbr_of_images = np.shape(finger_data)[0] # number of images to use from the original data set
             nbr_of_images = 5616
             finger_data = util.reshape_grayscale_data(finger_data)
-            rotation_res = 10
+            rotation_res = 1
             generator = data_generator(finger_data, finger_id, person_id, translation, rotation, nbr_of_images, rotation_res) # initialize data generator
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
@@ -53,7 +53,7 @@ def main(unused_argv):
     
     # parameters for training
     batch_size_train = 150
-    train_iter = 3000
+    train_iter = 500
     learning_rate = 0.00001
     momentum = 0.9
    
