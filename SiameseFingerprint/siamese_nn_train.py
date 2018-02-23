@@ -20,8 +20,7 @@ import pickle
 def main(unused_argv):
     """ This method is used to train a siamese network for fingerprint datasets.
     
-    The model is defined in the file siamese_nn_model_mnist.py. The class
-    data_generator is used to generate batches for training and validation.
+    The model is defined in the file siamese_nn_model.py.
     When training is completed the model is saved in the file /tmp/siamese_finger_model/.
     If a model exists it will be used for further training, otherwise a new
     one is created. It is also possible to evaluate the model directly after training.
@@ -63,12 +62,8 @@ def main(unused_argv):
     
     # parameters for evaluation
     batch_size_test = 100
-    eval_itr = 10
     threshold = 0.15    
-    
-#    image_dims = np.shape(generator.train_data)
-#    placeholder_dims = [batch_size_train, image_dims[1], image_dims[2], image_dims[3]]
-    
+        
     dims = np.shape(generator.train_data[0])
     batch_sizes = [batch_size_train,batch_size_val,batch_size_test]
     image_dims = [dims[1],dims[2],dims[3]] 
@@ -83,7 +78,6 @@ def main(unused_argv):
          # create placeholders
         left_train,right_train,label_train,left_val,right_val,label_val,left_test,right_test = sm.placeholder_inputs(image_dims,batch_sizes)
         handle = tf.placeholder(tf.string, shape=[],name="handle")
-#        left,right,label = sm.placeholder_inputs(placeholder_dims,nbr_of_eval_pairs)
             
         left_output = sm.inference(left_train)            
         right_output = sm.inference(right_train)
@@ -226,17 +220,8 @@ def main(unused_argv):
             rnd_rotation = np.random.randint(0,generator.rotation_res)
             b_l_train,b_r_train = generator.get_pairs(generator.train_data[rnd_rotation],train_batch)
             
-#            _,train_loss_value, val_loss_value,left_o,right_o, summary = sess.run([train_op, train_loss, val_loss, left_output, right_output, summary_op],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train})#, left_val:b_val_l, right_val:b_val_r,label_val:b_val_sim})
-            _,train_loss_value, left_o,right_o, summary = sess.run([train_op, train_loss, left_output, right_output, summary_op],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train})#, left_val:b_val_l, right_val:b_val_r,label_val:b_val_sim})
+            _,train_loss_value, left_o,right_o, summary = sess.run([train_op, train_loss, left_output, right_output, summary_op],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train})
 
-#            b_l, b_r, b_sim = generator.gen_match_batch(batch_size_train)
-#            b_l, b_r, b_sim = generator.gen_batch(batch_size_train)
-#            b_val_l, b_val_r, b_val_sim = generator.gen_batch(batch_size_val,training = 0)
-#            _,train_loss_value, val_loss_value,left_o,right_o, summary = sess.run([train_op, train_loss, val_loss, left_output, right_output, summary_op],feed_dict={left:b_l, right:b_r, label:b_sim, left_val:b_val_l, right_val:b_val_r,label_val:b_val_sim})
-#            print(loss_value)
-#            print(left_o)
-#            print(right_o)
-            
              # Use validation data set to tune hyperparameters (Classification threshold)
             if i % 50 == 0:
                 b_sim_val_matching = np.ones((batch_size_val*int(val_match_dataset_length/batch_size_val),1))
@@ -272,13 +257,7 @@ def main(unused_argv):
                 print("Iteration %d: train loss = %.5f" % (i, train_loss_value))
 #                print("Iteration %d: val loss = %.5f" % (i,val_loss_value))
             writer.add_summary(summary, i)
-            
-#        graph = tf.get_default_graph()
-#        kernel_var = graph.get_tensor_by_name("conv_layer_1/bias:0")
-#        kernel_var_after_init = sess.run(kernel_var)
-#        dims = np.shape(kernel_var_after_init)
-#        print(kernel_var_after_init)
-        
+                    
         save_path = tf.train.Saver().save(sess,output_dir)
         print("Trained model saved in path: %s" % save_path)
         
@@ -289,11 +268,6 @@ def main(unused_argv):
         
         print("Current threshold: %f" % threshold)
         print("Final precision: %f" % precision_over_time[-1])
-    
-    # Only run this if the final network is to be evaluated    
-    sme.evaluate_siamese_network(generator,batch_size_test,eval_itr,threshold,output_dir)
-
-    sme.main(None)
-    
+        
 if __name__ == "__main__":
     tf.app.run()

@@ -71,8 +71,6 @@ def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_
     output_dir - the directory of the siamese model
     """
     
-#    left,right,sim = generator.prep_eval_match(batch_size)
-
     tf.reset_default_graph()
     
     if not os.path.exists(output_dir + ".meta"):
@@ -152,9 +150,6 @@ def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_
             print("# Miss rate/false negative rate: %f " % fnr)
             print("# fall-out/false positive rate: %f " % fpr)
          
-            
-                  
-                  
 def main(unused_argv):
    """ Runs evaluation on mnist siamese network"""
     
