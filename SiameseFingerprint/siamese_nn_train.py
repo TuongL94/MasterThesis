@@ -31,7 +31,7 @@ def main(argv):
     
     gpu_device_name = argv
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    output_dir = dir_path + "/train_models/" + gpu_device_name + "/" # directory where the model will be saved
+    output_dir = dir_path + "/train_models" + gpu_device_name + "/" # directory where the model will be saved
     
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
@@ -56,22 +56,22 @@ def main(argv):
     
     # parameters for training
     batch_size_train = 150
-    train_iter = 3000
+    train_iter = 30000
     learning_rate = 0.00001
     momentum = 0.99
    
     # parameters for validation
-    batch_size_val = 50
+    batch_size_val = 175
     
     # parameters for evaluation
-    batch_size_test = 50
+    batch_size_test = 105
     threshold = 0.5    
         
     dims = np.shape(generator.train_data[0])
     batch_sizes = [batch_size_train,batch_size_val,batch_size_test]
     image_dims = [dims[1],dims[2],dims[3]]
     
-    save_itr = 100 # frequency in which the model is saved
+    save_itr = 10000 # frequency in which the model is saved
     
     tf.reset_default_graph()
     
@@ -134,8 +134,8 @@ def main(argv):
             
             handle= g.get_tensor_by_name("handle:0")
     
-    config = tf.ConfigProto(allow_soft_placement=True,log_device_placement=True)
-#    config.gpu_options.allow_growth = True
+    config = tf.ConfigProto(allow_soft_placement=True)
+    config.gpu_options.allow_growth = True
     with tf.Session(config=config) as sess:
         if is_model_new:
             with tf.device(gpu_device_name):
@@ -291,7 +291,7 @@ def main(argv):
         plt.show()
         
         print("Current threshold: %f" % threshold)
-#        print("Final precision: %f" % precision_over_time[-1])
+        print("Final precision: %f" % precision_over_time[-1])
         
 if __name__ == "__main__":
 #    tf.app.run()
