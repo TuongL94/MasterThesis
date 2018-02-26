@@ -17,7 +17,6 @@ import matplotlib.pyplot as plt
 import pickle
 import re
 import sys
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
 
 
 def main(argv):
