@@ -15,6 +15,7 @@ import utilities as util
 import siamese_nn_eval as sme
 import matplotlib.pyplot as plt
 import pickle
+import re
 
 
 def main(unused_argv):
@@ -28,7 +29,7 @@ def main(unused_argv):
     """
     
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    output_dir = "/tmp/siamese_finger_model/" # directory where the model will be saved
+    output_dir = dir_path + "/train_models/" # directory where the model will be saved
     
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
@@ -53,7 +54,7 @@ def main(unused_argv):
     
     # parameters for training
     batch_size_train = 150
-    train_iter = 500
+    train_iter = 10
     learning_rate = 0.00001
     momentum = 0.9
    
@@ -66,15 +67,18 @@ def main(unused_argv):
         
     dims = np.shape(generator.train_data[0])
     batch_sizes = [batch_size_train,batch_size_val,batch_size_test]
-    image_dims = [dims[1],dims[2],dims[3]] 
+    image_dims = [dims[1],dims[2],dims[3]]
+    
+    save_itr = 5 # frequency in which the model is saved
     
     tf.reset_default_graph()
     
-    # if models exists use the existing one otherwise create a new one
-    if not os.path.exists(output_dir + ".meta"):
+    # if models exists use the latest existing one otherwise create a new one
+    if not os.path.exists(output_dir + "checkpoint"):
         print("No previous model exists, creating a new one.")
         is_model_new = True
-
+        current_itr = 0 # current training iteration
+        
          # create placeholders
         left_train,right_train,label_train,left_val,right_val,label_val,left_test,right_test = sm.placeholder_inputs(image_dims,batch_sizes)
         handle = tf.placeholder(tf.string, shape=[],name="handle")
@@ -99,11 +103,18 @@ def main(unused_argv):
         tf.add_to_collection("right_test_output",right_test_output)
         
         saver = tf.train.Saver()
+
     else:
-        print("Using existing model in the directory " + output_dir)
+        print("Using latest existing model in the directory " + output_dir)
         is_model_new = False
         
-        saver = tf.train.import_meta_graph(output_dir + ".meta")
+        with open(output_dir + "checkpoint","r") as file:
+            line  = file.readline()
+            words = re.split("/",line)
+            model_file_name = words[-1][:-2]
+            current_itr = int(re.split("-",model_file_name)[-1]) # current training iteration
+            saver = tf.train.import_meta_graph(output_dir + model_file_name + ".meta")
+            
         g = tf.get_default_graph()
         left_train = g.get_tensor_by_name("left_train:0")
         right_train = g.get_tensor_by_name("right_train:0")
@@ -222,7 +233,7 @@ def main(unused_argv):
             _,train_loss_value, summary = sess.run([train_op, train_loss, summary_op],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train})
 
              # Use validation data set to tune hyperparameters (Classification threshold)
-            if i % 50 == 0:
+            if i % 1000 == 0:
                 b_sim_val_matching = np.ones((batch_size_val*int(val_match_dataset_length/batch_size_val),1))
                 b_sim_val_non_matching = np.zeros((batch_size_val*int((int(val_non_match_dataset_length/10)+1)/batch_size_val),1))
                 b_sim_val = np.append(b_sim_val_matching,b_sim_val_non_matching,axis=0)
@@ -254,13 +265,14 @@ def main(unused_argv):
                     threshold += thresh_step
                 precision_over_time.append(precision)
             
-            if i % 100 == 0:
-                print("Iteration %d: train loss = %.5f" % (i, train_loss_value))
+#            if i % 100 == 0:
+#                print("Iteration %d: train loss = %.5f" % (i, train_loss_value))
 #                print("Iteration %d: val loss = %.5f" % (i,val_loss_value))
             writer.add_summary(summary, i)
-                    
-        save_path = tf.train.Saver().save(sess,output_dir)
-        print("Trained model saved in path: %s" % save_path)
+            
+            if i % save_itr == 0:
+                save_path = tf.train.Saver().save(sess,output_dir + "model",global_step=i+current_itr)
+                print("Trained model after {} iterations saved in path: {}".format(i,save_path))
         
         # Plot precision over time
         time = list(range(len(precision_over_time)))
@@ -268,7 +280,7 @@ def main(unused_argv):
         plt.show()
         
         print("Current threshold: %f" % threshold)
-        print("Final precision: %f" % precision_over_time[-1])
+#        print("Final precision: %f" % precision_over_time[-1])
         
 if __name__ == "__main__":
     tf.app.run()
