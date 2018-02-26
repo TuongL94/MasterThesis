@@ -37,7 +37,11 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold):
     n = len(sim_labels) - p
     for i in range(len(sim_labels)):
 #        print(sl.norm(l2_normalized_diff[i,:]))
-        if sl.norm(l2_normalized_diff[i,:]) < threshold:
+        if np.isinf(l2_normalized_diff[i,:]).any() or np.isnan(l2_normalized_diff[i,:]).any():
+            print('Got inf or Nan in L2 norm; Change hyperparameters to avoid')
+            if sim_labels[i] == 1:
+                false_neg = false_neg + 1
+        elif sl.norm(l2_normalized_diff[i,:]) < threshold:
             matching[i] = 1
             if sim_labels[i] == 0:
                 false_pos = false_pos + 1
@@ -154,9 +158,9 @@ def main(unused_argv):
    """ Runs evaluation on mnist siamese network"""
     
     # Set parameters for evaluation
-   threshold = 0.5
+   threshold = 0.3
    batch_size = 50
-   eval_itr = 1
+   eval_itr = 8
     
    output_dir = "/tmp/siamese_finger_model/"
     

@@ -53,16 +53,16 @@ def main(unused_argv):
     
     # parameters for training
     batch_size_train = 150
-    train_iter = 500
+    train_iter = 3000
     learning_rate = 0.00001
-    momentum = 0.9
+    momentum = 0.99
    
     # parameters for validation
     batch_size_val = 50
     
     # parameters for evaluation
     batch_size_test = 50
-    threshold = 0.15    
+    threshold = 0.5    
         
     dims = np.shape(generator.train_data[0])
     batch_sizes = [batch_size_train,batch_size_val,batch_size_test]
@@ -224,21 +224,23 @@ def main(unused_argv):
              # Use validation data set to tune hyperparameters (Classification threshold)
             if i % 50 == 0:
                 b_sim_val_matching = np.ones((batch_size_val*int(val_match_dataset_length/batch_size_val),1))
-                b_sim_val_non_matching = np.zeros((batch_size_val*int((int(val_non_match_dataset_length/10)+1)/batch_size_val),1))
+                b_sim_val_non_matching = np.zeros((batch_size_val*int(val_match_dataset_length/batch_size_val),1))
+#                b_sim_val_non_matching = np.zeros((batch_size_val*int((int(val_non_match_dataset_length/10)+1)/batch_size_val),1))
                 b_sim_val = np.append(b_sim_val_matching,b_sim_val_non_matching,axis=0)
                 for j in range(int(val_match_dataset_length/batch_size_val)):
                     val_batch_matching = sess.run(next_element,feed_dict={handle:val_match_handle})
                     for k in range(generator.rotation_res):
                         b_l_val,b_r_val = generator.get_pairs(generator.val_data[k],val_batch_matching) 
                         left_o,right_o = sess.run([left_val_output,right_val_output],feed_dict = {left_val:b_l_val, right_val:b_r_val})
-                        if j == 0:
+                        if j == 0 and k == 0:
                             left_full = left_o
                             right_full = right_o
                         else:
                             left_full = np.vstack((left_full,left_o))
                             right_full = np.vstack((right_full,right_o))
                     
-                for k in range(int((int(val_non_match_dataset_length/10)+1)/batch_size_val)):
+#                for k in range(int((int(val_non_match_dataset_length/10)+1)/batch_size_val)):
+                for j in range(int(val_match_dataset_length/batch_size_val)):
                     val_batch_non_matching = sess.run(next_element,feed_dict={handle:val_non_match_handle})
 #                    for l in range(generator.rotation_res):
                     b_l_val,b_r_val = generator.get_pairs(generator.val_data[0],val_batch_non_matching) 
