@@ -14,7 +14,7 @@ import utilities as util
 import pickle
 import re
 
-def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold):
+def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_id=None):
     """ Computes and returns evaluation metrics.
     
     Input:
@@ -23,6 +23,7 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold):
     sim_labels - ground truth for pairs of arrays (1 if the arrays correspond to matching images, 0 otherwise)
     threshold - distance threshold, if the 2-norm distanc between two arrays are less than or equal to this value 
     they are considered to correspond to a matching pair of images.
+    class_id - Is optional. Contains information about which finger and person each fingerprint comes from.
     Returns:
     precision - precision
     false_pos - number of false positives
@@ -30,11 +31,13 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold):
     recall - recall (nbr of true positives/total number of positive examples)
     fnr - false negative rate (false negative/total number of positive examples)
     fpr - false positive rate (false positive/total number of negative examples)
+    inter_class_errors - number of false positive from the same finger+person (class)
     """
     matching = np.zeros(len(sim_labels))
     l2_normalized_diff = util.l2_normalize(left_pairs_o-right_pairs_o)
     false_pos = 0
     false_neg = 0
+    inter_class_errors = 0
     p = np.sum(sim_labels)
     n = len(sim_labels) - p
     for i in range(len(sim_labels)):
@@ -47,6 +50,9 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold):
             matching[i] = 1
             if sim_labels[i] == 0:
                 false_pos = false_pos + 1
+                if not class_id is None:
+                    if class_id[i] == 1:
+                        inter_class_errors += 1
         else:
             if sim_labels[i] == 1:
                 false_neg = false_neg + 1
@@ -60,7 +66,7 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold):
     fnr = 1 - recall
     fpr = false_pos/n
     
-    return precision, false_pos, false_neg, recall, fnr, fpr
+    return precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors
  
 def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_itr,gpu_device_name):
     """ This method is used to evaluate a siamese network for fingerprint datasets.
@@ -111,9 +117,10 @@ def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_
                 test_match_dataset = test_match_dataset.batch(batch_size)
                 test_match_dataset_length = np.shape(generator.match_test)[0]
             
-                test_non_match_dataset_length = np.shape(generator.match_test)[0]
-    #            test_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_test[0:int(test_non_match_dataset_length/10)])
+                test_non_match_dataset_length = np.shape(generator.no_match_test)[0]
+#                test_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_test[0:int(test_non_match_dataset_length/10)])
                 test_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_test)
+                test_non_match_dataset = test_non_match_dataset.shuffle(buffer_size = test_non_match_dataset_length)
                 test_non_match_dataset = test_non_match_dataset.batch(batch_size)
     #            test_non_match_dataset_length = np.shape(generator.all_no_match_test)[0]
                 
@@ -138,13 +145,16 @@ def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_
     
                     for j in range(generator.rotation_res):
                         b_l_test,b_r_test = generator.get_pairs(generator.test_data[j],test_batch)
-                        left_o,right_o= sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_l_test, right_test:b_r_test})
+                        class_id_batch = generator.same_class(test_batch,test=True)
+                        left_o,right_o = sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_l_test, right_test:b_r_test})
                         if i == 0 and j == 0:
                             left_full = left_o
                             right_full = right_o
+                            class_id = class_id_batch
                         else:
                             left_full = np.vstack((left_full,left_o))
                             right_full = np.vstack((right_full,right_o))
+                            class_id = np.vstack((class_id, class_id_batch))
     
                 for i in range(eval_itr):
     #            for i in range(int(int(test_non_match_dataset_length/10)/batch_size_test)):
@@ -154,16 +164,23 @@ def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_
                         left_o,right_o = sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_l_test, right_test:b_r_test})
                         left_full = np.vstack((left_full,left_o))
                         right_full = np.vstack((right_full,right_o))   
+                        
+                        class_id_batch = generator.same_class(test_batch,test=True)
+                        class_id = np.vstack((class_id, class_id_batch))
 
                 
-                precision, false_pos, false_neg, recall, fnr, fpr = get_test_diagnostics(left_full,right_full,sim_full,threshold)
+                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = get_test_diagnostics(left_full,right_full,sim_full,threshold,class_id)
     
                 print("Precision: %f " % precision)
                 print("# False positive: %d " % false_pos)
                 print("# False negative: %d " % false_neg)
+                print("# Number of false positive from the same class: %d " % inter_class_errors)
                 print("# Recall: %f " % recall)
                 print("# Miss rate/false negative rate: %f " % fnr)
                 print("# fall-out/false positive rate: %f " % fpr)
+                      
+                nbr_same_class = np.sum(class_id[eval_itr*batch_size:])
+                print("Number of fingerprints in the same class in the non matching set: %d " % nbr_same_class)
          
 def main(argv):
    """ Runs evaluation on mnist siamese network"""

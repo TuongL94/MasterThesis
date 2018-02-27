@@ -55,8 +55,8 @@ def main(argv):
             generator = pickle.load(input)
     
     # parameters for training
-    batch_size_train = 150
-    train_iter = 30000
+    batch_size_train = 200
+    train_iter = 50
     learning_rate = 0.00001
     momentum = 0.99
    
@@ -222,6 +222,7 @@ def main(argv):
             iterator = tf.data.Iterator.from_string_handle(handle, train_match_dataset.output_types)
             next_element = iterator.get_next()
         
+        print("Starting training")
         # Training loop
         for i in range(1,train_iter + 1):
             train_batch_matching = sess.run(next_element,feed_dict={handle:train_match_handle})
@@ -242,22 +243,25 @@ def main(argv):
             _,train_loss_value, summary = sess.run([train_op, train_loss, summary_op],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train})
 
              # Use validation data set to tune hyperparameters (Classification threshold)
-            if i % 1000 == 0:
+            if i % 25 == 0:
                 b_sim_val_matching = np.ones((batch_size_val*int(val_match_dataset_length/batch_size_val),1))
                 b_sim_val_non_matching = np.zeros((batch_size_val*int(val_match_dataset_length/batch_size_val),1))
 #                b_sim_val_non_matching = np.zeros((batch_size_val*int((int(val_non_match_dataset_length/10)+1)/batch_size_val),1))
                 b_sim_val = np.append(b_sim_val_matching,b_sim_val_non_matching,axis=0)
                 for j in range(int(val_match_dataset_length/batch_size_val)):
                     val_batch_matching = sess.run(next_element,feed_dict={handle:val_match_handle})
+                    class_id_batch = generator.same_class(val_batch_matching)
                     for k in range(generator.rotation_res):
                         b_l_val,b_r_val = generator.get_pairs(generator.val_data[k],val_batch_matching) 
                         left_o,right_o = sess.run([left_val_output,right_val_output],feed_dict = {left_val:b_l_val, right_val:b_r_val})
                         if j == 0 and k == 0:
                             left_full = left_o
                             right_full = right_o
+                            class_id = class_id_batch
                         else:
                             left_full = np.vstack((left_full,left_o))
                             right_full = np.vstack((right_full,right_o))
+                            class_id = np.vstack((class_id, class_id_batch))
                     
 #                for k in range(int((int(val_non_match_dataset_length/10)+1)/batch_size_val)):
                 for j in range(int(val_match_dataset_length/batch_size_val)):
@@ -267,10 +271,12 @@ def main(argv):
                     left_o,right_o = sess.run([left_val_output,right_val_output],feed_dict = {left_val:b_l_val, right_val:b_r_val})
                     left_full = np.vstack((left_full,left_o))
                     right_full = np.vstack((right_full,right_o)) 
+                    class_id_batch = generator.same_class(val_batch_non_matching)
+                    class_id = np.vstack((class_id,class_id_batch))
                 
-                precision, false_pos, false_neg, recall, fnr, fpr = sme.get_test_diagnostics(left_full,right_full, b_sim_val,threshold)
+                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = sme.get_test_diagnostics(left_full,right_full, b_sim_val,threshold, class_id)
             
-                if false_pos > false_neg:
+                if false_pos > false_neg:   # Can use inter_class_errors to tune the threshold further
                     threshold -= thresh_step
                 else:
                     threshold += thresh_step

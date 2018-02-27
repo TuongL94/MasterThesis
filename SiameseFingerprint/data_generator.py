@@ -241,3 +241,40 @@ class data_generator:
         third_split = input_array[split_ind[1]+1:]
         return first_split,second_split,third_split
     
+    
+    
+    def same_class(self, pairs, test = False):
+        """Finds which pairs belongs to the same class (same finger and person i.e. same fingerprint)
+        Input:
+            pairs - (N x 2) matrix with pairs on each row
+            test - optinal boolean to be set if the class test is to be run on the test set
+        Return:
+            class_id - (N x 1) vector with 0 and 1. 1 corresponds to pairs within the same class
+        """
+        nbr_of_pairs = pairs.shape[0]
+        class_id = np.zeros((nbr_of_pairs, 1))
+        
+        if test:
+            person_id = self.test_person_id
+            finger_id = self.test_finger_id
+        else:
+            person_id = self.val_person_id
+            finger_id = self.val_finger_id
+     
+        for i in range(nbr_of_pairs):
+            first = [person_id[pairs[i,0]], finger_id[pairs[i,0]]]
+            second = [person_id[pairs[i,1]], finger_id[pairs[i,1]]]
+            if first == second:
+                class_id[i] = 1    
+            
+        return class_id
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        

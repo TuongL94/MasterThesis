@@ -3,3 +3,4 @@ Literature/
 *__pycache__*
 *.npy
 *.pk1
+train_models/
