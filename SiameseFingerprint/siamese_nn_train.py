@@ -57,6 +57,7 @@ def main(argv):
     # parameters for training
     batch_size_train = 150
     train_itr = 100
+
     learning_rate = 0.00001
     momentum = 0.99
    
@@ -220,6 +221,7 @@ def main(argv):
             iterator = tf.data.Iterator.from_string_handle(handle, train_match_dataset.output_types)
             next_element = iterator.get_next()
         
+        print("Starting training")
         # Training loop
         for i in range(1,train_itr + 1):
             train_batch_matching = sess.run(next_element,feed_dict={handle:train_match_handle})
@@ -240,6 +242,7 @@ def main(argv):
             _,train_loss_value, summary = sess.run([train_op, train_loss, summary_op],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train})
 
              # Use validation data set to tune hyperparameters (Classification threshold)
+
             if i % val_itr == 0:
                 current_val_loss = 0
                 b_sim_val_matching = np.repeat(np.ones((batch_size_val*int(val_match_dataset_length/batch_size_val),1)),generator.rotation_res,axis=0)
@@ -247,6 +250,7 @@ def main(argv):
                 b_sim_full = np.append(b_sim_val_matching,b_sim_val_non_matching,axis=0)
                 for j in range(int(val_match_dataset_length/batch_size_val)):
                     val_batch_matching = sess.run(next_element,feed_dict={handle:val_match_handle})
+                    class_id_batch = generator.same_class(val_batch_matching)
                     for k in range(generator.rotation_res):
                         b_l_val,b_r_val = generator.get_pairs(generator.val_data[k],val_batch_matching) 
                         left_o,right_o,val_loss_value = sess.run([left_val_output,right_val_output, val_loss],feed_dict = {left_val:b_l_val, right_val:b_r_val, label_val:np.ones((batch_size_val,1))})
@@ -254,24 +258,27 @@ def main(argv):
                         if j == 0 and k == 0:
                             left_full = left_o
                             right_full = right_o
+                            class_id = class_id_batch
                         else:
                             left_full = np.vstack((left_full,left_o))
                             right_full = np.vstack((right_full,right_o))
+                            class_id = np.vstack((class_id, class_id_batch))
                     
                 for j in range(int(val_match_dataset_length/batch_size_val)):
                     val_batch_non_matching = sess.run(next_element,feed_dict={handle:val_non_match_handle})
                     for k in range(generator.rotation_res):
                         b_l_val,b_r_val = generator.get_pairs(generator.val_data[0],val_batch_non_matching) 
-                        left_o,right_o,val_loss_value = sess.run([left_val_output,right_val_output, val_loss],feed_dict = {left_val:b_l_val, right_val:b_r_val, label_val:np.ones((batch_size_val,1))})
-                        current_val_loss += val_loss_value
+                        left_o,right_o,val_loss_value  = sess.run([left_val_output,right_val_output,val_loss],feed_dict = {left_val:b_l_val, right_val:b_r_val, label_val:np.ones((batch_size_val,1))})
                         left_full = np.vstack((left_full,left_o))
                         right_full = np.vstack((right_full,right_o)) 
-                
+                        class_id_batch = generator.same_class(val_batch_non_matching)
+                        class_id = np.vstack((class_id,class_id_batch))
+                        current_val_loss += val_loss_value
+                        
                 val_loss_over_time.append(current_val_loss*batch_size_val/np.shape(b_sim_full)[0])
-
-                precision, false_pos, false_neg, recall, fnr, fpr = sme.get_test_diagnostics(left_full,right_full, b_sim_full,threshold)
+                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = sme.get_test_diagnostics(left_full,right_full, b_sim_full,threshold, class_id)
             
-                if false_pos > false_neg:
+                if false_pos > false_neg:   # Can use inter_class_errors to tune the threshold further
                     threshold -= thresh_step
                 else:
                     threshold += thresh_step
