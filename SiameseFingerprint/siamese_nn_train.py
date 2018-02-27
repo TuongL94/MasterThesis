@@ -56,12 +56,13 @@ def main(argv):
     
     # parameters for training
     batch_size_train = 150
-    train_iter = 30000
+    train_itr = 100
     learning_rate = 0.00001
     momentum = 0.99
    
     # parameters for validation
     batch_size_val = 175
+    val_itr = 10 # frequency in which to use validation data for computations
     
     # parameters for evaluation
     batch_size_test = 105
@@ -71,7 +72,7 @@ def main(argv):
     batch_sizes = [batch_size_train,batch_size_val,batch_size_test]
     image_dims = [dims[1],dims[2],dims[3]]
     
-    save_itr = 10000 # frequency in which the model is saved
+    save_itr = 25000 # frequency in which the model is saved
     
     tf.reset_default_graph()
     
@@ -152,40 +153,37 @@ def main(argv):
 #            global_vars = tf.global_variables()
 #            for i in range(len(global_vars)):
 #                print(global_vars[i])
+                
         with tf.device(gpu_device_name): 
             graph = tf.get_default_graph()
-            conv1_layer = graph.get_tensor_by_name("conv_layer_1/kernel:0")
-            nbr_of_filters_conv1 = sess.run(tf.shape(conv1_layer)[-1])
-    
-            conv2_layer = graph.get_tensor_by_name("conv_layer_2/kernel:0")
-            hist_conv1 = tf.summary.histogram("hist_conv1", conv1_layer)
-            hist_conv2 = tf.summary.histogram("hist_conv2", conv2_layer)
-            conv1_layer = tf.transpose(conv1_layer, perm = [3,0,1,2])
-            filter1 = tf.summary.image('Filter_1', conv1_layer, max_outputs=nbr_of_filters_conv1)
-    #        conv2_layer = tf.transpose(conv2_layer, perm = [3,0,1,2])
-    #        filter2 = tf.summary.image('Filter_2', conv2_layer, max_outputs=32)
-            bias_conv1 = graph.get_tensor_by_name("conv_layer_1/bias:0")
-            hist_bias1 = tf.summary.histogram("hist_bias1", bias_conv1)
-            bias_conv2 = graph.get_tensor_by_name("conv_layer_2/bias:0")
-            hist_bias2 = tf.summary.histogram("hist_bias2", bias_conv2)
-    
-                
-            summary_op = tf.summary.scalar('training_loss', train_loss)
-    #        summary_val_loss = tf.summary.scalar("validation_loss",val_loss)
-            x_image = tf.summary.image('input', left_train)
-            summary_op = tf.summary.merge([summary_op, x_image, filter1, hist_conv1, hist_conv2, hist_bias1, hist_bias2])
+            
             # Summary setup
-            writer = tf.summary.FileWriter(output_dir + "/summary", graph=tf.get_default_graph())
-          
-#        counter = 0
-#        data_size = batch_size
+            conv1_filters = graph.get_tensor_by_name("conv_layer_1/kernel:0")
+            nbr_of_filters_conv1 = sess.run(tf.shape(conv1_filters)[-1])
+    
+            conv2_filters = graph.get_tensor_by_name("conv_layer_2/kernel:0")
+            hist_conv1 = tf.summary.histogram("hist_conv1", conv1_filters)
+            hist_conv2 = tf.summary.histogram("hist_conv2", conv2_filters)
+            conv1_filters = tf.transpose(conv1_filters, perm = [3,0,1,2])
+            filter1 = tf.summary.image('Filter_1', conv1_filters, max_outputs=nbr_of_filters_conv1)
+            conv1_bias = graph.get_tensor_by_name("conv_layer_1/bias:0")
+            hist_bias1 = tf.summary.histogram("hist_bias1", conv1_bias)
+            conv2_bias = graph.get_tensor_by_name("conv_layer_2/bias:0")
+            hist_bias2 = tf.summary.histogram("hist_bias2", conv2_bias)
+                
+            summary_train_loss = tf.summary.scalar('training_loss', train_loss)
+            x_image = tf.summary.image('left_input', left_train)
+            summary_op = tf.summary.merge([summary_train_loss, x_image, filter1, hist_conv1, hist_conv2, hist_bias1, hist_bias2])
+            train_writer = tf.summary.FileWriter(output_dir + "/train_summary", graph=tf.get_default_graph())
+            
+            
         precision_over_time = []
+        val_loss_over_time = []
         thresh_step = 0.05
         
         with tf.device(gpu_device_name):
             # Setup tensorflow's batch generator
             train_match_dataset = tf.data.Dataset.from_tensor_slices(generator.match_train)
-    #        train_match_dataset = train_match_dataset.map(lambda x: x**2)
             train_match_dataset = train_match_dataset.shuffle(buffer_size=np.shape(generator.match_train)[0])
             train_match_dataset = train_match_dataset.repeat()
             train_match_dataset = train_match_dataset.batch(int(batch_size_train/2))
@@ -223,7 +221,7 @@ def main(argv):
             next_element = iterator.get_next()
         
         # Training loop
-        for i in range(1,train_iter + 1):
+        for i in range(1,train_itr + 1):
             train_batch_matching = sess.run(next_element,feed_dict={handle:train_match_handle})
             b_sim_train_matching = np.ones((np.shape(train_batch_matching)[0],1),dtype=np.int32)
             train_batch_non_matching = sess.run(next_element,feed_dict={handle:train_non_match_handle})
@@ -242,16 +240,17 @@ def main(argv):
             _,train_loss_value, summary = sess.run([train_op, train_loss, summary_op],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train})
 
              # Use validation data set to tune hyperparameters (Classification threshold)
-            if i % 1000 == 0:
-                b_sim_val_matching = np.ones((batch_size_val*int(val_match_dataset_length/batch_size_val),1))
-                b_sim_val_non_matching = np.zeros((batch_size_val*int(val_match_dataset_length/batch_size_val),1))
-#                b_sim_val_non_matching = np.zeros((batch_size_val*int((int(val_non_match_dataset_length/10)+1)/batch_size_val),1))
-                b_sim_val = np.append(b_sim_val_matching,b_sim_val_non_matching,axis=0)
+            if i % val_itr == 0:
+                current_val_loss = 0
+                b_sim_val_matching = np.repeat(np.ones((batch_size_val*int(val_match_dataset_length/batch_size_val),1)),generator.rotation_res,axis=0)
+                b_sim_val_non_matching = np.repeat(np.zeros((batch_size_val*int(val_match_dataset_length/batch_size_val),1)),generator.rotation_res,axis=0)
+                b_sim_full = np.append(b_sim_val_matching,b_sim_val_non_matching,axis=0)
                 for j in range(int(val_match_dataset_length/batch_size_val)):
                     val_batch_matching = sess.run(next_element,feed_dict={handle:val_match_handle})
                     for k in range(generator.rotation_res):
                         b_l_val,b_r_val = generator.get_pairs(generator.val_data[k],val_batch_matching) 
-                        left_o,right_o = sess.run([left_val_output,right_val_output],feed_dict = {left_val:b_l_val, right_val:b_r_val})
+                        left_o,right_o,val_loss_value = sess.run([left_val_output,right_val_output, val_loss],feed_dict = {left_val:b_l_val, right_val:b_r_val, label_val:np.ones((batch_size_val,1))})
+                        current_val_loss += val_loss_value
                         if j == 0 and k == 0:
                             left_full = left_o
                             right_full = right_o
@@ -259,40 +258,50 @@ def main(argv):
                             left_full = np.vstack((left_full,left_o))
                             right_full = np.vstack((right_full,right_o))
                     
-#                for k in range(int((int(val_non_match_dataset_length/10)+1)/batch_size_val)):
                 for j in range(int(val_match_dataset_length/batch_size_val)):
                     val_batch_non_matching = sess.run(next_element,feed_dict={handle:val_non_match_handle})
-#                    for l in range(generator.rotation_res):
-                    b_l_val,b_r_val = generator.get_pairs(generator.val_data[0],val_batch_non_matching) 
-                    left_o,right_o = sess.run([left_val_output,right_val_output],feed_dict = {left_val:b_l_val, right_val:b_r_val})
-                    left_full = np.vstack((left_full,left_o))
-                    right_full = np.vstack((right_full,right_o)) 
+                    for k in range(generator.rotation_res):
+                        b_l_val,b_r_val = generator.get_pairs(generator.val_data[0],val_batch_non_matching) 
+                        left_o,right_o,val_loss_value = sess.run([left_val_output,right_val_output, val_loss],feed_dict = {left_val:b_l_val, right_val:b_r_val, label_val:np.ones((batch_size_val,1))})
+                        current_val_loss += val_loss_value
+                        left_full = np.vstack((left_full,left_o))
+                        right_full = np.vstack((right_full,right_o)) 
                 
-                precision, false_pos, false_neg, recall, fnr, fpr = sme.get_test_diagnostics(left_full,right_full, b_sim_val,threshold)
+                val_loss_over_time.append(current_val_loss*batch_size_val/np.shape(b_sim_full)[0])
+
+                precision, false_pos, false_neg, recall, fnr, fpr = sme.get_test_diagnostics(left_full,right_full, b_sim_full,threshold)
             
                 if false_pos > false_neg:
                     threshold -= thresh_step
                 else:
                     threshold += thresh_step
                 precision_over_time.append(precision)
+
+            train_writer.add_summary(summary, i)
             
-#            if i % 100 == 0:
-#                print("Iteration %d: train loss = %.5f" % (i, train_loss_value))
-#                print("Iteration %d: val loss = %.5f" % (i,val_loss_value))
-            writer.add_summary(summary, i)
-            
-            if i % save_itr == 0:
+            if i % save_itr == 0 or i == train_itr:
                 save_path = tf.train.Saver().save(sess,output_dir + "model",global_step=i+current_itr)
                 print("Trained model after {} iterations saved in path: {}".format(i,save_path))
         
         # Plot precision over time
         time = list(range(len(precision_over_time)))
         plt.plot(time, precision_over_time)
+        plt.title("Precision over time")
+        plt.xlabel("iteration")
+        plt.ylabel("precision")
+        plt.show()
+
+        print("Suggested threshold from hyperparameter tuning: %f" % threshold)
+        if len(precision_over_time) > 0:
+            print("Final (last computed) precision: %f" % precision_over_time[-1])
+        
+        # Plot validation loss over time
+        plt.figure()
+        plt.plot(list(range(val_itr,val_itr*len(val_loss_over_time)+1,val_itr)),val_loss_over_time)
+        plt.title("Validation loss (contrastive loss) over time")
+        plt.xlabel("iteration")
+        plt.ylabel("validation loss")
         plt.show()
         
-        print("Current threshold: %f" % threshold)
-        print("Final precision: %f" % precision_over_time[-1])
-        
 if __name__ == "__main__":
-#    tf.app.run()
      main(sys.argv[1])
