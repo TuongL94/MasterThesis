@@ -17,13 +17,14 @@ def inference(input):
     # Convolutional layer 1
     conv1 = tf.layers.conv2d(
             inputs = input_layer,
-            filters = 32,
+            filters = 16,
             kernel_size = [7,7], 
             padding = "same",
             activation = tf.nn.relu,
             reuse = tf.AUTO_REUSE,
 #                kernel_initializer = tf.initializers.truncated_normal(mean=0.0, stddev=4.0),
             kernel_initializer = tf.random_uniform_initializer(minval=-1, maxval=1),
+            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
             name="conv_layer_1") 
         
     # Pooling layer 1
@@ -34,13 +35,14 @@ def inference(input):
     # Convolutional Layer 2 and pooling layer 2
     conv2 = tf.layers.conv2d(
             inputs = pool1,
-            filters = 32,
+            filters = 16,
             kernel_size = [5,5],
             padding = "same",
             activation = tf.nn.relu,
             reuse = tf.AUTO_REUSE,
 #            kernel_initializer = tf.initializers.truncated_normal(),
             kernel_initializer = tf.random_uniform_initializer(minval=-1, maxval=1),
+            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
             name="conv_layer_2")
             
     pool2 = tf.layers.max_pooling2d(
@@ -51,11 +53,12 @@ def inference(input):
     # Convolutional Layer 3
     conv3 = tf.layers.conv2d(
             inputs = pool2,
-            filters = 16,
+            filters = 32,
             kernel_size = [3,3],
 #            padding = "same",
             activation = tf.nn.relu,
             reuse = tf.AUTO_REUSE,
+            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
             name="conv_layer_3")
             
     pool2 = tf.layers.max_pooling2d(
@@ -66,11 +69,12 @@ def inference(input):
     # Convolutional Layer 4
     conv4 = tf.layers.conv2d(
             inputs = conv3,
-            filters = 16,
+            filters = 64,
             kernel_size = [3,3],
 #             padding = "same",
             activation = tf.nn.relu,
             reuse = tf.AUTO_REUSE,
+            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
             name="conv_layer_4")
             
     pool4 = tf.layers.max_pooling2d(
@@ -81,7 +85,13 @@ def inference(input):
 
     net = tf.layers.flatten(pool4)
     
-    net = tf.layers.dense(net,1000,activation = tf.nn.relu, reuse = tf.AUTO_REUSE,name="dense_layer_1")
+    net = tf.layers.dense(
+            net,
+            1000,
+            activation = tf.nn.relu,
+            reuse = tf.AUTO_REUSE,
+            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
+            name="dense_layer_1")
     
     net = tf.layers.dropout(
             inputs = net,

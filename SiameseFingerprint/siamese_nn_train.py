@@ -55,15 +55,15 @@ def main(argv):
             generator = pickle.load(input)
     
     # parameters for training
-    batch_size_train = 150
-    train_itr = 100
+    batch_size_train = 200
+    train_itr = 3000
 
     learning_rate = 0.00001
     momentum = 0.99
    
     # parameters for validation
     batch_size_val = 175
-    val_itr = 10 # frequency in which to use validation data for computations
+    val_itr = 100 # frequency in which to use validation data for computations
     
     # parameters for evaluation
     batch_size_test = 105
@@ -95,8 +95,12 @@ def main(argv):
             left_test_output = sm.inference(left_test)
             right_test_output = sm.inference(right_test)
             
+            reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
             margin = tf.constant(4.0) # margin for contrastive loss
             train_loss = sm.contrastive_loss(left_train_output,right_train_output,label_train,margin)
+            # add regularization terms to contrastive loss function
+            for i in range(len(reg_losses)):
+                train_loss += reg_losses[i]
             
             val_loss = sm.contrastive_loss(left_val_output,right_val_output,label_val,margin)
             
@@ -107,6 +111,10 @@ def main(argv):
             tf.add_to_collection("left_test_output",left_test_output)
             tf.add_to_collection("right_test_output",right_test_output)
             
+            global_vars = tf.global_variables()
+            for i in range(len(global_vars)):
+                print(global_vars[i])
+                
             saver = tf.train.Saver()
 
     else:
@@ -268,7 +276,7 @@ def main(argv):
                     val_batch_non_matching = sess.run(next_element,feed_dict={handle:val_non_match_handle})
                     for k in range(generator.rotation_res):
                         b_l_val,b_r_val = generator.get_pairs(generator.val_data[0],val_batch_non_matching) 
-                        left_o,right_o,val_loss_value  = sess.run([left_val_output,right_val_output,val_loss],feed_dict = {left_val:b_l_val, right_val:b_r_val, label_val:np.ones((batch_size_val,1))})
+                        left_o,right_o,val_loss_value  = sess.run([left_val_output,right_val_output,val_loss],feed_dict = {left_val:b_l_val, right_val:b_r_val, label_val:np.zeros((batch_size_val,1))})
                         left_full = np.vstack((left_full,left_o))
                         right_full = np.vstack((right_full,right_o)) 
                         class_id_batch = generator.same_class(val_batch_non_matching)
