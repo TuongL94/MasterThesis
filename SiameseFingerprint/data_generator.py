@@ -31,6 +31,7 @@ class data_generator:
         self.train_data, self.val_data, self.test_data = self.three_split_array(images[0:data_size,:,:,:], percentages)
         self.train_finger_id, self.val_finger_id, self.test_finger_id = self.three_split_array(finger_id[0:data_size], percentages)
         self.train_person_id, self.val_person_id, self.test_person_id= self.three_split_array(person_id[0:data_size], percentages)
+        
         self.train_translation, self.val_translation, self.test_translation= self.three_split_array(translation[0:data_size], percentages)
         self.train_rotation, self.val_rotation, self.test_rotation= self.three_split_array(rotation[0:data_size], percentages)
         
@@ -67,31 +68,132 @@ class data_generator:
         # All combinations of training data
         self.match_test, self.no_match_test= self.all_combinations_easy(self.breakpoints_test, self.test_rotation, self.test_translation, rot_diff, trans_diff, margin_rot, margin_trans)
         
-        # Create rotated training set with 90 degree steps
-        original_train_data = self.train_data
-        original_val_data = self.val_data
-        original_test_data = self.test_data
-        self.train_data = [self.train_data]
-        self.val_data = [self.val_data]
-        self.test_data = [self.test_data]
+#        # Create rotated training set with 90 degree steps
+#        original_train_data = self.train_data
+#        original_val_data = self.val_data
+#        original_test_data = self.test_data
+#        self.train_data = [self.train_data]
+#        self.val_data = [self.val_data]
+#        self.test_data = [self.test_data]
+#        self.rotation_res = rotation_res
+#        
+#        train_dims = np.shape(original_train_data)
+#        val_dims = np.shape(original_val_data)
+#        test_dims = np.shape(original_test_data)
+#        train_holder = tf.placeholder(tf.float32,shape=[train_dims[0],train_dims[1],train_dims[2],train_dims[3]])
+#        val_holder = tf.placeholder(tf.float32,shape=[val_dims[0],val_dims[1],val_dims[2],val_dims[3]])
+#        test_holder = tf.placeholder(tf.float32,shape=[test_dims[0],test_dims[1],test_dims[2],test_dims[3]])
+#        with tf.Session() as sess:
+#            for i in range(1,rotation_res):
+#                angle = 2*math.pi/i
+#                rotated_train_images = sess.run(tf.contrib.image.rotate(train_holder,angle), feed_dict={train_holder:original_train_data})
+#                rotated_val_images = sess.run(tf.contrib.image.rotate(val_holder,angle), feed_dict={val_holder:original_val_data})
+#                rotated_test_images = sess.run(tf.contrib.image.rotate(test_holder,angle), feed_dict={test_holder:original_test_data})
+#                self.train_data.append(rotated_train_images)
+#                self.val_data.append(rotated_val_images)
+#                self.test_data.append(rotated_test_images)
+                
         self.rotation_res = rotation_res
+        self.gen_rotations(self.train_data,self.val_data,self.test_data,self.rotation_res)
+    
+    def add_new_data(self, images, finger_id, person_id, translation, rotation, data_size):
+        percentages = [0.8,0.1]
+        train_data, val_data, test_data = self.three_split_array(images[0:data_size,:,:,:], percentages)
+        train_finger_id, val_finger_id, test_finger_id = self.three_split_array(finger_id[0:data_size], percentages)
+        train_person_id, val_person_id, test_person_id= self.three_split_array(person_id[0:data_size], percentages)
+        train_translation, val_translation, test_translation= self.three_split_array(translation[0:data_size], percentages)
+        train_rotation, val_rotation, test_rotation= self.three_split_array(rotation[0:data_size], percentages)
         
+        nbr_of_train_images = np.shape(self.train_data[0])[0]
+        nbr_of_val_images = np.shape(self.val_data[0])[0]
+        nbr_of_test_images = np.shape(self.test_data[0])[0]
+        
+        # Add new data to the current generator
+        self.train_data[0] = np.append(self.train_data[0],train_data,axis=0)
+        self.train_finger_id = np.append(self.train_finger_id,train_finger_id)
+        self.train_person_id = np.append(self.train_person_id,train_person_id)
+        self.train_rotation = np.append(self.train_rotation,train_rotation)
+        self.train_translation = np.append(self.train_translation,train_translation,axis=0)
+        self.val_data[0] = np.append(self.val_data[0],val_data,axis=0)
+        self.val_finger_id = np.append(self.val_finger_id,val_finger_id)
+        self.val_person_id = np.append(self.val_person_id,val_person_id)
+        self.val_translation = np.append(self.val_translation,val_translation,axis=0)
+        self.val_rotation = np.append(self.val_rotation,val_rotation)
+        self.test_data[0] = np.append(self.test_data[0],test_data,axis=0)
+        self.test_finger_id = np.append(self.test_finger_id,test_finger_id)
+        self.test_person_id = np.append(self.test_person_id,test_person_id)
+        self.test_rotation = np.append(self.test_rotation,test_rotation)
+        self.test_translation = np.append(self.test_translation,test_translation,axis=0)
+        
+         # Breakpoints for training data 
+        breakpoints_train = [e + nbr_of_train_images for e in self.get_breakpoints(train_person_id, train_finger_id)]
+        
+        # Breakpoints for validation data 
+        breakpoints_val= [e + nbr_of_val_images for e in self.get_breakpoints(val_person_id, val_finger_id)]
+        
+        # Breakpoints for test data 
+        breakpoints_test= [e + nbr_of_test_images for e in self.get_breakpoints(test_person_id, test_finger_id)]
+    
+        rot_diff = 5
+        trans_diff = 30
+        margin_trans = 100
+        margin_rot = 20
+        # All combinations of training data
+        match_train, no_match_train = self.all_combinations_easy(breakpoints_train, self.train_rotation, self.train_translation, rot_diff, trans_diff, margin_rot, margin_trans)
+        
+        # All combinations of training data
+        match_val, no_match_val= self.all_combinations_easy(breakpoints_val, self.val_rotation, self.val_translation, rot_diff, trans_diff, margin_rot, margin_trans)
+        
+        # All combinations of training data
+        match_test, no_match_test= self.all_combinations_easy(breakpoints_test, self.test_rotation, self.test_translation, rot_diff, trans_diff, margin_rot, margin_trans)
+       
+        # Add new pair indices to the pair indices of the current generator
+        self.match_train = np.append(self.match_train,match_train,axis=0)
+        self.no_match_train = np.append(self.no_match_train,no_match_train,axis=0)
+        self.match_val = np.append(self.match_val,match_val,axis=0)
+        self.no_match_val = np.append(self.no_match_val,no_match_val,axis=0)
+        self.match_test = np.append(self.match_test,match_test,axis=0)
+        self.no_match_test = np.append(self.no_match_test,no_match_test,axis=0)
+        
+
+    def gen_rotations(self,train_data,val_data,test_data,rotation_res):
+        original_train_data = train_data
+        original_val_data = val_data
+        original_test_data = test_data
+        rotations_exist = len(self.train_data) > 1
+        
+        if not rotations_exist:
+            self.train_data = [self.train_data]
+            self.val_data = [self.val_data]
+            self.test_data = [self.test_data]
+
         train_dims = np.shape(original_train_data)
         val_dims = np.shape(original_val_data)
         test_dims = np.shape(original_test_data)
         train_holder = tf.placeholder(tf.float32,shape=[train_dims[0],train_dims[1],train_dims[2],train_dims[3]])
         val_holder = tf.placeholder(tf.float32,shape=[val_dims[0],val_dims[1],val_dims[2],val_dims[3]])
         test_holder = tf.placeholder(tf.float32,shape=[test_dims[0],test_dims[1],test_dims[2],test_dims[3]])
+        
         with tf.Session() as sess:
-            for i in range(1,rotation_res):
-                angle = 2*math.pi/i
-                rotated_train_images = sess.run(tf.contrib.image.rotate(train_holder,angle), feed_dict={train_holder:original_train_data})
-                rotated_val_images = sess.run(tf.contrib.image.rotate(val_holder,angle), feed_dict={val_holder:original_val_data})
-                rotated_test_images = sess.run(tf.contrib.image.rotate(test_holder,angle), feed_dict={test_holder:original_test_data})
-                self.train_data.append(rotated_train_images)
-                self.val_data.append(rotated_val_images)
-                self.test_data.append(rotated_test_images)
-    
+            if not rotations_exist:
+                for i in range(1,rotation_res):
+                    angle = 2*math.pi/i
+                    rotated_train_images = sess.run(tf.contrib.image.rotate(train_holder,angle), feed_dict={train_holder:original_train_data})
+                    rotated_val_images = sess.run(tf.contrib.image.rotate(val_holder,angle), feed_dict={val_holder:original_val_data})
+                    rotated_test_images = sess.run(tf.contrib.image.rotate(test_holder,angle), feed_dict={test_holder:original_test_data})
+                    self.train_data.append(rotated_train_images)
+                    self.val_data.append(rotated_val_images)
+                    self.test_data.append(rotated_test_images)
+            else:
+                for i in range(1,rotation_res):
+                    angle = 2*math.pi/i
+                    rotated_train_images = sess.run(tf.contrib.image.rotate(train_holder,angle), feed_dict={train_holder:original_train_data})
+                    rotated_val_images = sess.run(tf.contrib.image.rotate(val_holder,angle), feed_dict={val_holder:original_val_data})
+                    rotated_test_images = sess.run(tf.contrib.image.rotate(test_holder,angle), feed_dict={test_holder:original_test_data})
+                    np.append(self.train_data[i],rotated_train_images,axis=0)
+                    np.append(self.val_data[i],rotated_val_images,axis=0)
+                    np.append(self.test_data[i],rotated_test_images,axis=0)
+                    
     def get_breakpoints(self, person_id, finger_id):
         breakpoints = []
         idx_counter = 0
@@ -240,8 +342,6 @@ class data_generator:
         second_split = input_array[split_ind[0]+1:split_ind[1]+1]
         third_split = input_array[split_ind[1]+1:]
         return first_split,second_split,third_split
-    
-    
     
     def same_class(self, pairs, test = False):
         """Finds which pairs belongs to the same class (same finger and person i.e. same fingerprint)

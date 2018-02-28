@@ -47,16 +47,28 @@ def main(argv):
             nbr_of_images = 5616
             finger_data = util.reshape_grayscale_data(finger_data)
             rotation_res = 1
+            
             generator = data_generator(finger_data, finger_id, person_id, translation, rotation, nbr_of_images, rotation_res) # initialize data generator
+            
+            finger_id_gt_vt = np.load(dir_path + "/finger_id_gt_vt.npy")
+            person_id_gt_vt = np.load(dir_path + "/person_id_gt_vt.npy")
+            finger_data_gt_vt = np.load(dir_path + "/fingerprints_gt_vt.npy")
+            translation_gt_vt = np.load(dir_path + "/translation_gt_vt.npy")
+            rotation_gt_vt = np.load(dir_path + "/rotation_gt_vt.npy")
+            
+            finger_data_gt_vt = util.reshape_grayscale_data(finger_data_gt_vt)
+            nbr_of_images_gt_vt = np.shape(finger_data)[0]
+            
+            generator.add_new_data(finger_data_gt_vt, finger_id_gt_vt, person_id_gt_vt, translation_gt_vt, rotation_gt_vt, nbr_of_images_gt_vt)
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
         # Load generator
         with open('generator_data.pk1', 'rb') as input:
             generator = pickle.load(input)
-    
+             
     # parameters for training
     batch_size_train = 200
-    train_itr = 3000
+    train_itr = 255000
 
     learning_rate = 0.00001
     momentum = 0.99
@@ -111,9 +123,9 @@ def main(argv):
             tf.add_to_collection("left_test_output",left_test_output)
             tf.add_to_collection("right_test_output",right_test_output)
             
-            global_vars = tf.global_variables()
-            for i in range(len(global_vars)):
-                print(global_vars[i])
+#            global_vars = tf.global_variables()
+#            for i in range(len(global_vars)):
+#                print(global_vars[i])
                 
             saver = tf.train.Saver()
 
@@ -146,6 +158,7 @@ def main(argv):
     
     config = tf.ConfigProto(allow_soft_placement=True)
     config.gpu_options.allow_growth = True
+#    config.gpu_options.per_process_gpu_memory_fraction = 0.8
     with tf.Session(config=config) as sess:
         if is_model_new:
             with tf.device(gpu_device_name):
