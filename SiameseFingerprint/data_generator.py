@@ -57,7 +57,7 @@ class data_generator:
 #        self.match_test, self.no_match_test= self.all_combinations(self.breakpoints_test, self.test_rotation, self.test_translation, rot_diff, trans_diff)
         
         '''Make easy matching and non matching sets'''
-        margin_trans = 100
+        margin_trans = 192
         margin_rot = 20
         # All combinations of training data
         self.match_train, self.no_match_train = self.all_combinations_easy(self.breakpoints_train, self.train_rotation, self.train_translation, rot_diff, trans_diff, margin_rot, margin_trans)
@@ -68,31 +68,6 @@ class data_generator:
         # All combinations of training data
         self.match_test, self.no_match_test= self.all_combinations_easy(self.breakpoints_test, self.test_rotation, self.test_translation, rot_diff, trans_diff, margin_rot, margin_trans)
         
-#        # Create rotated training set with 90 degree steps
-#        original_train_data = self.train_data
-#        original_val_data = self.val_data
-#        original_test_data = self.test_data
-#        self.train_data = [self.train_data]
-#        self.val_data = [self.val_data]
-#        self.test_data = [self.test_data]
-#        self.rotation_res = rotation_res
-#        
-#        train_dims = np.shape(original_train_data)
-#        val_dims = np.shape(original_val_data)
-#        test_dims = np.shape(original_test_data)
-#        train_holder = tf.placeholder(tf.float32,shape=[train_dims[0],train_dims[1],train_dims[2],train_dims[3]])
-#        val_holder = tf.placeholder(tf.float32,shape=[val_dims[0],val_dims[1],val_dims[2],val_dims[3]])
-#        test_holder = tf.placeholder(tf.float32,shape=[test_dims[0],test_dims[1],test_dims[2],test_dims[3]])
-#        with tf.Session() as sess:
-#            for i in range(1,rotation_res):
-#                angle = 2*math.pi/i
-#                rotated_train_images = sess.run(tf.contrib.image.rotate(train_holder,angle), feed_dict={train_holder:original_train_data})
-#                rotated_val_images = sess.run(tf.contrib.image.rotate(val_holder,angle), feed_dict={val_holder:original_val_data})
-#                rotated_test_images = sess.run(tf.contrib.image.rotate(test_holder,angle), feed_dict={test_holder:original_test_data})
-#                self.train_data.append(rotated_train_images)
-#                self.val_data.append(rotated_val_images)
-#                self.test_data.append(rotated_test_images)
-                
         self.rotation_res = rotation_res
         self.gen_rotations(self.train_data,self.val_data,self.test_data,self.rotation_res)
     
@@ -125,6 +100,8 @@ class data_generator:
         self.test_rotation = np.append(self.test_rotation,test_rotation)
         self.test_translation = np.append(self.test_translation,test_translation,axis=0)
         
+        self.gen_rotations(train_data,val_data,test_data,self.rotation_res) 
+        
          # Breakpoints for training data 
         breakpoints_train = [e + nbr_of_train_images for e in self.get_breakpoints(train_person_id, train_finger_id)]
         
@@ -155,14 +132,13 @@ class data_generator:
         self.match_test = np.append(self.match_test,match_test,axis=0)
         self.no_match_test = np.append(self.no_match_test,no_match_test,axis=0)
         
-
     def gen_rotations(self,train_data,val_data,test_data,rotation_res):
         original_train_data = train_data
         original_val_data = val_data
         original_test_data = test_data
-        rotations_exist = len(self.train_data) > 1
+        no_rotations_exist = type(self.train_data) is np.ndarray
         
-        if not rotations_exist:
+        if no_rotations_exist:
             self.train_data = [self.train_data]
             self.val_data = [self.val_data]
             self.test_data = [self.test_data]
@@ -175,9 +151,9 @@ class data_generator:
         test_holder = tf.placeholder(tf.float32,shape=[test_dims[0],test_dims[1],test_dims[2],test_dims[3]])
         
         with tf.Session() as sess:
-            if not rotations_exist:
+            if no_rotations_exist:
                 for i in range(1,rotation_res):
-                    angle = 2*math.pi/i
+                    angle = 2*math.pi/rotation_res*i
                     rotated_train_images = sess.run(tf.contrib.image.rotate(train_holder,angle), feed_dict={train_holder:original_train_data})
                     rotated_val_images = sess.run(tf.contrib.image.rotate(val_holder,angle), feed_dict={val_holder:original_val_data})
                     rotated_test_images = sess.run(tf.contrib.image.rotate(test_holder,angle), feed_dict={test_holder:original_test_data})
@@ -186,14 +162,14 @@ class data_generator:
                     self.test_data.append(rotated_test_images)
             else:
                 for i in range(1,rotation_res):
-                    angle = 2*math.pi/i
+                    angle = 2*math.pi/rotation_res*i
                     rotated_train_images = sess.run(tf.contrib.image.rotate(train_holder,angle), feed_dict={train_holder:original_train_data})
                     rotated_val_images = sess.run(tf.contrib.image.rotate(val_holder,angle), feed_dict={val_holder:original_val_data})
                     rotated_test_images = sess.run(tf.contrib.image.rotate(test_holder,angle), feed_dict={test_holder:original_test_data})
-                    np.append(self.train_data[i],rotated_train_images,axis=0)
-                    np.append(self.val_data[i],rotated_val_images,axis=0)
-                    np.append(self.test_data[i],rotated_test_images,axis=0)
-                    
+                    self.train_data[i] = np.append(self.train_data[i],rotated_train_images,axis=0)
+                    self.val_data[i] = np.append(self.val_data[i],rotated_val_images,axis=0)
+                    self.test_data[i] = np.append(self.test_data[i],rotated_test_images,axis=0)
+                          
     def get_breakpoints(self, person_id, finger_id):
         breakpoints = []
         idx_counter = 0
@@ -312,19 +288,22 @@ class data_generator:
                     translation_match = False
                     translation_margin = False
                     rotation_match = self.is_rotation_similar(template_rot,rot_cand,rotation_diff)
-                    rotation_margin = self.is_rotation_similar(template_rot,rot_cand,margin_rot)
+#                    rotation_margin = self.is_rotation_similar(template_rot,rot_cand,margin_rot)
                     
                     # if rotation is sufficiently similar check translation
                     if rotation_match:
                         translation_match = self.is_translation_similar(template_trans,trans_cand,translation_diff)
-                    elif rotation_margin:
-                        translation_margin = self.is_translation_similar(template_trans,trans_cand,margin_trans)
+#                    elif rotation_margin:
+#                        translation_margin = self.is_translation_similar(template_trans,trans_cand,margin_trans)
+                    translation_margin = self.is_translation_similar(template_trans,trans_cand,margin_trans)
                     
                     # if rotation and translation is similar the images related to the corresponding
                     # breakpoint indices are considered similar
                     if translation_match and rotation_match:
                         match.append([breakpoints[i]+k, j])
-                    elif rotation_margin and translation_margin:
+#                    elif rotation_margin and translation_margin:
+#                        continue
+                    elif translation_margin:
                         continue
                     else:
                         no_match.append([breakpoints[i]+k, j])

@@ -46,7 +46,7 @@ def main(argv):
 #            nbr_of_images = np.shape(finger_data)[0] # number of images to use from the original data set
             nbr_of_images = 5616
             finger_data = util.reshape_grayscale_data(finger_data)
-            rotation_res = 1
+            rotation_res = 2
             
             generator = data_generator(finger_data, finger_id, person_id, translation, rotation, nbr_of_images, rotation_res) # initialize data generator
             
@@ -57,7 +57,7 @@ def main(argv):
             rotation_gt_vt = np.load(dir_path + "/rotation_gt_vt.npy")
             
             finger_data_gt_vt = util.reshape_grayscale_data(finger_data_gt_vt)
-            nbr_of_images_gt_vt = np.shape(finger_data)[0]
+            nbr_of_images_gt_vt = np.shape(finger_data_gt_vt)[0]
             
             generator.add_new_data(finger_data_gt_vt, finger_id_gt_vt, person_id_gt_vt, translation_gt_vt, rotation_gt_vt, nbr_of_images_gt_vt)
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
@@ -68,18 +68,19 @@ def main(argv):
              
     # parameters for training
     batch_size_train = 200
-    train_itr = 255000
+    train_itr = 225000
 
-    learning_rate = 0.00001
+    learning_rate = 0.000001
     momentum = 0.99
    
     # parameters for validation
     batch_size_val = 175
-    val_itr = 100 # frequency in which to use validation data for computations
+    val_itr = 1000 # frequency in which to use validation data for computations
     
     # parameters for evaluation
     batch_size_test = 105
     threshold = 0.5    
+    thresh_step = 0.01
         
     dims = np.shape(generator.train_data[0])
     batch_sizes = [batch_size_train,batch_size_val,batch_size_test]
@@ -201,7 +202,6 @@ def main(argv):
             
         precision_over_time = []
         val_loss_over_time = []
-        thresh_step = 0.05
         
         with tf.device(gpu_device_name):
             # Setup tensorflow's batch generator
