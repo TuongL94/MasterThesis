@@ -348,12 +348,3 @@ class data_generator:
             
         return class_id
         
-        
-        
-        
-        
-        
-        
-        
-        
-        

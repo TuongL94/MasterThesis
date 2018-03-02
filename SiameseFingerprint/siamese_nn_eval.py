@@ -10,9 +10,11 @@ import scipy.linalg as sl
 import tensorflow as tf
 import os 
 import sys
-import utilities as util
 import pickle
 import re
+
+# imports from self-implemented modules
+import utilities as util
 
 def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_id=None):
     """ Computes and returns evaluation metrics.
@@ -109,20 +111,19 @@ def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_
         
         config = tf.ConfigProto(allow_soft_placement=True)
         config.gpu_options.allow_growth = True
+        
         with tf.Session(config=config) as sess:
             with tf.device(gpu_device_name):
                 saver.restore(sess, tf.train.latest_checkpoint(output_dir))
                 
                 test_match_dataset = tf.data.Dataset.from_tensor_slices(generator.match_test)
                 test_match_dataset = test_match_dataset.batch(batch_size)
-                test_match_dataset_length = np.shape(generator.match_test)[0]
+#                test_match_dataset_length = np.shape(generator.match_test)[0]
             
                 test_non_match_dataset_length = np.shape(generator.no_match_test)[0]
-#                test_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_test[0:int(test_non_match_dataset_length/10)])
                 test_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_test)
                 test_non_match_dataset = test_non_match_dataset.shuffle(buffer_size = test_non_match_dataset_length)
                 test_non_match_dataset = test_non_match_dataset.batch(batch_size)
-    #            test_non_match_dataset_length = np.shape(generator.all_no_match_test)[0]
                 
                 test_match_iterator = test_match_dataset.make_one_shot_iterator()
                 test_match_handle = sess.run(test_match_iterator.string_handle())
@@ -133,16 +134,10 @@ def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_
                 iterator = tf.data.Iterator.from_string_handle(handle, test_match_dataset.output_types)
                 next_element = iterator.get_next()
                 
-    #            sim_full = np.vstack((np.ones((batch_size_test*int(test_match_dataset_length/batch_size_test),1)),np.zeros((batch_size_test*int(test_non_match_dataset_length/batch_size_test),1))))
                 sim_full = np.vstack((np.ones((batch_size*eval_itr,1)), np.zeros((batch_size*eval_itr,1))))
-    #            sim_full = np.vstack((np.ones((batch_size_test*int(test_match_dataset_length/batch_size_test),1)),np.zeros((batch_size_test*int((int(test_non_match_dataset_length/10))/batch_size_test),1))))
-    #            sim_full = np.vstack((np.ones((batch_size_test*int(test_match_dataset_length/batch_size_test),1)),np.zeros((batch_size_test*int(int(test_non_match_dataset_length/10)/batch_size_test),1))))
-                
                 
                 for i in range(eval_itr):
-                    #            for i in range(int(test_match_dataset_length/batch_size_test)):
                     test_batch = sess.run(next_element,feed_dict={handle:test_match_handle})
-    
                     for j in range(generator.rotation_res):
                         b_l_test,b_r_test = generator.get_pairs(generator.test_data[j],test_batch)
                         class_id_batch = generator.same_class(test_batch,test=True)
@@ -157,7 +152,6 @@ def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_
                             class_id = np.vstack((class_id, class_id_batch))
     
                 for i in range(eval_itr):
-    #            for i in range(int(int(test_non_match_dataset_length/10)/batch_size_test)):
                     test_batch = sess.run(next_element,feed_dict={handle:test_non_match_handle})
                     for j in range(generator.rotation_res):
                         b_l_test,b_r_test = generator.get_pairs(generator.test_data[j],test_batch) 
@@ -187,11 +181,11 @@ def main(argv):
     
     # Set parameters for evaluation
    threshold = 0.3
-   batch_size = 105
-   eval_itr = 4
+   batch_size = 200
+   eval_itr = 16
     
    dir_path = os.path.dirname(os.path.realpath(__file__))
-   output_dir = dir_path + "/train_models" + argv[0] + "/" # directory where the model is saved
+   output_dir = dir_path + "/train_models/" + argv[0] + "/" # directory where the model is saved
    gpu_device_name = argv[-1] 
    
     # Load generator

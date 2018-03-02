@@ -5,19 +5,20 @@ Created on Mon Jan 29 13:44:22 2018
 @author: Tuong Lam & Simon Nilsson
 """
 
-from data_generator import data_generator
-
-import siamese_nn_model as sm
 import numpy as np
 import tensorflow as tf
 import os 
 import utilities as util
-import siamese_nn_eval as sme
 import matplotlib.pyplot as plt
 import pickle
 import re
 import sys
 
+# imports from self-implemented modules
+import siamese_nn_model as sm
+import siamese_nn_eval as sme
+import siamese_nn_utilities as su
+from data_generator import data_generator
 
 def main(argv):
     """ This method is used to train a siamese network for fingerprint datasets.
@@ -29,9 +30,11 @@ def main(argv):
     
     """
     
-    gpu_device_name = argv
+    model_name = argv[0]
+    gpu_device_name = argv[1] 
+
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    output_dir = dir_path + "/train_models" + gpu_device_name + "/" # directory where the model will be saved
+    output_dir = dir_path + "/train_models/" + model_name + "/" # directory where the model will be saved
     
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
@@ -43,11 +46,10 @@ def main(argv):
             finger_data = np.load(dir_path + "/fingerprints.npy")
             translation = np.load(dir_path + "/translation.npy")
             rotation = np.load(dir_path + "/rotation.npy")
-#            nbr_of_images = np.shape(finger_data)[0] # number of images to use from the original data set
-            nbr_of_images = 5616
             finger_data = util.reshape_grayscale_data(finger_data)
-            rotation_res = 2
+            nbr_of_images = np.shape(finger_data)[0] # number of images to use from the original data set
             
+            rotation_res = 1
             generator = data_generator(finger_data, finger_id, person_id, translation, rotation, nbr_of_images, rotation_res) # initialize data generator
             
             finger_id_gt_vt = np.load(dir_path + "/finger_id_gt_vt.npy")
@@ -55,7 +57,6 @@ def main(argv):
             finger_data_gt_vt = np.load(dir_path + "/fingerprints_gt_vt.npy")
             translation_gt_vt = np.load(dir_path + "/translation_gt_vt.npy")
             rotation_gt_vt = np.load(dir_path + "/rotation_gt_vt.npy")
-            
             finger_data_gt_vt = util.reshape_grayscale_data(finger_data_gt_vt)
             nbr_of_images_gt_vt = np.shape(finger_data_gt_vt)[0]
             
@@ -68,17 +69,17 @@ def main(argv):
              
     # parameters for training
     batch_size_train = 200
-    train_itr = 225000
+    train_itr = 500
 
-    learning_rate = 0.000001
+    learning_rate = 0.00001
     momentum = 0.99
    
     # parameters for validation
-    batch_size_val = 175
+    batch_size_val = 200
     val_itr = 1000 # frequency in which to use validation data for computations
     
     # parameters for evaluation
-    batch_size_test = 105
+    batch_size_test = 200
     threshold = 0.5    
     thresh_step = 0.01
         
@@ -86,7 +87,7 @@ def main(argv):
     batch_sizes = [batch_size_train,batch_size_val,batch_size_test]
     image_dims = [dims[1],dims[2],dims[3]]
     
-    save_itr = 25000 # frequency in which the model is saved
+    save_itr = 100000 # frequency in which the model is saved
     
     tf.reset_default_graph()
     
@@ -98,7 +99,7 @@ def main(argv):
         
         with tf.device(gpu_device_name):
              # create placeholders
-            left_train,right_train,label_train,left_val,right_val,label_val,left_test,right_test = sm.placeholder_inputs(image_dims,batch_sizes)
+            left_train,right_train,label_train,left_val,right_val,label_val,left_test,right_test = su.placeholder_inputs(image_dims,batch_sizes)
             handle = tf.placeholder(tf.string, shape=[],name="handle")
                 
             left_train_output = sm.inference(left_train)            
@@ -109,13 +110,13 @@ def main(argv):
             right_test_output = sm.inference(right_test)
             
             reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-            margin = tf.constant(4.0) # margin for contrastive loss
-            train_loss = sm.contrastive_loss(left_train_output,right_train_output,label_train,margin)
+            margin = tf.constant(2.0) # margin for contrastive loss
+            train_loss = su.contrastive_loss(left_train_output,right_train_output,label_train,margin)
             # add regularization terms to contrastive loss function
             for i in range(len(reg_losses)):
                 train_loss += reg_losses[i]
             
-            val_loss = sm.contrastive_loss(left_val_output,right_val_output,label_val,margin)
+            val_loss = su.contrastive_loss(left_val_output,right_val_output,label_val,margin)
             
             tf.add_to_collection("train_loss",train_loss)
             tf.add_to_collection("val_loss",val_loss)
@@ -124,10 +125,6 @@ def main(argv):
             tf.add_to_collection("left_test_output",left_test_output)
             tf.add_to_collection("right_test_output",right_test_output)
             
-#            global_vars = tf.global_variables()
-#            for i in range(len(global_vars)):
-#                print(global_vars[i])
-                
             saver = tf.train.Saver()
 
     else:
@@ -159,11 +156,11 @@ def main(argv):
     
     config = tf.ConfigProto(allow_soft_placement=True)
     config.gpu_options.allow_growth = True
-#    config.gpu_options.per_process_gpu_memory_fraction = 0.8
+        
     with tf.Session(config=config) as sess:
         if is_model_new:
             with tf.device(gpu_device_name):
-                train_op = sm.training(train_loss, learning_rate, momentum)
+                train_op = su.training(train_loss, learning_rate, momentum)
                 sess.run(tf.global_variables_initializer()) # initialize all trainable parameters
                 tf.add_to_collection("train_op",train_op)
         else:
@@ -198,8 +195,7 @@ def main(argv):
             x_image = tf.summary.image('left_input', left_train)
             summary_op = tf.summary.merge([summary_train_loss, x_image, filter1, hist_conv1, hist_conv2, hist_bias1, hist_bias2])
             train_writer = tf.summary.FileWriter(output_dir + "/train_summary", graph=tf.get_default_graph())
-            
-            
+             
         precision_over_time = []
         val_loss_over_time = []
         
@@ -263,7 +259,6 @@ def main(argv):
             _,train_loss_value, summary = sess.run([train_op, train_loss, summary_op],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train})
 
              # Use validation data set to tune hyperparameters (Classification threshold)
-
             if i % val_itr == 0:
                 current_val_loss = 0
                 b_sim_val_matching = np.repeat(np.ones((batch_size_val*int(val_match_dataset_length/batch_size_val),1)),generator.rotation_res,axis=0)
@@ -332,4 +327,4 @@ def main(argv):
         plt.show()
         
 if __name__ == "__main__":
-     main(sys.argv[1])
+     main(sys.argv[1:])
