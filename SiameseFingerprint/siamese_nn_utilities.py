@@ -6,6 +6,9 @@ Created on Fri Mar  2 11:02:14 2018
 @author: Tuong Lam
 """
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import tensorflow as tf
 
 def contrastive_loss(input_1,input_2,label,margin):

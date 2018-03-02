@@ -12,10 +12,11 @@ import matplotlib.pyplot as plt
 import pickle
 import re
 import sys
+import time
 
 # imports from self-implemented modules
-import siamese_nn_model as sm
-import siamese_nn_eval as sme
+import inception_nn_model as im
+import inception_nn_eval as ie
 import siamese_nn_utilities as su
 import utilities as util
 from data_generator import data_generator
@@ -31,8 +32,12 @@ def main(argv):
     """
     
     model_name = argv[0]
-    gpu_device_name = argv[1] 
-
+    gpu_device_name = argv[1]
+    if len(argv) == 3:
+        use_time = True
+    else:
+        use_time = False
+        
     dir_path = os.path.dirname(os.path.realpath(__file__))
     output_dir = dir_path + "/train_models/" + model_name + "/" # directory where the model will be saved
     
@@ -69,14 +74,14 @@ def main(argv):
              
     # parameters for training
     batch_size_train = 200
-    train_itr = 500
+    train_itr = 5000
 
     learning_rate = 0.00001
     momentum = 0.99
    
     # parameters for validation
     batch_size_val = 200
-    val_itr = 1000 # frequency in which to use validation data for computations
+    val_itr = 500 # frequency in which to use validation data for computations
     
     # parameters for evaluation
     batch_size_test = 200
@@ -102,15 +107,15 @@ def main(argv):
             left_train,right_train,label_train,left_val,right_val,label_val,left_test,right_test = su.placeholder_inputs(image_dims,batch_sizes)
             handle = tf.placeholder(tf.string, shape=[],name="handle")
                 
-            left_train_output = sm.inference(left_train)            
-            right_train_output = sm.inference(right_train)
-            left_val_output = sm.inference(left_val)
-            right_val_output = sm.inference(right_val)
-            left_test_output = sm.inference(left_test)
-            right_test_output = sm.inference(right_test)
+            left_train_output = im.inference(left_train)            
+            right_train_output = im.inference(right_train)
+            left_val_output = im.inference(left_val)
+            right_val_output = im.inference(right_val)
+            left_test_output = im.inference(left_test)
+            right_test_output = im.inference(right_test)
             
             reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-            margin = tf.constant(2.0) # margin for contrastive loss
+            margin = tf.constant(4.0) # margin for contrastive loss
             train_loss = su.contrastive_loss(left_train_output,right_train_output,label_train,margin)
             # add regularization terms to contrastive loss function
             for i in range(len(reg_losses)):
@@ -136,7 +141,7 @@ def main(argv):
             words = re.split("/",line)
             model_file_name = words[-1][:-2]
             current_itr = int(re.split("-",model_file_name)[-1]) # current training iteration
-            saver = tf.train.import_meta_graph(output_dir + model_file_name + ".meta")
+            saver = tf.train.import_meta_graph(output_dir + model_file_name + ".meta",clear_devices=True)
         
         with tf.device(gpu_device_name):
             g = tf.get_default_graph()
@@ -167,9 +172,7 @@ def main(argv):
             with tf.device(gpu_device_name):
                 saver.restore(sess, tf.train.latest_checkpoint(output_dir))
                 train_op = tf.get_collection("train_op")[0]
-            
-#            for i in sess.graph.get_operations():
-#                print(i.values())
+
 #            global_vars = tf.global_variables()
 #            for i in range(len(global_vars)):
 #                print(global_vars[i])
@@ -178,23 +181,43 @@ def main(argv):
             graph = tf.get_default_graph()
             
             # Summary setup
-            conv1_filters = graph.get_tensor_by_name("conv_layer_1/kernel:0")
+            
+            # get filters in first inception layer and their dimensions
+            conv1_filters = graph.get_tensor_by_name("conv1_layer_1/kernel:0")
             nbr_of_filters_conv1 = sess.run(tf.shape(conv1_filters)[-1])
-    
-            conv2_filters = graph.get_tensor_by_name("conv_layer_2/kernel:0")
+            conv2_filters = graph.get_tensor_by_name("conv2_layer_1/kernel:0")
+            nbr_of_filters_conv2 = sess.run(tf.shape(conv2_filters)[-1])
+            conv3_filters = graph.get_tensor_by_name("conv3_layer_1/kernel:0")
+            nbr_of_filters_conv3 = sess.run(tf.shape(conv3_filters)[-1])
+            
+            # histograms of filter weights
             hist_conv1 = tf.summary.histogram("hist_conv1", conv1_filters)
             hist_conv2 = tf.summary.histogram("hist_conv2", conv2_filters)
+            hist_conv3 = tf.summary.histogram("hist_conv3", conv3_filters)
+            
+            # transpose filters to coincide with the dimensions requested by tensorflow's summary. 
+            # Add filters to summary
             conv1_filters = tf.transpose(conv1_filters, perm = [3,0,1,2])
             filter1 = tf.summary.image('Filter_1', conv1_filters, max_outputs=nbr_of_filters_conv1)
-            conv1_bias = graph.get_tensor_by_name("conv_layer_1/bias:0")
+            conv2_filters = tf.transpose(conv2_filters, perm = [3,0,1,2])
+            filter2 = tf.summary.image('Filter_2', conv2_filters, max_outputs=nbr_of_filters_conv2)
+            conv3_filters = tf.transpose(conv3_filters, perm = [3,0,1,2])
+            filter3 = tf.summary.image('Filter_3', conv3_filters, max_outputs=nbr_of_filters_conv3)
+            
+            # get biases of filters in the first inception layer
+            conv1_bias = graph.get_tensor_by_name("conv1_layer_1/bias:0")
+            conv2_bias = graph.get_tensor_by_name("conv2_layer_1/bias:0")
+            conv3_bias = graph.get_tensor_by_name("conv3_layer_1/bias:0")
+            
+            # histograms of filter biases
             hist_bias1 = tf.summary.histogram("hist_bias1", conv1_bias)
-            conv2_bias = graph.get_tensor_by_name("conv_layer_2/bias:0")
             hist_bias2 = tf.summary.histogram("hist_bias2", conv2_bias)
+            hist_bias3 = tf.summary.histogram("hist_bias3", conv3_bias)
                 
             summary_train_loss = tf.summary.scalar('training_loss', train_loss)
             x_image = tf.summary.image('left_input', left_train)
-            summary_op = tf.summary.merge([summary_train_loss, x_image, filter1, hist_conv1, hist_conv2, hist_bias1, hist_bias2])
-            train_writer = tf.summary.FileWriter(output_dir + "/train_summary", graph=tf.get_default_graph())
+            summary_op = tf.summary.merge([summary_train_loss, x_image, filter1,filter2,filter3, hist_conv1, hist_conv2,hist_conv3, hist_bias1, hist_bias2, hist_bias3])
+            train_writer = tf.summary.FileWriter(output_dir + "train_summary", graph=tf.get_default_graph())
              
         precision_over_time = []
         val_loss_over_time = []
@@ -237,7 +260,11 @@ def main(argv):
             
             iterator = tf.data.Iterator.from_string_handle(handle, train_match_dataset.output_types)
             next_element = iterator.get_next()
+            
+#        for i in sess.graph.get_operations():
+#            print(i.values())
         
+        start_time_train = time.time()
         print("Starting training")
         # Training loop
         for i in range(1,train_itr + 1):
@@ -256,7 +283,7 @@ def main(argv):
             rnd_rotation = np.random.randint(0,generator.rotation_res)
             b_l_train,b_r_train = generator.get_pairs(generator.train_data[rnd_rotation],train_batch)
             
-            _,train_loss_value, summary = sess.run([train_op, train_loss, summary_op],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train})
+            _,train_loss_value,summary = sess.run([train_op, train_loss,summary_op],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train})
 
              # Use validation data set to tune hyperparameters (Classification threshold)
             if i % val_itr == 0:
@@ -292,7 +319,7 @@ def main(argv):
                         current_val_loss += val_loss_value
                         
                 val_loss_over_time.append(current_val_loss*batch_size_val/np.shape(b_sim_full)[0])
-                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = sme.get_test_diagnostics(left_full,right_full, b_sim_full,threshold, class_id)
+                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = ie.get_test_diagnostics(left_full,right_full, b_sim_full,threshold, class_id)
             
                 if false_pos > false_neg:   # Can use inter_class_errors to tune the threshold further
                     threshold -= thresh_step
@@ -302,13 +329,20 @@ def main(argv):
 
             train_writer.add_summary(summary, i)
             
+            if use_time:
+                elapsed_time = (time.time() - start_time_train)/60.0 # elapsed time in minutes since start of training 
+                if elapsed_time >= int(argv[2]):
+                    save_path = tf.train.Saver().save(sess,output_dir + "model",global_step=i+current_itr)
+                    print("Trained model after {} iterations and {} minutes saved in path: {}".format(i,elapsed_time,save_path))
+                    break
+                
             if i % save_itr == 0 or i == train_itr:
                 save_path = tf.train.Saver().save(sess,output_dir + "model",global_step=i+current_itr)
                 print("Trained model after {} iterations saved in path: {}".format(i,save_path))
         
         # Plot precision over time
-        time = list(range(len(precision_over_time)))
-        plt.plot(time, precision_over_time)
+        time_points = list(range(len(precision_over_time)))
+        plt.plot(time_points, precision_over_time)
         plt.title("Precision over time")
         plt.xlabel("iteration")
         plt.ylabel("precision")

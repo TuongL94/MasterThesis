@@ -164,7 +164,7 @@ def inference(input):
 #            kernel_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.05),
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
 #            bias_initializer = tf.initializers.truncated_normal(mean=0, stddev=0.1),
-            name="conv_layer_0")
+            name="conv_layer_10")
     
      # Convolutional layer 1
     conv11 = tf.layers.conv2d(

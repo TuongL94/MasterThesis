@@ -46,6 +46,13 @@ def inception_a_block(input):
     return output
 
 def inference(input):
-    output_1 = inception_a_block(input)
-    net = tf.layers.flatten(output_1)
-    return net
+    output = inception_a_block(input)
+    output = tf.layers.flatten(output)
+    output = tf.layers.dense(
+            output,
+            10,
+            activation = tf.nn.relu,
+            reuse = tf.AUTO_REUSE,
+            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
+            name="dense_1")
+    return output
