@@ -135,7 +135,8 @@ def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_
                     test_batch_anchors = sess.run(next_element,feed_dict={handle:test_anchors_handle})
     
                     for j in range(generator.rotation_res):
-                        b_anch_test,b_pos_test,b_neg_test= generator.get_triplet(generator.test_data[j], generator.triplets_test, test_batch_anchors)
+                        difficulty_lvl = np.random.randint(1,4)
+                        b_anch_test,b_pos_test,b_neg_test= generator.get_triplet(generator.test_data[j], generator.triplets_test, test_batch_anchors, difficulty_lvl)
 #                        class_id_batch = generator.same_class(test_batch,test=True)
                         left_o_match,right_o_match = sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_anch_test, right_test:b_pos_test})
                         left_o_no_match,right_o_no_match = sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_anch_test, right_test:b_neg_test})
@@ -180,9 +181,9 @@ def main(argv):
    """ Runs evaluation on mnist siamese network"""
     
     # Set parameters for evaluation
-   threshold = 0.5
+   threshold = 0.4
    batch_size = 100
-   eval_itr = 1
+   eval_itr = 10
     
    dir_path = os.path.dirname(os.path.realpath(__file__))
    output_dir = dir_path + "/train_models" + argv[0] + "/" # directory where the model is saved

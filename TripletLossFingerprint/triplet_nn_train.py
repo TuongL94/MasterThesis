@@ -76,14 +76,16 @@ def main(argv):
              
     # parameters for training
     batch_size_train = 100
-    train_itr = 5000000
+    train_itr = 300
+    lvl_2 = 100     # Set number of iterations at when to increase difficulty to level 2
+    lvl_3 = 200     # Set number of iterations at when to increase difficulty to level 3
 
-    learning_rate = 0.000001
+    learning_rate = 0.00001
     momentum = 0.99
    
     # parameters for validation
     batch_size_val = 100
-    val_itr = 10000 # frequency in which to use validation data for computations
+    val_itr = 75 # frequency in which to use validation data for computations
     
     # parameters for evaluation
     batch_size_test = 100
@@ -276,8 +278,14 @@ def main(argv):
 #            b_sim_train = np.take(b_sim_train,permutation,axis=0)
             
             # Randomize rotation of batch              
+            if i < lvl_2:
+                difficulty_lvl = 1
+            elif i < lvl_3:
+                difficulty_lvl = 2
+            else:
+                difficulty_lvl = 3   
             rnd_rotation = np.random.randint(0,generator.rotation_res)
-            b_anch_train,b_pos_train,b_neg_train = generator.get_triplet(generator.train_data[rnd_rotation], generator.triplets_train, train_batch_anchors)
+            b_anch_train,b_pos_train,b_neg_train = generator.get_triplet(generator.train_data[rnd_rotation], generator.triplets_train, train_batch_anchors, difficulty_lvl)
             
             _,train_loss_value, summary = sess.run([train_op, train_loss, summary_op],feed_dict={anchor_train:b_anch_train, pos_train:b_pos_train, neg_train:b_neg_train})
 
@@ -294,7 +302,8 @@ def main(argv):
 #                    class_id_batch = generator.same_class(val_batch_anchors)
                     for k in range(generator.rotation_res):
 #                        b_l_val,b_r_val = generator.get_pairs(generator.val_data[k],val_batch_anchors) 
-                        b_anch_val,b_pos_val,b_neg_val= generator.get_triplet(generator.val_data[k], generator.triplets_val, val_batch_anchors)
+                        difficulty_lvl = np.random.randint(1,4)
+                        b_anch_val,b_pos_val,b_neg_val= generator.get_triplet(generator.val_data[k], generator.triplets_val, val_batch_anchors, difficulty_lvl)
                         anchor_o,pos_o,neg_o,val_loss_value = sess.run([anchor_val_output,pos_val_output, neg_val_output,val_loss],feed_dict = {anchor_val:b_anch_val, pos_val:b_pos_val, neg_val:b_neg_val})
                         current_val_loss += val_loss_value
                         if j == 0 and k == 0:
