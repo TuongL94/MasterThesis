@@ -102,6 +102,7 @@ def main(argv):
     if not os.path.exists(output_dir + "checkpoint"):
         print("No previous model exists, creating a new one.")
         is_model_new = True
+        meta_file_exists = False
         current_itr = 0 # current training iteration
         
         with tf.device(gpu_device_name):
@@ -145,13 +146,17 @@ def main(argv):
     else:
         print("Using latest existing model in the directory " + output_dir)
         is_model_new = False
+        meta_file_exists = True
         
         with open(output_dir + "checkpoint","r") as file:
             line  = file.readline()
             words = re.split("/",line)
             model_file_name = words[-1][:-2]
             current_itr = int(re.split("-",model_file_name)[-1]) # current training iteration
-            saver = tf.train.import_meta_graph(output_dir + model_file_name + ".meta")
+            for file in os.listdir(output_dir):
+                if file.endswith(".meta"):
+                    meta_file_name = os.path.join(output_dir,file)
+            saver = tf.train.import_meta_graph(meta_file_name)
         
         with tf.device(gpu_device_name):
             g = tf.get_default_graph()
@@ -328,12 +333,19 @@ def main(argv):
             if use_time:
                 elapsed_time = (time.time() - start_time_train)/60.0 # elapsed time in minutes since start of training 
                 if elapsed_time >= int(argv[3]):
-                    save_path = tf.train.Saver().save(sess,output_dir + "model",global_step=i+current_itr)
+                    if meta_file_exists:
+                        save_path = tf.train.Saver().save(sess,output_dir + "model",global_step=i+current_itr,write_meta_graph=False)
+                    else:
+                        save_path = tf.train.Saver().save(sess,output_dir + "model",global_step=i+current_itr)
                     print("Trained model after {} iterations and {} minutes saved in path: {}".format(i,elapsed_time,save_path))
                     break
                 
             if i % save_itr == 0 or i == train_itr:
-                save_path = tf.train.Saver().save(sess,output_dir + "model",global_step=i+current_itr)
+                if meta_file_exists:
+                    save_path = tf.train.Saver().save(sess,output_dir + "model",global_step=i+current_itr,write_meta_graph=False)
+                else:
+                    save_path = tf.train.Saver().save(sess,output_dir + "model",global_step=i+current_itr)
+                    meta_file_exists = True
                 print("Trained model after {} iterations saved in path: {}".format(i,save_path))
         
         # Plot precision over time
