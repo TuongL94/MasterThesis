@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import pickle
 import re
 import sys
+import time
 
 
 def main(argv):
@@ -29,10 +30,16 @@ def main(argv):
     
     """
     
-    gpu_device_name = argv
+    model_name = argv[0]
+    gpu_device_name = argv[2]
+    if len(argv) == 4:
+        use_time = True
+    else:
+        use_time = False
+        
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    output_dir = dir_path + "/train_models" + gpu_device_name + "/" # directory where the model will be saved
-    
+    output_dir =  argv[1] + model_name + "/" # directory where the model will be saved
+
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
     if not os.path.exists(dir_path + "/generator_data.pk1"):
@@ -43,8 +50,8 @@ def main(argv):
             finger_data = np.load(dir_path + "/fingerprints.npy")
             translation = np.load(dir_path + "/translation.npy")
             rotation = np.load(dir_path + "/rotation.npy")
-#            nbr_of_images = np.shape(finger_data)[0] # number of images to use from the original data set
-            nbr_of_images = 1000
+            nbr_of_images = np.shape(finger_data)[0] # number of images to use from the original data set
+#            nbr_of_images = 5000
             finger_data = util.reshape_grayscale_data(finger_data)
             rotation_res = 1
             
@@ -58,7 +65,7 @@ def main(argv):
             
             finger_data_gt_vt = util.reshape_grayscale_data(finger_data_gt_vt)
             nbr_of_images_gt_vt = np.shape(finger_data_gt_vt)[0]
-            nbr_of_images_gt_vt = 1000            
+#            nbr_of_images_gt_vt = 5000            
             
             generator.add_new_data(finger_data_gt_vt, finger_id_gt_vt, person_id_gt_vt, translation_gt_vt, rotation_gt_vt, nbr_of_images_gt_vt)
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
@@ -69,14 +76,14 @@ def main(argv):
              
     # parameters for training
     batch_size_train = 100
-    train_itr = 500
+    train_itr = 5000000
 
-    learning_rate = 0.00001
+    learning_rate = 0.000001
     momentum = 0.99
    
     # parameters for validation
     batch_size_val = 100
-    val_itr = 10 # frequency in which to use validation data for computations
+    val_itr = 10000 # frequency in which to use validation data for computations
     
     # parameters for evaluation
     batch_size_test = 100
@@ -87,7 +94,7 @@ def main(argv):
     batch_sizes = [batch_size_train,batch_size_val,batch_size_test]
     image_dims = [dims[1],dims[2],dims[3]]
     
-    save_itr = 25000 # frequency in which the model is saved
+    save_itr = 250000 # frequency in which the model is saved
     
     tf.reset_default_graph()
     
@@ -201,8 +208,8 @@ def main(argv):
             hist_bias2 = tf.summary.histogram("hist_bias2", conv2_bias)
                 
             summary_train_loss = tf.summary.scalar('training_loss', train_loss)
-            x_image = tf.summary.image('anchor_input', anchor_train)
-            summary_op = tf.summary.merge([summary_train_loss, x_image, filter1, hist_conv1, hist_conv2, hist_bias1, hist_bias2])
+#            x_image = tf.summary.image('anchor_input', anchor_train)
+            summary_op = tf.summary.merge([summary_train_loss, filter1, hist_conv1, hist_conv2, hist_bias1, hist_bias2])
             train_writer = tf.summary.FileWriter(output_dir + "/train_summary", graph=tf.get_default_graph())
             
             
@@ -249,6 +256,7 @@ def main(argv):
             next_element = iterator.get_next()
         
         print("Starting training")
+        start_time_train = time.time()
         # Training loop
         for i in range(1,train_itr + 1):
             train_batch_anchors = sess.run(next_element,feed_dict={handle:train_anchors_handle})
@@ -281,7 +289,7 @@ def main(argv):
 #                    class_id_batch = generator.same_class(val_batch_anchors)
                     for k in range(generator.rotation_res):
 #                        b_l_val,b_r_val = generator.get_pairs(generator.val_data[k],val_batch_anchors) 
-                        b_anch_val,b_pos_val,b_neg_val= generator.get_triplet(generator.val_data[j], generator.triplets_val, val_batch_anchors)
+                        b_anch_val,b_pos_val,b_neg_val= generator.get_triplet(generator.val_data[k], generator.triplets_val, val_batch_anchors)
                         anchor_o,pos_o,neg_o,val_loss_value = sess.run([anchor_val_output,pos_val_output, neg_val_output,val_loss],feed_dict = {anchor_val:b_anch_val, pos_val:b_pos_val, neg_val:b_neg_val})
                         current_val_loss += val_loss_value
                         if j == 0 and k == 0:
@@ -317,13 +325,20 @@ def main(argv):
 
             train_writer.add_summary(summary, i)
             
+            if use_time:
+                elapsed_time = (time.time() - start_time_train)/60.0 # elapsed time in minutes since start of training 
+                if elapsed_time >= int(argv[3]):
+                    save_path = tf.train.Saver().save(sess,output_dir + "model",global_step=i+current_itr)
+                    print("Trained model after {} iterations and {} minutes saved in path: {}".format(i,elapsed_time,save_path))
+                    break
+                
             if i % save_itr == 0 or i == train_itr:
                 save_path = tf.train.Saver().save(sess,output_dir + "model",global_step=i+current_itr)
                 print("Trained model after {} iterations saved in path: {}".format(i,save_path))
         
         # Plot precision over time
-        time = list(range(len(precision_over_time)))
-        plt.plot(time, precision_over_time)
+        time_points = list(range(len(precision_over_time)))
+        plt.plot(time_points, precision_over_time)
         plt.title("Precision over time")
         plt.xlabel("iteration")
         plt.ylabel("precision")
@@ -342,4 +357,4 @@ def main(argv):
         plt.show()
         
 if __name__ == "__main__":
-     main(sys.argv[1])
+     main(sys.argv[1:])

@@ -32,14 +32,14 @@ def main(argv):
     """
     
     model_name = argv[0]
-    gpu_device_name = argv[1]
-    if len(argv) == 3:
+    gpu_device_name = argv[2]
+    if len(argv) == 4:
         use_time = True
     else:
         use_time = False
         
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    output_dir = dir_path + "/train_models/" + model_name + "/" # directory where the model will be saved
+    output_dir =  argv[1] + model_name + "/" # directory where the model will be saved
     
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
@@ -331,7 +331,7 @@ def main(argv):
             
             if use_time:
                 elapsed_time = (time.time() - start_time_train)/60.0 # elapsed time in minutes since start of training 
-                if elapsed_time >= int(argv[2]):
+                if elapsed_time >= int(argv[3]):
                     save_path = tf.train.Saver().save(sess,output_dir + "model",global_step=i+current_itr)
                     print("Trained model after {} iterations and {} minutes saved in path: {}".format(i,elapsed_time,save_path))
                     break

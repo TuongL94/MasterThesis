@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import pickle
 import re
 import sys
+import time
 
 # imports from self-implemented modules
 import siamese_nn_model as sm
@@ -31,10 +32,14 @@ def main(argv):
     """
     
     model_name = argv[0]
-    gpu_device_name = argv[1] 
+    gpu_device_name = argv[2]
+    if len(argv) == 4:
+        use_time = True
+    else:
+        use_time = False
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    output_dir = dir_path + "/train_models/" + model_name + "/" # directory where the model will be saved
+    output_dir =  argv[1] + model_name + "/" # directory where the model will be saved
     
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
@@ -239,6 +244,7 @@ def main(argv):
             next_element = iterator.get_next()
         
         print("Starting training")
+        start_time_train = time.time()
         # Training loop
         for i in range(1,train_itr + 1):
             train_batch_matching = sess.run(next_element,feed_dict={handle:train_match_handle})
@@ -302,13 +308,20 @@ def main(argv):
 
             train_writer.add_summary(summary, i)
             
+            if use_time:
+                elapsed_time = (time.time() - start_time_train)/60.0 # elapsed time in minutes since start of training 
+                if elapsed_time >= int(argv[3]):
+                    save_path = tf.train.Saver().save(sess,output_dir + "model",global_step=i+current_itr)
+                    print("Trained model after {} iterations and {} minutes saved in path: {}".format(i,elapsed_time,save_path))
+                    break
+                
             if i % save_itr == 0 or i == train_itr:
                 save_path = tf.train.Saver().save(sess,output_dir + "model",global_step=i+current_itr)
                 print("Trained model after {} iterations saved in path: {}".format(i,save_path))
         
         # Plot precision over time
-        time = list(range(len(precision_over_time)))
-        plt.plot(time, precision_over_time)
+        time_points = list(range(len(precision_over_time)))
+        plt.plot(time_points, precision_over_time)
         plt.title("Precision over time")
         plt.xlabel("iteration")
         plt.ylabel("precision")
