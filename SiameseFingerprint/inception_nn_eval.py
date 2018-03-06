@@ -36,7 +36,9 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_i
     inter_class_errors - number of false positive from the same finger+person (class)
     """
     matching = np.zeros(len(sim_labels))
-    l2_normalized_diff = util.l2_normalize(left_pairs_o-right_pairs_o)
+#    l2_normalized_diff = util.l2_normalize(left_pairs_o-right_pairs_o)
+    l2_normalized_diff = left_pairs_o-right_pairs_o
+    l2_distances = sl.norm(l2_normalized_diff,axis=1)
     false_pos = 0
     false_neg = 0
     inter_class_errors = 0
@@ -48,7 +50,7 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_i
             print('Got inf or Nan in L2 norm; Change hyperparameters to avoid')
             if sim_labels[i] == 1:
                 false_neg = false_neg + 1
-        elif sl.norm(l2_normalized_diff[i,:]) < threshold:
+        elif l2_distances[i] < threshold:
             matching[i] = 1
             if sim_labels[i] == 0:
                 false_pos = false_pos + 1
@@ -179,9 +181,9 @@ def main(argv):
    """ Runs evaluation on mnist siamese network"""
     
     # Set parameters for evaluation
-   threshold = 0.3
-   batch_size = 150
-   eval_itr = 16
+   threshold = 0.35
+   batch_size = 100
+   eval_itr = 32
     
    dir_path = os.path.dirname(os.path.realpath(__file__))
    output_dir = argv[1] + argv[0] + "/" # directory where the model is saved

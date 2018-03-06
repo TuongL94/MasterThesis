@@ -73,20 +73,20 @@ def main(argv):
             generator = pickle.load(input)
              
     # parameters for training
-    batch_size_train = 150
+    batch_size_train = 100
     train_itr = 300000000
 
-    learning_rate = 0.000001
+    learning_rate = 0.00001
     momentum = 0.99
    
     # parameters for validation
-    batch_size_val = 150
-    val_itr = 1000 # frequency in which to use validation data for computations
+    batch_size_val = 100
+    val_itr = 100 # frequency in which to use validation data for computations
     
     # parameters for evaluation
-    batch_size_test = 150
+    batch_size_test = 100
     threshold = 0.5    
-    thresh_step = 0.01
+    thresh_step = 0.1
         
     dims = np.shape(generator.train_data[0])
     batch_sizes = [batch_size_train,batch_size_val,batch_size_test]
@@ -131,6 +131,9 @@ def main(argv):
             tf.add_to_collection("left_test_output",left_test_output)
             tf.add_to_collection("right_test_output",right_test_output)
             
+            tf.add_to_collection("left_train_output",left_train_output)
+            tf.add_to_collection("right_train_output",right_train_output)
+            
             saver = tf.train.Saver()
 
     else:
@@ -163,6 +166,9 @@ def main(argv):
             val_loss = tf.get_collection("val_loss")[0]
             
             handle= g.get_tensor_by_name("handle:0")
+            
+            left_train_output = tf.get_collection("left_train_output")[0]
+            right_train_output = tf.get_collection("right_train_output")[0]
     
     with tf.device(gpu_device_name):
         # Setup tensorflow's batch generator
@@ -220,40 +226,42 @@ def main(argv):
             # Summary setup
             
             # get filters in first inception layer and their dimensions
-            conv1_filters = graph.get_tensor_by_name("inception_1/conv1_layer_1/kernel:0")
-            nbr_of_filters_conv1 = sess.run(tf.shape(conv1_filters)[-1])
-            conv2_filters = graph.get_tensor_by_name("inception_1/conv2_layer_1/kernel:0")
-            nbr_of_filters_conv2 = sess.run(tf.shape(conv2_filters)[-1])
-            conv3_filters = graph.get_tensor_by_name("inception_1/conv3_layer_1/kernel:0")
-            nbr_of_filters_conv3 = sess.run(tf.shape(conv3_filters)[-1])
+#            conv1_filters = graph.get_tensor_by_name("inception_1/conv1_layer_1/kernel:0")
+#            nbr_of_filters_conv1 = sess.run(tf.shape(conv1_filters)[-1])
+#            conv2_filters = graph.get_tensor_by_name("inception_1/conv2_layer_1/kernel:0")
+#            nbr_of_filters_conv2 = sess.run(tf.shape(conv2_filters)[-1])
+#            conv3_filters = graph.get_tensor_by_name("inception_1/conv3_layer_1/kernel:0")
+#            nbr_of_filters_conv3 = sess.run(tf.shape(conv3_filters)[-1])
             
             # histograms of filter weights
-            hist_conv1 = tf.summary.histogram("hist_conv1", conv1_filters)
-            hist_conv2 = tf.summary.histogram("hist_conv2", conv2_filters)
-            hist_conv3 = tf.summary.histogram("hist_conv3", conv3_filters)
+#            hist_conv1 = tf.summary.histogram("hist_conv1", conv1_filters)
+#            hist_conv2 = tf.summary.histogram("hist_conv2", conv2_filters)
+#            hist_conv3 = tf.summary.histogram("hist_conv3", conv3_filters)
             
             # transpose filters to coincide with the dimensions requested by tensorflow's summary. 
             # Add filters to summary
-            conv1_filters = tf.transpose(conv1_filters, perm = [3,0,1,2])
-            filter1 = tf.summary.image('Filter_1', conv1_filters, max_outputs=nbr_of_filters_conv1)
-            conv2_filters = tf.transpose(conv2_filters, perm = [3,0,1,2])
-            filter2 = tf.summary.image('Filter_2', conv2_filters, max_outputs=nbr_of_filters_conv2)
-            conv3_filters = tf.transpose(conv3_filters, perm = [3,0,1,2])
-            filter3 = tf.summary.image('Filter_3', conv3_filters, max_outputs=nbr_of_filters_conv3)
+#            conv1_filters = tf.transpose(conv1_filters, perm = [3,0,1,2])
+#            filter1 = tf.summary.image('Filter_1', conv1_filters, max_outputs=nbr_of_filters_conv1)
+#            conv2_filters = tf.transpose(conv2_filters, perm = [3,0,1,2])
+#            filter2 = tf.summary.image('Filter_2', conv2_filters, max_outputs=nbr_of_filters_conv2)
+#            conv3_filters = tf.transpose(conv3_filters, perm = [3,0,1,2])
+#            filter3 = tf.summary.image('Filter_3', conv3_filters, max_outputs=nbr_of_filters_conv3)
             
             # get biases of filters in the first inception layer
-            conv1_bias = graph.get_tensor_by_name("inception_1/conv1_layer_1/bias:0")
-            conv2_bias = graph.get_tensor_by_name("inception_1/conv2_layer_1/bias:0")
-            conv3_bias = graph.get_tensor_by_name("inception_1/conv3_layer_1/bias:0")
+#            conv1_bias = graph.get_tensor_by_name("inception_1/conv1_layer_1/bias:0")
+#            conv2_bias = graph.get_tensor_by_name("inception_1/conv2_layer_1/bias:0")
+#            conv3_bias = graph.get_tensor_by_name("inception_1/conv3_layer_1/bias:0")
             
             # histograms of filter biases
-            hist_bias1 = tf.summary.histogram("hist_bias1", conv1_bias)
-            hist_bias2 = tf.summary.histogram("hist_bias2", conv2_bias)
-            hist_bias3 = tf.summary.histogram("hist_bias3", conv3_bias)
+#            hist_bias1 = tf.summary.histogram("hist_bias1", conv1_bias)
+#            hist_bias2 = tf.summary.histogram("hist_bias2", conv2_bias)
+#            hist_bias3 = tf.summary.histogram("hist_bias3", conv3_bias)
                 
             summary_train_loss = tf.summary.scalar('training_loss', train_loss)
-            x_image = tf.summary.image('left_input', left_train)
-            summary_op = tf.summary.merge([summary_train_loss, x_image, filter1,filter2,filter3, hist_conv1, hist_conv2,hist_conv3, hist_bias1, hist_bias2, hist_bias3])
+#            x_image = tf.summary.image('left_input', left_train)
+            
+#            summary_op = tf.summary.merge([summary_train_loss, x_image, filter1,filter2,filter3, hist_conv1, hist_conv2,hist_conv3, hist_bias1, hist_bias2, hist_bias3])
+            summary_op = tf.summary.merge([summary_train_loss])
             train_writer = tf.summary.FileWriter(output_dir + "train_summary", graph=tf.get_default_graph())
              
             train_match_handle = sess.run(train_match_iterator.string_handle())
@@ -285,7 +293,8 @@ def main(argv):
             rnd_rotation = np.random.randint(0,generator.rotation_res)
             b_l_train,b_r_train = generator.get_pairs(generator.train_data[rnd_rotation],train_batch)
             
-            _,train_loss_value,summary = sess.run([train_op, train_loss,summary_op],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train})
+            _,train_loss_value,summary,left_o,right_o = sess.run([train_op, train_loss,summary_op,left_train_output,right_train_output],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train})
+#            _,train_loss_value = sess.run([train_op, train_loss],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train})
 
              # Use validation data set to tune hyperparameters (Classification threshold)
             if i % val_itr == 0:
