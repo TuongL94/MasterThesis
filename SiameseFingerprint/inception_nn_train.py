@@ -226,42 +226,42 @@ def main(argv):
             # Summary setup
             
             # get filters in first inception layer and their dimensions
-#            conv1_filters = graph.get_tensor_by_name("inception_1/conv1_layer_1/kernel:0")
-#            nbr_of_filters_conv1 = sess.run(tf.shape(conv1_filters)[-1])
-#            conv2_filters = graph.get_tensor_by_name("inception_1/conv2_layer_1/kernel:0")
-#            nbr_of_filters_conv2 = sess.run(tf.shape(conv2_filters)[-1])
-#            conv3_filters = graph.get_tensor_by_name("inception_1/conv3_layer_1/kernel:0")
-#            nbr_of_filters_conv3 = sess.run(tf.shape(conv3_filters)[-1])
+            conv1_filters = graph.get_tensor_by_name("inception_1/conv1_layer_1/kernel:0")
+            nbr_of_filters_conv1 = sess.run(tf.shape(conv1_filters)[-1])
+            conv2_filters = graph.get_tensor_by_name("inception_1/conv2_layer_1/kernel:0")
+            nbr_of_filters_conv2 = sess.run(tf.shape(conv2_filters)[-1])
+            conv3_filters = graph.get_tensor_by_name("inception_1/conv3_layer_1/kernel:0")
+            nbr_of_filters_conv3 = sess.run(tf.shape(conv3_filters)[-1])
             
             # histograms of filter weights
-#            hist_conv1 = tf.summary.histogram("hist_conv1", conv1_filters)
-#            hist_conv2 = tf.summary.histogram("hist_conv2", conv2_filters)
-#            hist_conv3 = tf.summary.histogram("hist_conv3", conv3_filters)
+            hist_conv1 = tf.summary.histogram("hist_conv1", conv1_filters)
+            hist_conv2 = tf.summary.histogram("hist_conv2", conv2_filters)
+            hist_conv3 = tf.summary.histogram("hist_conv3", conv3_filters)
             
             # transpose filters to coincide with the dimensions requested by tensorflow's summary. 
             # Add filters to summary
-#            conv1_filters = tf.transpose(conv1_filters, perm = [3,0,1,2])
-#            filter1 = tf.summary.image('Filter_1', conv1_filters, max_outputs=nbr_of_filters_conv1)
-#            conv2_filters = tf.transpose(conv2_filters, perm = [3,0,1,2])
-#            filter2 = tf.summary.image('Filter_2', conv2_filters, max_outputs=nbr_of_filters_conv2)
-#            conv3_filters = tf.transpose(conv3_filters, perm = [3,0,1,2])
-#            filter3 = tf.summary.image('Filter_3', conv3_filters, max_outputs=nbr_of_filters_conv3)
+            conv1_filters = tf.transpose(conv1_filters, perm = [3,0,1,2])
+            filter1 = tf.summary.image('Filter_1', conv1_filters, max_outputs=nbr_of_filters_conv1)
+            conv2_filters = tf.transpose(conv2_filters, perm = [3,0,1,2])
+            filter2 = tf.summary.image('Filter_2', conv2_filters, max_outputs=nbr_of_filters_conv2)
+            conv3_filters = tf.transpose(conv3_filters, perm = [3,0,1,2])
+            filter3 = tf.summary.image('Filter_3', conv3_filters, max_outputs=nbr_of_filters_conv3)
             
             # get biases of filters in the first inception layer
-#            conv1_bias = graph.get_tensor_by_name("inception_1/conv1_layer_1/bias:0")
-#            conv2_bias = graph.get_tensor_by_name("inception_1/conv2_layer_1/bias:0")
-#            conv3_bias = graph.get_tensor_by_name("inception_1/conv3_layer_1/bias:0")
+            conv1_bias = graph.get_tensor_by_name("inception_1/conv1_layer_1/bias:0")
+            conv2_bias = graph.get_tensor_by_name("inception_1/conv2_layer_1/bias:0")
+            conv3_bias = graph.get_tensor_by_name("inception_1/conv3_layer_1/bias:0")
             
             # histograms of filter biases
-#            hist_bias1 = tf.summary.histogram("hist_bias1", conv1_bias)
-#            hist_bias2 = tf.summary.histogram("hist_bias2", conv2_bias)
-#            hist_bias3 = tf.summary.histogram("hist_bias3", conv3_bias)
+            hist_bias1 = tf.summary.histogram("hist_bias1", conv1_bias)
+            hist_bias2 = tf.summary.histogram("hist_bias2", conv2_bias)
+            hist_bias3 = tf.summary.histogram("hist_bias3", conv3_bias)
                 
             summary_train_loss = tf.summary.scalar('training_loss', train_loss)
 #            x_image = tf.summary.image('left_input', left_train)
             
 #            summary_op = tf.summary.merge([summary_train_loss, x_image, filter1,filter2,filter3, hist_conv1, hist_conv2,hist_conv3, hist_bias1, hist_bias2, hist_bias3])
-            summary_op = tf.summary.merge([summary_train_loss])
+            summary_op = tf.summary.merge([summary_train_loss,filter1,filter2,filter3, hist_conv1, hist_conv2,hist_conv3, hist_bias1, hist_bias2, hist_bias3])
             train_writer = tf.summary.FileWriter(output_dir + "train_summary", graph=tf.get_default_graph())
              
             train_match_handle = sess.run(train_match_iterator.string_handle())
