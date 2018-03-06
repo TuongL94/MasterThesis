@@ -73,18 +73,18 @@ def main(argv):
             generator = pickle.load(input)
              
     # parameters for training
-    batch_size_train = 200
-    train_itr = 5000
+    batch_size_train = 150
+    train_itr = 300000000
 
-    learning_rate = 0.00001
+    learning_rate = 0.000001
     momentum = 0.99
    
     # parameters for validation
-    batch_size_val = 200
-    val_itr = 500 # frequency in which to use validation data for computations
+    batch_size_val = 150
+    val_itr = 1000 # frequency in which to use validation data for computations
     
     # parameters for evaluation
-    batch_size_test = 200
+    batch_size_test = 150
     threshold = 0.5    
     thresh_step = 0.01
         
@@ -92,7 +92,7 @@ def main(argv):
     batch_sizes = [batch_size_train,batch_size_val,batch_size_test]
     image_dims = [dims[1],dims[2],dims[3]]
     
-    save_itr = 100000 # frequency in which the model is saved
+    save_itr = 40000 # frequency in which the model is saved
     
     tf.reset_default_graph()
     
@@ -165,6 +165,7 @@ def main(argv):
             handle= g.get_tensor_by_name("handle:0")
     
     with tf.device(gpu_device_name):
+        # Setup tensorflow's batch generator
         train_match_dataset = tf.data.Dataset.from_tensor_slices(generator.match_train)
         train_match_dataset = train_match_dataset.shuffle(buffer_size=np.shape(generator.match_train)[0])
         train_match_dataset = train_match_dataset.repeat()
@@ -219,11 +220,11 @@ def main(argv):
             # Summary setup
             
             # get filters in first inception layer and their dimensions
-            conv1_filters = graph.get_tensor_by_name("conv1_layer_1/kernel:0")
+            conv1_filters = graph.get_tensor_by_name("inception_1/conv1_layer_1/kernel:0")
             nbr_of_filters_conv1 = sess.run(tf.shape(conv1_filters)[-1])
-            conv2_filters = graph.get_tensor_by_name("conv2_layer_1/kernel:0")
+            conv2_filters = graph.get_tensor_by_name("inception_1/conv2_layer_1/kernel:0")
             nbr_of_filters_conv2 = sess.run(tf.shape(conv2_filters)[-1])
-            conv3_filters = graph.get_tensor_by_name("conv3_layer_1/kernel:0")
+            conv3_filters = graph.get_tensor_by_name("inception_1/conv3_layer_1/kernel:0")
             nbr_of_filters_conv3 = sess.run(tf.shape(conv3_filters)[-1])
             
             # histograms of filter weights
@@ -241,9 +242,9 @@ def main(argv):
             filter3 = tf.summary.image('Filter_3', conv3_filters, max_outputs=nbr_of_filters_conv3)
             
             # get biases of filters in the first inception layer
-            conv1_bias = graph.get_tensor_by_name("conv1_layer_1/bias:0")
-            conv2_bias = graph.get_tensor_by_name("conv2_layer_1/bias:0")
-            conv3_bias = graph.get_tensor_by_name("conv3_layer_1/bias:0")
+            conv1_bias = graph.get_tensor_by_name("inception_1/conv1_layer_1/bias:0")
+            conv2_bias = graph.get_tensor_by_name("inception_1/conv2_layer_1/bias:0")
+            conv3_bias = graph.get_tensor_by_name("inception_1/conv3_layer_1/bias:0")
             
             # histograms of filter biases
             hist_bias1 = tf.summary.histogram("hist_bias1", conv1_bias)
@@ -262,14 +263,6 @@ def main(argv):
             
         precision_over_time = []
         val_loss_over_time = []
-        
-#        with tf.device(gpu_device_name):
-            # Setup tensorflow's batch generator
-
-
-            
-
-            
 #        for i in sess.graph.get_operations():
 #            print(i.values())
         

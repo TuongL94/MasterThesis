@@ -93,11 +93,10 @@ def evaluate_inception_network(generator, batch_size, threshold, output_dir, eva
         
     else:
         print("Using existing model in the directory " + output_dir + " for evaluation")  
-        with open(output_dir + "checkpoint","r") as file:
-            line  = file.readline()
-            words = re.split("/",line)
-            model_file_name = words[-1][:-2]
-            saver = tf.train.import_meta_graph(output_dir + model_file_name + ".meta")
+        for file in os.listdir(output_dir):
+            if file.endswith(".meta"):
+                meta_file_name = os.path.join(output_dir,file)
+        saver = tf.train.import_meta_graph(meta_file_name)
         
         with tf.device(gpu_device_name):
             g = tf.get_default_graph()
@@ -180,12 +179,12 @@ def main(argv):
    """ Runs evaluation on mnist siamese network"""
     
     # Set parameters for evaluation
-   threshold = 0.33
-   batch_size = 200
+   threshold = 0.3
+   batch_size = 150
    eval_itr = 16
     
    dir_path = os.path.dirname(os.path.realpath(__file__))
-   output_dir = dir_path + "/train_models/" + argv[0] + "/" # directory where the model is saved
+   output_dir = argv[1] + argv[0] + "/" # directory where the model is saved
    gpu_device_name = argv[-1] 
    
     # Load generator
