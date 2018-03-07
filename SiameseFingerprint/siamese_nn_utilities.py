@@ -25,9 +25,15 @@ def contrastive_loss(input_1,input_2,label,margin):
     max_sq = tf.square(tf.maximum(margin-d_sq,0))
     return tf.reduce_mean(label*d_sq + (1-label)*max_sq)/2
 
-def training(loss, learning_rate, momentum):
+def momentum_training(loss, learning_rate, momentum):
     global_step = tf.Variable(0, trainable = False)
     optimizer = tf.train.MomentumOptimizer(learning_rate,momentum, use_nesterov=True)
+    train_op = optimizer.minimize(loss,global_step = global_step)
+    return train_op
+
+def adadelta_training(loss,learning_rate,rho,epsilon):
+    global_step = tf.Variable(0, trainable = False)
+    optimizer = tf.train.AdadeltaOptimizer(learning_rate=learning_rate,rho=rho,epsilon=epsilon)
     train_op = optimizer.minimize(loss,global_step = global_step)
     return train_op
     

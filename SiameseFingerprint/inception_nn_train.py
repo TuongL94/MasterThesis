@@ -22,24 +22,28 @@ import utilities as util
 from data_generator import data_generator
 
 def main(argv):
-    """ This method is used to train a siamese network for fingerprint datasets.
+    """ This method is used to train an inception network for fingerprint datasets.
     
-    The model is defined in the file siamese_nn_model.py.
-    When training is completed the model is saved in the file /tmp/siamese_finger_model/.
+    The model is defined in the file inception_nn_model.py.
     If a model exists it will be used for further training, otherwise a new
     one is created. It is also possible to evaluate the model directly after training.
     
+    Input:
+    argv - arguments to run this method
+    argv[0] - path of the directory which the model will be saved in
+    argv[1] - name of the GPU to use for training
+    argv[2] - optional argument, if this argument is given the model will train for argv[2] minutes
+              otherwise it will train for a given amount of iterations
     """
     
-    model_name = argv[0]
-    gpu_device_name = argv[2]
-    if len(argv) == 4:
+    output_dir = argv[0]
+    gpu_device_name = argv[1]
+    if len(argv) == 3:
         use_time = True
     else:
         use_time = False
         
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    output_dir =  argv[1] + model_name + "/" # directory where the model will be saved
     
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
@@ -76,12 +80,12 @@ def main(argv):
     batch_size_train = 100
     train_itr = 300000000
 
-    learning_rate = 0.00001
+    learning_rate = 0.001
     momentum = 0.99
    
     # parameters for validation
     batch_size_val = 100
-    val_itr = 100 # frequency in which to use validation data for computations
+    val_itr = 500 # frequency in which to use validation data for computations
     
     # parameters for evaluation
     batch_size_test = 100
@@ -92,7 +96,7 @@ def main(argv):
     batch_sizes = [batch_size_train,batch_size_val,batch_size_test]
     image_dims = [dims[1],dims[2],dims[3]]
     
-    save_itr = 40000 # frequency in which the model is saved
+    save_itr = 30000 # frequency in which the model is saved
     
     tf.reset_default_graph()
     
@@ -134,6 +138,10 @@ def main(argv):
             tf.add_to_collection("left_train_output",left_train_output)
             tf.add_to_collection("right_train_output",right_train_output)
             
+#            global_vars = tf.global_variables()
+#            for i in range(len(global_vars)):
+#                print(global_vars[i])
+                
             saver = tf.train.Saver()
 
     else:
@@ -208,29 +216,36 @@ def main(argv):
     with tf.Session(config=config) as sess:
         if is_model_new:
             with tf.device(gpu_device_name):
-                train_op = su.training(train_loss, learning_rate, momentum)
+#                train_op = su.momentum_training(train_loss, learning_rate, momentum)
+                train_op = su.adadelta_training(train_loss, learning_rate, 0.95,1e-08)
                 sess.run(tf.global_variables_initializer()) # initialize all trainable parameters
                 tf.add_to_collection("train_op",train_op)
         else:
             with tf.device(gpu_device_name):
                 saver.restore(sess, tf.train.latest_checkpoint(output_dir))
                 train_op = tf.get_collection("train_op")[0]
-
-#            global_vars = tf.global_variables()
-#            for i in range(len(global_vars)):
-#                print(global_vars[i])
                 
         with tf.device(gpu_device_name): 
             graph = tf.get_default_graph()
             
             # Summary setup
             
+            # get parameters of the first convolutional layer. Add filters and histograms
+            # of filters and biases to summary
+            conv0_filters = graph.get_tensor_by_name("conv1/kernel:0")
+            nbr_of_filters_conv0 = sess.run(tf.shape(conv0_filters)[-1])
+            hist_conv0 = tf.summary.histogram("hist_conv0", conv0_filters)
+            conv0_filters = tf.transpose(conv0_filters, perm = [3,0,1,2])
+            filter0 = tf.summary.image('Filter_0', conv0_filters, max_outputs=nbr_of_filters_conv0)
+            conv0_bias = graph.get_tensor_by_name("conv1/bias:0")
+            hist_bias0 = tf.summary.histogram("hist_bias0", conv0_bias)
+            
             # get filters in first inception layer and their dimensions
-            conv1_filters = graph.get_tensor_by_name("inception_1/conv1_layer_1/kernel:0")
+            conv1_filters = graph.get_tensor_by_name("inception_1/conv1/kernel:0")
             nbr_of_filters_conv1 = sess.run(tf.shape(conv1_filters)[-1])
-            conv2_filters = graph.get_tensor_by_name("inception_1/conv2_layer_1/kernel:0")
+            conv2_filters = graph.get_tensor_by_name("inception_1/conv2/kernel:0")
             nbr_of_filters_conv2 = sess.run(tf.shape(conv2_filters)[-1])
-            conv3_filters = graph.get_tensor_by_name("inception_1/conv3_layer_1/kernel:0")
+            conv3_filters = graph.get_tensor_by_name("inception_1/conv3/kernel:0")
             nbr_of_filters_conv3 = sess.run(tf.shape(conv3_filters)[-1])
             
             # histograms of filter weights
@@ -248,9 +263,9 @@ def main(argv):
             filter3 = tf.summary.image('Filter_3', conv3_filters, max_outputs=nbr_of_filters_conv3)
             
             # get biases of filters in the first inception layer
-            conv1_bias = graph.get_tensor_by_name("inception_1/conv1_layer_1/bias:0")
-            conv2_bias = graph.get_tensor_by_name("inception_1/conv2_layer_1/bias:0")
-            conv3_bias = graph.get_tensor_by_name("inception_1/conv3_layer_1/bias:0")
+            conv1_bias = graph.get_tensor_by_name("inception_1/conv1/bias:0")
+            conv2_bias = graph.get_tensor_by_name("inception_1/conv2/bias:0")
+            conv3_bias = graph.get_tensor_by_name("inception_1/conv3/bias:0")
             
             # histograms of filter biases
             hist_bias1 = tf.summary.histogram("hist_bias1", conv1_bias)
@@ -261,7 +276,7 @@ def main(argv):
 #            x_image = tf.summary.image('left_input', left_train)
             
 #            summary_op = tf.summary.merge([summary_train_loss, x_image, filter1,filter2,filter3, hist_conv1, hist_conv2,hist_conv3, hist_bias1, hist_bias2, hist_bias3])
-            summary_op = tf.summary.merge([summary_train_loss,filter1,filter2,filter3, hist_conv1, hist_conv2,hist_conv3, hist_bias1, hist_bias2, hist_bias3])
+            summary_op = tf.summary.merge([summary_train_loss, filter0, hist_conv0, hist_bias0, filter1, hist_conv1, hist_bias1, filter2, hist_conv2, hist_bias2, filter3, hist_conv3, hist_bias3])
             train_writer = tf.summary.FileWriter(output_dir + "train_summary", graph=tf.get_default_graph())
              
             train_match_handle = sess.run(train_match_iterator.string_handle())
@@ -342,7 +357,7 @@ def main(argv):
             
             if use_time:
                 elapsed_time = (time.time() - start_time_train)/60.0 # elapsed time in minutes since start of training 
-                if elapsed_time >= int(argv[3]):
+                if elapsed_time >= int(argv[2]):
                     if meta_file_exists:
                         save_path = tf.train.Saver().save(sess,output_dir + "model",global_step=i+current_itr,write_meta_graph=False)
                     else:

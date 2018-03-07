@@ -11,7 +11,6 @@ import tensorflow as tf
 import os 
 import sys
 import pickle
-import re
 
 # imports from self-implemented modules
 import utilities as util
@@ -45,9 +44,8 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_i
     p = np.sum(sim_labels)
     n = len(sim_labels) - p
     for i in range(len(sim_labels)):
-#        print(sl.norm(l2_normalized_diff[i,:]))
         if np.isinf(l2_normalized_diff[i,:]).any() or np.isnan(l2_normalized_diff[i,:]).any():
-            print('Got inf or Nan in L2 norm; Change hyperparameters to avoid')
+#            print('Got inf or Nan in L2 norm; Change hyperparameters to avoid')
             if sim_labels[i] == 1:
                 false_neg = false_neg + 1
         elif l2_distances[i] < threshold:
@@ -72,19 +70,20 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_i
     
     return precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors
  
-def evaluate_inception_network(generator, batch_size, threshold, output_dir, eval_itr,gpu_device_name):
-    """ This method is used to evaluate a siamese network for fingerprint datasets.
+def evaluate_inception_network(generator, batch_size, threshold, eval_itr, output_dir,gpu_device_name):
+    """ This method is used to evaluate an inception network for fingerprint datasets.
     
-    The model is defined in the file siamese_nn_model.py and trained in 
-    the file siamese_nn_train.py. Evaluation will only be performed if
+    The model is defined in the file ínception_nn_model.py and trained in 
+    the file inception_nn_train.py. Evaluation will only be performed if
     a model exists. The method will print evaluation metrics.
     
     Input:
     generator - an instance of a data_generator object used in training
-    nbr_of_eval_pairs - batch size for the evaluation placeholder
-    eval_itr - number of evaluation iterations
+    batch_size - batch size for the evaluation placeholder
     threshold - distance threshold (2-norm) for the decision stage
-    output_dir - the directory of the siamese model
+    eval_itr - number of evaluation iterations
+    output_dir - the directory of the trained model
+    gpu_device_name - name of the GPU device to run the evaluation with
     """
     
     tf.reset_default_graph()
@@ -98,6 +97,7 @@ def evaluate_inception_network(generator, batch_size, threshold, output_dir, eva
         for file in os.listdir(output_dir):
             if file.endswith(".meta"):
                 meta_file_name = os.path.join(output_dir,file)
+                break
         saver = tf.train.import_meta_graph(meta_file_name)
         
         with tf.device(gpu_device_name):
@@ -178,14 +178,15 @@ def evaluate_inception_network(generator, batch_size, threshold, output_dir, eva
                 print("Number of fingerprints in the same class in the non matching set: %d " % nbr_same_class)
          
 def main(argv):
-   """ Runs evaluation on mnist siamese network"""
+   """ Runs evaluation on trained network
+   """
     
     # Set parameters for evaluation
-   threshold = 1.2
+   threshold = 0.3
    batch_size = 100
    eval_itr = 32
     
-   dir_path = os.path.dirname(os.path.realpath(__file__))
+#   dir_path = os.path.dirname(os.path.realpath(__file__))
    output_dir = argv[1] + argv[0] + "/" # directory where the model is saved
    gpu_device_name = argv[-1] 
    
@@ -193,7 +194,7 @@ def main(argv):
    with open('generator_data.pk1', 'rb') as input:
        generator = pickle.load(input)
     
-   evaluate_inception_network(generator, batch_size, threshold, output_dir, eval_itr,gpu_device_name)
+   evaluate_inception_network(generator, batch_size, threshold, eval_itr, output_dir, gpu_device_name)
     
 if __name__ == "__main__":
     main(sys.argv[1:])
