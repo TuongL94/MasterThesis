@@ -49,17 +49,31 @@ class data_generator:
         '''Make easy matching and non matching sets'''
         margin_trans = 192
         margin_rot = 20
+#        # All combinations of training data
+#        self.triplets_train, self.anchors_train = self.all_triplets_naive(self.breakpoints_train, self.train_person_id, self.train_rotation, self.train_translation, rot_diff, trans_diff, margin_rot, margin_trans)
+#        
+#        # All combinations of training data
+#        self.triplets_val, self.anchors_val= self.all_triplets_naive(self.breakpoints_val, self.val_person_id, self.val_rotation, self.val_translation, rot_diff, trans_diff, margin_rot, margin_trans)
+#        
+#        # All combinations of training data
+#        self.triplets_test, self.anchors_test= self.all_triplets_naive(self.breakpoints_test, self.test_person_id, self.test_rotation, self.test_translation, rot_diff, trans_diff, margin_rot, margin_trans)
         # All combinations of training data
-        self.triplets_train, self.anchors_train = self.all_triplets_easy(self.breakpoints_train, self.train_person_id, self.train_rotation, self.train_translation, rot_diff, trans_diff, margin_rot, margin_trans)
+        self.triplets_train, self.anchors_train = self.all_triplets_easy(self.breakpoints_train, self.train_rotation, self.train_translation, rot_diff, trans_diff, margin_rot, margin_trans)
         
         # All combinations of training data
-        self.triplets_val, self.anchors_val= self.all_triplets_easy(self.breakpoints_val, self.val_person_id, self.val_rotation, self.val_translation, rot_diff, trans_diff, margin_rot, margin_trans)
+        self.triplets_val, self.anchors_val= self.all_triplets_easy(self.breakpoints_val, self.val_rotation, self.val_translation, rot_diff, trans_diff, margin_rot, margin_trans)
         
         # All combinations of training data
-        self.triplets_test, self.anchors_test= self.all_triplets_easy(self.breakpoints_test, self.test_person_id, self.test_rotation, self.test_translation, rot_diff, trans_diff, margin_rot, margin_trans)
+        self.triplets_test, self.anchors_test= self.all_triplets_easy(self.breakpoints_test, self.test_rotation, self.test_translation, rot_diff, trans_diff, margin_rot, margin_trans)
         
         self.rotation_res = rotation_res
         self.gen_rotations(self.train_data,self.val_data,self.test_data,self.rotation_res)
+        
+        # Save the original triplets
+        self.triplets_train_original = self.triplets_train
+        self.triplets_val_original = self.triplets_val
+        self.triplets_test_original = self.triplets_test
+        
     
     def add_new_data(self, images, finger_id, person_id, translation, rotation, data_size):
         percentages = [0.8,0.1]
@@ -105,14 +119,23 @@ class data_generator:
         trans_diff = 30
         margin_trans = 192
         margin_rot = 20
+#        # All combinations of training data
+#        triplets_train, anchors_train = self.all_triplets_naive(breakpoints_train, self.train_person_id, self.train_rotation, self.train_translation, rot_diff, trans_diff, margin_rot, margin_trans)
+#        
+#        # All combinations of training data
+#        triplets_val, anchors_val= self.all_triplets_naive(breakpoints_val, self.val_person_id, self.val_rotation, self.val_translation, rot_diff, trans_diff, margin_rot, margin_trans)
+#        
+#        # All combinations of training data
+#        triplets_test, anchors_test= self.all_triplets_naive(breakpoints_test, self.test_person_id, self.test_rotation, self.test_translation, rot_diff, trans_diff, margin_rot, margin_trans)
         # All combinations of training data
-        triplets_train, anchors_train = self.all_triplets_easy(breakpoints_train, self.train_person_id, self.train_rotation, self.train_translation, rot_diff, trans_diff, margin_rot, margin_trans)
+        triplets_train, anchors_train = self.all_triplets_easy(breakpoints_train, self.train_rotation, self.train_translation, rot_diff, trans_diff, margin_rot, margin_trans)
         
         # All combinations of training data
-        triplets_val, anchors_val= self.all_triplets_easy(breakpoints_val, self.val_person_id, self.val_rotation, self.val_translation, rot_diff, trans_diff, margin_rot, margin_trans)
+        triplets_val, anchors_val= self.all_triplets_easy(breakpoints_val, self.val_rotation, self.val_translation, rot_diff, trans_diff, margin_rot, margin_trans)
         
         # All combinations of training data
-        triplets_test, anchors_test= self.all_triplets_easy(breakpoints_test, self.test_person_id, self.test_rotation, self.test_translation, rot_diff, trans_diff, margin_rot, margin_trans)
+        triplets_test, anchors_test= self.all_triplets_easy(breakpoints_test, self.test_rotation, self.test_translation, rot_diff, trans_diff, margin_rot, margin_trans)
+        
 
         self.triplets_train.extend(triplets_train)
         self.triplets_val.extend(triplets_val)
@@ -121,6 +144,11 @@ class data_generator:
         self.anchors_train = np.append(self.anchors_train,anchors_train,axis=0)
         self.anchors_val = np.append(self.anchors_val,anchors_val,axis=0)
         self.anchors_test = np.append(self.anchors_test,anchors_test,axis=0)
+        
+        # Save the original triplets
+        self.triplets_train_original = self.triplets_train
+        self.triplets_val_original = self.triplets_val
+        self.triplets_test_original = self.triplets_test
         
     def gen_rotations(self,train_data,val_data,test_data,rotation_res):
         original_train_data = train_data
@@ -179,7 +207,27 @@ class data_generator:
         
         return breakpoints
     
-    def get_triplet(self, data, triplets, anchors, difficulty_lvl):
+#    def get_triplet(self, data, triplets, anchors, difficulty_lvl):
+#        batch_size = len(anchors)
+#        anchor_images = np.take(data,anchors,axis=0)
+#        # Randomly draw a poisitve and a negative sample to the anchors
+#        positive_index = np.zeros(batch_size,dtype='int32')
+#        negative_index = np.zeros(batch_size,dtype='int32')
+#        for i in range(batch_size):
+#            anchor_triplet = triplets[anchors[i]]
+#            nbr_non_matching = len(anchor_triplet[difficulty_lvl])
+#            positive_index[i] = anchor_triplet[0][np.random.randint(0,len(anchor_triplet[0]))]  # Pick random matching fingerprint
+#            if nbr_non_matching > 0:
+#                negative_index[i] = anchor_triplet[difficulty_lvl][np.random.randint(0,nbr_non_matching)]  # Pick random non matching fingerprint
+#            else:
+#                negative_index[i] = anchor_triplet[1][np.random.randint(0,len(anchor_triplet[1]))]  # if no non matching exist at the difficulty level default back to level 1
+#        
+#        positive_images = np.take(data, positive_index, axis=0)
+#        negative_images = np.take(data, negative_index, axis=0)
+#        
+#        return anchor_images, positive_images, negative_images
+    
+    def get_triplet(self, data, triplets, anchors):
         batch_size = len(anchors)
         anchor_images = np.take(data,anchors,axis=0)
         # Randomly draw a poisitve and a negative sample to the anchors
@@ -187,17 +235,19 @@ class data_generator:
         negative_index = np.zeros(batch_size,dtype='int32')
         for i in range(batch_size):
             anchor_triplet = triplets[anchors[i]]
-            nbr_non_matching = len(anchor_triplet[difficulty_lvl])
+            nbr_non_matching = len(anchor_triplet[1])
             positive_index[i] = anchor_triplet[0][np.random.randint(0,len(anchor_triplet[0]))]  # Pick random matching fingerprint
-            if nbr_non_matching > 0:
-                negative_index[i] = anchor_triplet[difficulty_lvl][np.random.randint(0,nbr_non_matching)]  # Pick random non matching fingerprint
-            else:
-                negative_index[i] = anchor_triplet[1][np.random.randint(0,len(anchor_triplet[1]))]  # if no non matching exist at the difficulty level default back to level 1
+            negative_index[i] = anchor_triplet[1][np.random.randint(0,nbr_non_matching)]  # Pick random non matching fingerprint
         
         positive_images = np.take(data, positive_index, axis=0)
         negative_images = np.take(data, negative_index, axis=0)
         
         return anchor_images, positive_images, negative_images
+    
+    def get_pairs(self,data,pair_list):
+        left_pairs = np.take(data,pair_list[:,0],axis=0)
+        right_pairs = np.take(data,pair_list[:,1],axis=0)
+        return left_pairs, right_pairs
     
     def is_rotation_similar(self,angle_1,angle_2,rotation_diff):
         """ Checks if two angles differ by at most rotation_diff in absolute value.
@@ -249,7 +299,7 @@ class data_generator:
             
         return translation_match
     
-    def all_triplets_easy(self, breakpoints, person_id, rotation, translation, rotation_diff, translation_diff, margin_rot, margin_trans):
+    def all_triplets_naive(self, breakpoints, person_id, rotation, translation, rotation_diff, translation_diff, margin_rot, margin_trans):
         triplets = []
         anchors = []
         
@@ -314,7 +364,61 @@ class data_generator:
                     anchors.append(breakpoints[i] + k)  # Add index of anchor
                             
         return triplets, np.array(anchors)
+    
+    def all_triplets_easy(self, breakpoints, rotation, translation, rotation_diff, translation_diff, margin_rot, margin_trans):
+        triplets = []
+        anchors = []
         
+        for i in range(len(breakpoints) - 1):
+            for k in range(breakpoints[i+1] - breakpoints[i]):
+                match_to_anchor = []
+                no_match_to_anchor = []
+                template_trans = translation[breakpoints[i]+k]
+                template_rot = rotation[breakpoints[i]+k]
+                for j in range(breakpoints[i]+k+1, breakpoints[i+1]):
+                    rot_cand = rotation[j]
+                    trans_cand = translation[j]
+                    translation_match = False
+                    translation_margin = False
+                    rotation_match = self.is_rotation_similar(template_rot,rot_cand,rotation_diff)
+#                    rotation_margin = self.is_rotation_similar(template_rot,rot_cand,margin_rot)
+                    
+                    # if rotation is sufficiently similar check translation
+                    if rotation_match:
+                        translation_match = self.is_translation_similar(template_trans,trans_cand,translation_diff)
+#                    elif rotation_margin:
+#                        translation_margin = self.is_translation_similar(template_trans,trans_cand,margin_trans)
+                    translation_margin = self.is_translation_similar(template_trans,trans_cand,margin_trans)
+                    
+                    # if rotation and translation is similar the images related to the corresponding
+                    # breakpoint indices are considered similar
+                    if translation_match and rotation_match:
+                        match_to_anchor.append(j)
+#                    elif rotation_margin and translation_margin:
+#                        continue
+                    elif translation_margin:
+                        continue
+                    else:
+                        no_match_to_anchor.append(j)
+                    
+                for n in range(breakpoints[0], breakpoints[i]):
+                        no_match_to_anchor.append(n)
+                for n in range(breakpoints[i+1], rotation.shape[0]):
+                        no_match_to_anchor.append(n)
+                
+                match_to_anchor = np.array(match_to_anchor)
+                no_match_to_anchor = np.array(no_match_to_anchor)
+                
+                triplets.append([match_to_anchor, no_match_to_anchor])    # Append the list of matches to the anchor
+                
+                if len(match_to_anchor) > 0:
+                    anchors.append(breakpoints[i] + k)  # Add index of anchor
+                            
+        return triplets, np.array(anchors)
+        
+    def update_no_match(self,hardest_no_match):
+        for i in range(len(hardest_no_match)):
+            self.triplets_train[i][1] = hardest_no_match[i]
     
     def three_split_array(self,input_array,percentage):
         length = len(input_array)

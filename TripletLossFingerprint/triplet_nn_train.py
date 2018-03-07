@@ -7,17 +7,19 @@ Created on Mon Jan 29 13:44:22 2018
 
 from data_generator import data_generator
 
-import triplet_nn_model as sm
 import numpy as np
 import tensorflow as tf
 import os 
-import utilities as util
-import triplet_nn_eval as tre
 import matplotlib.pyplot as plt
 import pickle
 import re
 import sys
 import time
+import scipy.linalg as sl
+
+import utilities as util
+import triplet_nn_eval as tre
+import triplet_nn_model as sm
 
 
 def main(argv):
@@ -76,9 +78,10 @@ def main(argv):
              
     # parameters for training
     batch_size_train = 100
-    train_itr = 300
-    lvl_2 = 100     # Set number of iterations at when to increase difficulty to level 2
-    lvl_3 = 200     # Set number of iterations at when to increase difficulty to level 3
+    train_itr = 2000
+#    lvl_2 = 100     # Set number of iterations at when to increase difficulty to level 2
+#    lvl_3 = 200     # Set number of iterations at when to increase difficulty to level 3
+    harder_itr = 600
 
     learning_rate = 0.00001
     momentum = 0.99
@@ -88,7 +91,7 @@ def main(argv):
     val_itr = 75 # frequency in which to use validation data for computations
     
     # parameters for evaluation
-    batch_size_test = 100
+    batch_size_test = 200
     threshold = 0.5    
     thresh_step = 0.01
         
@@ -174,6 +177,11 @@ def main(argv):
             pos_val = g.get_tensor_by_name("positive_val:0")
             neg_val = g.get_tensor_by_name("negative_val:0")
             val_loss = tf.get_collection("val_loss")[0]
+            
+            left_test = g.get_tensor_by_name("left_test:0")
+            right_test = g.get_tensor_by_name("right_test:0")
+            left_test_output = tf.get_collection("left_test_output")[0]
+            right_test_output = tf.get_collection("right_test_output")[0]
             
             handle= g.get_tensor_by_name("handle:0")
     
@@ -277,15 +285,60 @@ def main(argv):
 #            train_batch = np.take(train_batch,permutation,axis=0)
 #            b_sim_train = np.take(b_sim_train,permutation,axis=0)
             
+            ####### Increase difficulty every harder_itr iteration by offline evaluation on a subset of all triplets #######
+            if i % harder_itr == 0:                   
+                # Take a random subset of each anchors non matching set
+                nbr_non_matching = 10
+                for j in range(len(generator.triplets_train_original)):
+                    no_match_samples = np.random.choice(generator.triplets_train_original[j][1], nbr_non_matching)
+#                    no_match_samples = no_match_samples.reshape((nbr_non_matching,1))
+                    if j == 0:
+                        negative_pairs = np.array([j*np.ones((nbr_non_matching)), no_match_samples], dtype = 'int32')
+                    else:
+                        negative_pairs = np.hstack((negative_pairs, np.array([j*np.ones((nbr_non_matching)), no_match_samples], dtype = 'int32')))
+                negative_pairs = negative_pairs.T
+                
+                # Run network on the subset and save the output
+                for j in range(int(len(negative_pairs) / batch_size_test)):
+                    b_anch, b_neg = generator.get_pairs(generator.train_data[0], negative_pairs[j*batch_size_test:(j+1)*batch_size_test])
+                
+                    anchor_o,neg_o = sess.run([left_test_output, right_test_output],feed_dict = {left_test:b_anch, right_test:b_neg})
+                    if j == 0:
+                        anchor_full = anchor_o
+                        neg_full = neg_o
+                    else:
+                        anchor_full = np.vstack((anchor_full,anchor_o))
+                        neg_full = np.vstack((neg_full,neg_o))
+                
+                # Calculate distance between all non matching pairs
+                distance = sl.norm(anchor_full - neg_full,axis=1)
+                
+                # Create the new non matching set and replace in the generator
+                hardest_all = []
+                nbr_hardest = 2
+                for j in range(int(len(distance) / nbr_non_matching)):
+                    hardest_current = np.full((nbr_hardest,2), np.inf)        # Keeps track on index in first column and distance in second
+                    for k in range(j*nbr_non_matching, (j+1)*nbr_non_matching):
+                        if distance[k] < hardest_current[0][1]:
+                            hardest_current[0] = [negative_pairs[k][1],distance[k]]
+                            hardest_current = hardest_current[hardest_current[:,1].argsort()][::-1]  # Sort in decending order based on distance
+                    hardest_all.append(hardest_current[:,0].astype('int32'))
+                generator.update_no_match(hardest_all)        
+                
+                    
+                    
+            
+            
             # Randomize rotation of batch              
-            if i < lvl_2:
-                difficulty_lvl = 1
-            elif i < lvl_3:
-                difficulty_lvl = 2
-            else:
-                difficulty_lvl = 3   
+#            if i < lvl_2:
+#                difficulty_lvl = 1
+#            elif i < lvl_3:
+#                difficulty_lvl = 2
+#            else:
+#                difficulty_lvl = 3   
             rnd_rotation = np.random.randint(0,generator.rotation_res)
-            b_anch_train,b_pos_train,b_neg_train = generator.get_triplet(generator.train_data[rnd_rotation], generator.triplets_train, train_batch_anchors, difficulty_lvl)
+#            b_anch_train,b_pos_train,b_neg_train = generator.get_triplet(generator.train_data[rnd_rotation], generator.triplets_train, train_batch_anchors, difficulty_lvl)
+            b_anch_train,b_pos_train,b_neg_train = generator.get_triplet(generator.train_data[rnd_rotation], generator.triplets_train, train_batch_anchors)
             
             _,train_loss_value, summary = sess.run([train_op, train_loss, summary_op],feed_dict={anchor_train:b_anch_train, pos_train:b_pos_train, neg_train:b_neg_train})
 
@@ -302,8 +355,9 @@ def main(argv):
 #                    class_id_batch = generator.same_class(val_batch_anchors)
                     for k in range(generator.rotation_res):
 #                        b_l_val,b_r_val = generator.get_pairs(generator.val_data[k],val_batch_anchors) 
-                        difficulty_lvl = np.random.randint(1,4)
-                        b_anch_val,b_pos_val,b_neg_val= generator.get_triplet(generator.val_data[k], generator.triplets_val, val_batch_anchors, difficulty_lvl)
+#                        difficulty_lvl = np.random.randint(1,4)
+#                        b_anch_val,b_pos_val,b_neg_val= generator.get_triplet(generator.val_data[k], generator.triplets_val, val_batch_anchors, difficulty_lvl)
+                        b_anch_val,b_pos_val,b_neg_val= generator.get_triplet(generator.val_data[k], generator.triplets_val, val_batch_anchors)
                         anchor_o,pos_o,neg_o,val_loss_value = sess.run([anchor_val_output,pos_val_output, neg_val_output,val_loss],feed_dict = {anchor_val:b_anch_val, pos_val:b_pos_val, neg_val:b_neg_val})
                         current_val_loss += val_loss_value
                         if j == 0 and k == 0:
