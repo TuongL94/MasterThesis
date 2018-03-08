@@ -18,11 +18,6 @@ def l2_normalize(input_array):
     """
     dims = np.shape(input_array)
     if len(dims) == 1:
-        # Rescaled the data to (0,1) interval
-#        max_in = input_array.max(1)
-#        min_in = input_array.min(1)
-#        return (input_array - min_in)/(max_in - min_in)
-        # Scale max to 1
         return input_array/sl.norm(input_array)
     else:
         max_length = -1

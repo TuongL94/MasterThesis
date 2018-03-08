@@ -25,7 +25,7 @@ def inference(input):
 #            kernel_initializer = tf.random_uniform_initializer(minval=-0, maxval=0),
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
 #            bias_initializer = tf.initializers.truncated_normal(mean=0.5, stddev=0.25),
-            name="conv_layer_1") 
+            name="conv1") 
         
     # Pooling layer 1
     pool1 = tf.layers.max_pooling2d(inputs = conv1, 
@@ -43,7 +43,7 @@ def inference(input):
 #            kernel_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.1),
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
 #            bias_initializer = tf.initializers.truncated_normal(mean=0.3, stddev=0.1),
-            name="conv_layer_2")
+            name="conv2")
     
     # Convolutional layer 1
     conv3 = tf.layers.conv2d(
@@ -56,7 +56,7 @@ def inference(input):
 #            kernel_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.1),
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
 #            bias_initializer = tf.initializers.truncated_normal(mean=0.3, stddev=0.1),
-            name="conv_layer_3")
+            name="conv3")
     
     # Convolutional layer 1
     conv4 = tf.layers.conv2d(
@@ -69,7 +69,7 @@ def inference(input):
 #            kernel_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.1),
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
 #            bias_initializer = tf.initializers.truncated_normal(mean=0.2, stddev=0.1),
-            name="conv_layer_4")
+            name="conv4")
     
     # Convolutional layer 2
     conv5 = tf.layers.conv2d(
@@ -82,7 +82,7 @@ def inference(input):
 #            kernel_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.1),
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
 #            bias_initializer = tf.initializers.truncated_normal(mean=0.2, stddev=0.1),
-            name="conv_layer_5")
+            name="conv5")
         
     # Pooling layer 2   
     pool2 = tf.layers.max_pooling2d(
@@ -101,7 +101,7 @@ def inference(input):
 #            kernel_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.1),
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
 #            bias_initializer = tf.initializers.truncated_normal(mean=0.2, stddev=0.1),
-            name="conv_layer_6")
+            name="conv6")
             
     # Pooling layer 3
     pool3 = tf.layers.max_pooling2d(
@@ -120,7 +120,7 @@ def inference(input):
 #            kernel_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.1),
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
 #            bias_initializer = tf.initializers.truncated_normal(mean=0.2, stddev=0.1),
-            name="conv_layer_7")
+            name="conv7")
             
     pool4 = tf.layers.max_pooling2d(
             inputs = conv7, 
@@ -138,7 +138,7 @@ def inference(input):
 #            kernel_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.05),
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
 #            bias_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.1),
-            name="conv_layer_8")
+            name="conv8")
     
      # Convolutional layer 1
     conv9 = tf.layers.conv2d(
@@ -151,7 +151,7 @@ def inference(input):
 #            kernel_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.05),
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
 #            bias_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.1),
-            name="conv_layer_9")
+            name="conv9")
     
      # Convolutional layer 1
     conv10 = tf.layers.conv2d(
@@ -164,7 +164,7 @@ def inference(input):
 #            kernel_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.05),
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
 #            bias_initializer = tf.initializers.truncated_normal(mean=0, stddev=0.1),
-            name="conv_layer_10")
+            name="conv10")
     
      # Convolutional layer 1
     conv11 = tf.layers.conv2d(
@@ -177,7 +177,7 @@ def inference(input):
 #            kernel_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.05),
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
 #            bias_initializer = tf.initializers.truncated_normal(mean=0, stddev=0.1),
-            name="conv_layer_11")
+            name="conv11")
     
      # Convolutional layer 1
     conv12 = tf.layers.conv2d(
@@ -190,7 +190,7 @@ def inference(input):
 #            kernel_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.05),
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
 #            bias_initializer = tf.initializers.truncated_normal(mean=0, stddev=0.1),
-            name="conv_layer_12")
+            name="conv12")
     
     net = tf.layers.flatten(conv12)
     
@@ -201,11 +201,15 @@ def inference(input):
             reuse = tf.AUTO_REUSE,
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
 #            bias_initializer = tf.initializers.truncated_normal(mean=0.5, stddev=0.1),
-            name="dense_layer_1")
+            name="dense")
     
     net = tf.layers.dropout(
             inputs = net,
             rate = 0.7)
+    
+    net = tf.nn.l2_normalize(
+            net,
+            axis=1)
      
     return net
     

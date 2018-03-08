@@ -25,21 +25,25 @@ def main(argv):
     """ This method is used to train a siamese network for fingerprint datasets.
     
     The model is defined in the file siamese_nn_model.py.
-    When training is completed the model is saved in the file /tmp/siamese_finger_model/.
     If a model exists it will be used for further training, otherwise a new
     one is created. It is also possible to evaluate the model directly after training.
     
+    Input:
+    argv - arguments to run this method
+    argv[0] - path of the directory which the model will be saved in
+    argv[1] - name of the GPU to use for training
+    argv[2] - optional argument, if this argument is given the model will train for argv[2] minutes
+              otherwise it will train for a given amount of iterations
     """
     
-    model_name = argv[0]
-    gpu_device_name = argv[2]
-    if len(argv) == 4:
+    output_dir = argv[0]
+    gpu_device_name = argv[1]
+    if len(argv) == 3:
         use_time = True
     else:
         use_time = False
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    output_dir =  argv[1] + model_name + "/" # directory where the model will be saved
     
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
@@ -188,22 +192,22 @@ def main(argv):
             graph = tf.get_default_graph()
             
             # Summary setup
-            conv1_filters = graph.get_tensor_by_name("conv_layer_1/kernel:0")
+            conv1_filters = graph.get_tensor_by_name("conv1/kernel:0")
             nbr_of_filters_conv1 = sess.run(tf.shape(conv1_filters)[-1])
     
-            conv2_filters = graph.get_tensor_by_name("conv_layer_2/kernel:0")
+            conv2_filters = graph.get_tensor_by_name("conv2/kernel:0")
             hist_conv1 = tf.summary.histogram("hist_conv1", conv1_filters)
             hist_conv2 = tf.summary.histogram("hist_conv2", conv2_filters)
             conv1_filters = tf.transpose(conv1_filters, perm = [3,0,1,2])
             filter1 = tf.summary.image('Filter_1', conv1_filters, max_outputs=nbr_of_filters_conv1)
-            conv1_bias = graph.get_tensor_by_name("conv_layer_1/bias:0")
+            conv1_bias = graph.get_tensor_by_name("conv1/bias:0")
             hist_bias1 = tf.summary.histogram("hist_bias1", conv1_bias)
-            conv2_bias = graph.get_tensor_by_name("conv_layer_2/bias:0")
+            conv2_bias = graph.get_tensor_by_name("conv2/bias:0")
             hist_bias2 = tf.summary.histogram("hist_bias2", conv2_bias)
                 
             summary_train_loss = tf.summary.scalar('training_loss', train_loss)
-            x_image = tf.summary.image('left_input', left_train)
-            summary_op = tf.summary.merge([summary_train_loss, x_image, filter1, hist_conv1, hist_conv2, hist_bias1, hist_bias2])
+#            x_image = tf.summary.image('left_input', left_train)
+            summary_op = tf.summary.merge([summary_train_loss, filter1, hist_conv1, hist_bias1, hist_conv2, hist_bias2])
             train_writer = tf.summary.FileWriter(output_dir + "/train_summary", graph=tf.get_default_graph())
              
         precision_over_time = []
@@ -315,7 +319,7 @@ def main(argv):
             
             if use_time:
                 elapsed_time = (time.time() - start_time_train)/60.0 # elapsed time in minutes since start of training 
-                if elapsed_time >= int(argv[3]):
+                if elapsed_time >= int(argv[2]):
                     if meta_file_exists:
                         save_path = tf.train.Saver().save(sess,output_dir + "model",global_step=i+current_itr,write_meta_graph=False)
                     else:

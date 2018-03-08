@@ -324,7 +324,7 @@ def main(argv):
                     hardest_all.append(hardest_current[:,0].astype('int32'))
                 generator.update_no_match(hardest_all)        
                 
-            
+                
 #            if i < lvl_2:
 #                difficulty_lvl = 1
 #            elif i < lvl_3:
@@ -339,7 +339,6 @@ def main(argv):
             _,train_loss_value, summary = sess.run([train_op, train_loss, summary_op],feed_dict={anchor_train:b_anch_train, pos_train:b_pos_train, neg_train:b_neg_train})
 
              # Use validation data set to tune hyperparameters (Classification threshold)
-            ###############---This doesn't currently work, need to handle matching using siamese network---#####################
             if i % val_itr == 0:
                 current_val_loss = 0
 #                b_sim_val_anchors = np.repeat(np.ones((batch_size_val*int(val_anchors_dataset_length/batch_size_val),1)),generator.rotation_res,axis=0)
