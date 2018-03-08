@@ -78,17 +78,17 @@ def main(argv):
              
     # parameters for training
     batch_size_train = 100
-    train_itr = 2000
+    train_itr = 20000000000
 #    lvl_2 = 100     # Set number of iterations at when to increase difficulty to level 2
 #    lvl_3 = 200     # Set number of iterations at when to increase difficulty to level 3
-    harder_itr = 600
+    harder_itr = 20000
 
-    learning_rate = 0.00001
+    learning_rate = 0.000001
     momentum = 0.99
    
     # parameters for validation
     batch_size_val = 100
-    val_itr = 75 # frequency in which to use validation data for computations
+    val_itr = 5000 # frequency in which to use validation data for computations
     
     # parameters for evaluation
     batch_size_test = 200
@@ -288,7 +288,7 @@ def main(argv):
             ####### Increase difficulty every harder_itr iteration by offline evaluation on a subset of all triplets #######
             if i % harder_itr == 0:                   
                 # Take a random subset of each anchors non matching set
-                nbr_non_matching = 10
+                nbr_non_matching = 30
                 for j in range(len(generator.triplets_train_original)):
                     no_match_samples = np.random.choice(generator.triplets_train_original[j][1], nbr_non_matching)
 #                    no_match_samples = no_match_samples.reshape((nbr_non_matching,1))
@@ -315,7 +315,7 @@ def main(argv):
                 
                 # Create the new non matching set and replace in the generator
                 hardest_all = []
-                nbr_hardest = 2
+                nbr_hardest = 5
                 for j in range(int(len(distance) / nbr_non_matching)):
                     hardest_current = np.full((nbr_hardest,2), np.inf)        # Keeps track on index in first column and distance in second
                     for k in range(j*nbr_non_matching, (j+1)*nbr_non_matching):
