@@ -76,18 +76,21 @@ def main(argv):
             generator = pickle.load(input)
              
     # parameters for training
-    batch_size_train = 100
-    train_itr = 20000000000
+    batch_size_train = 300
+    train_itr = 2000000
+    learning_rate = 0.0001
+    momentum = 0.99
+    
+    
+    # Paramerters for increasing difficulty
 #    lvl_2 = 100     # Set number of iterations at when to increase difficulty to level 2
 #    lvl_3 = 200     # Set number of iterations at when to increase difficulty to level 3
-    harder_itr = 20000
-
-    learning_rate = 0.000001
-    momentum = 0.99
+    harder_itr = 1000
+    batch_size_increase_diff = 1000
    
     # parameters for validation
-    batch_size_val = 100
-    val_itr = 5000 # frequency in which to use validation data for computations
+    batch_size_val = 300
+    val_itr = 995 # frequency in which to use validation data for computations
     
     # parameters for evaluation
     batch_size_test = 200
@@ -182,7 +185,7 @@ def main(argv):
             left_test_output = tf.get_collection("left_test_output")[0]
             right_test_output = tf.get_collection("right_test_output")[0]
             
-            handle= g.get_tensor_by_name("handle:0")
+            handle = g.get_tensor_by_name("handle:0")
     
     config = tf.ConfigProto(allow_soft_placement=True)
     config.gpu_options.allow_growth = True
@@ -287,42 +290,147 @@ def main(argv):
             ####### Increase difficulty every harder_itr iteration by offline evaluation on a subset of all triplets #######
             if i % harder_itr == 0:                   
                 # Take a random subset of each anchors non matching set
-                nbr_non_matching = 30
-                for j in range(len(generator.triplets_train_original)):
-                    no_match_samples = np.random.choice(generator.triplets_train_original[j][1], nbr_non_matching)
-#                    no_match_samples = no_match_samples.reshape((nbr_non_matching,1))
+#                nbr_non_matching = 30
+#                for j in range(len(generator.triplets_train_original)):
+#                    no_match_samples = np.random.choice(generator.triplets_train_original[j][1], nbr_non_matching)
+##                    no_match_samples = no_match_samples.reshape((nbr_non_matching,1))
+#                    if j == 0:
+#                        negative_pairs = np.array([j*np.ones((nbr_non_matching)), no_match_samples], dtype = 'int32')
+#                    else:
+#                        negative_pairs = np.hstack((negative_pairs, np.array([j*np.ones((nbr_non_matching)), no_match_samples], dtype = 'int32')))
+#                negative_pairs = negative_pairs.T
+                
+                breakpoint_match = []
+                nbr_non_matching = 20
+                for j in range(len(generator.anchors_train)):
+                    current_image = generator.anchors_train[j]
+                    no_match_samples = np.random.choice(generator.triplets_train_original[current_image][1], nbr_non_matching)
+                    match = generator.triplets_train_original[current_image][0]
                     if j == 0:
-                        negative_pairs = np.array([j*np.ones((nbr_non_matching)), no_match_samples], dtype = 'int32')
+                        negative = np.array(no_match_samples, dtype = 'int32')
+                        positive = np.array(match, dtype = 'int32')
+                        breakpoint_match.append(len(match))
                     else:
-                        negative_pairs = np.hstack((negative_pairs, np.array([j*np.ones((nbr_non_matching)), no_match_samples], dtype = 'int32')))
-                negative_pairs = negative_pairs.T
-                
-                # Run network on the subset and save the output
-                for j in range(int(len(negative_pairs) / batch_size_test)):
-                    b_anch, b_neg = generator.get_pairs(generator.train_data[0], negative_pairs[j*batch_size_test:(j+1)*batch_size_test])
-                
-                    anchor_o,neg_o = sess.run([left_test_output, right_test_output],feed_dict = {left_test:b_anch, right_test:b_neg})
+                        negative = np.hstack((negative, np.array(no_match_samples, dtype = 'int32')))
+                        positive = np.hstack((positive, np.array(match, dtype = 'int32')))
+                        breakpoint_match.append(len(match) + breakpoint_match[-1])
+#                negative = negative.T
+#                positive = positive.T
+                    
+                for j in range(int(negative.shape[0] / batch_size_test) + 1):
+                    batch_start = j*batch_size_increase_diff
+                    batch_stop = (j+1)*batch_size_increase_diff
+                    if batch_stop > negative.shape[0]:
+                        batch_stop = negative.shape[0]
+                        if batch_stop <= batch_start:
+                            break
+                    b_neg = generator.get_images(generator.train_data[0], negative[batch_start:batch_stop])
+                    neg_o = sess.run(right_test_output, feed_dict = {right_test:b_neg})
                     if j == 0:
-                        anchor_full = anchor_o
                         neg_full = neg_o
                     else:
-                        anchor_full = np.vstack((anchor_full,anchor_o))
                         neg_full = np.vstack((neg_full,neg_o))
+                        
+                for j in range(int(len(generator.anchors_train) / batch_size_test) + 1):
+                    batch_start = j*batch_size_increase_diff
+                    batch_stop = (j+1)*batch_size_increase_diff
+                    if batch_stop > len(generator.anchors_train):
+                        batch_stop = len(generator.anchors_train)
+                        if batch_stop <= batch_start:
+                            break
+                    b_anch = generator.get_images(generator.train_data[0], generator.anchors_train[batch_start:batch_stop])
+                    anch_o = sess.run(right_test_output, feed_dict = {right_test:b_anch})
+                    if j == 0:
+                        anch_full = anch_o
+                    else:
+                        anch_full = np.vstack((anch_full,anch_o))
+                
+                for j in range(int(len(positive) / batch_size_test) + 1):
+                    batch_start = j*batch_size_increase_diff
+                    batch_stop = (j+1)*batch_size_increase_diff
+                    if batch_stop > len(positive):
+                        batch_stop = len(positive)
+                        if batch_stop <= batch_start:
+                            break
+                    b_pos = generator.get_images(generator.train_data[0], positive[batch_start:batch_stop])
+                    pos_o = sess.run(right_test_output, feed_dict = {right_test:b_pos})
+                    if j == 0:
+                        pos_full = pos_o
+                    else:
+                        pos_full = np.vstack((pos_full,pos_o))
+                        
+                distance_neg = []
+                for j in range(len(generator.anchors_train)):
+                    dist = sl.norm(neg_full[j*nbr_non_matching:(j+1)*nbr_non_matching] - anch_full[j], axis=1)
+                    distance_neg.append(dist) 
+                
+                distance_pos = []
+                for j in range(len(generator.anchors_train)):
+                    if j > 0:
+                        dist = sl.norm(pos_full[breakpoint_match[j-1]:breakpoint_match[j]] - anch_full[j], axis=1)
+                    else:
+                        dist = sl.norm(pos_full[0:breakpoint_match[j]] - anch_full[j], axis=1)
+                    distance_pos.append(dist) 
+                    
+                hardest_neg = []
+                nbr_hardest_neg = 5
+                for j in range(len(distance_neg)):
+                    hardest_current = np.full((nbr_hardest_neg,2), np.inf)        # Keeps track on index in first column and distance in second
+                    for k in range(nbr_non_matching):
+                        if distance_neg[j][k] < hardest_current[0][1]:
+                            hardest_current[0] = [negative[j*nbr_non_matching+k],distance_neg[j][k]]
+                            hardest_current = hardest_current[hardest_current[:,1].argsort()][::-1]  # Sort in decending order based on distance
+                            
+#                    for k in range(j*nbr_non_matching, (j+1)*nbr_non_matching):
+#                        if distance_neg[k] < hardest_current[0][1]:
+#                            hardest_current[0] = [negative[k],distance_neg[k]]
+#                            hardest_current = hardest_current[hardest_current[:,1].argsort()][::-1]  # Sort in decending order based on distance
+                    hardest_neg.append(hardest_current[:,0].astype('int32'))
+                
+                hardest_pos = []
+                maximum_nbr_hardest_pos = 3
+                for j in range(len(generator.anchors_train)):
+                    if j > 0:
+                        match_dist = distance_pos[j]
+                        hardest_current = np.array([positive[breakpoint_match[j-1]:breakpoint_match[j]], match_dist]).T
+                    else:
+                        match_dist = distance_pos[j]
+                        hardest_current = np.array([positive[0:breakpoint_match[j]], match_dist]).T
+                    
+                    hardest_current = hardest_current[hardest_current[:,1].argsort()][::-1]  # Sort in decending order based on distance
+                    if hardest_current.shape[0] > maximum_nbr_hardest_pos:
+                        hardest_pos.append(hardest_current[0:maximum_nbr_hardest_pos,0].astype('int32'))
+                    else:
+                        hardest_pos.append(hardest_current[:,0].astype('int32'))
+                    
+                generator.update_triplets(hardest_neg, hardest_pos)
+                
+#                # Run network on the subset and save the output
+#                for j in range(int(len(negative_pairs) / batch_size_test)):
+#                    b_anch, b_neg = generator.get_pairs(generator.train_data[0], negative_pairs[j*batch_size_test:(j+1)*batch_size_test])
+#                
+#                    anchor_o,neg_o = sess.run([left_test_output, right_test_output],feed_dict = {left_test:b_anch, right_test:b_neg})
+#                    if j == 0:
+#                        anchor_full = anchor_o
+#                        neg_full = neg_o
+#                    else:
+#                        anchor_full = np.vstack((anchor_full,anchor_o))
+#                        neg_full = np.vstack((neg_full,neg_o))
                 
                 # Calculate distance between all non matching pairs
-                distance = sl.norm(anchor_full - neg_full,axis=1)
+#                distance = sl.norm(anchor_full - neg_full,axis=1)
                 
                 # Create the new non matching set and replace in the generator
-                hardest_all = []
-                nbr_hardest = 5
-                for j in range(int(len(distance) / nbr_non_matching)):
-                    hardest_current = np.full((nbr_hardest,2), np.inf)        # Keeps track on index in first column and distance in second
-                    for k in range(j*nbr_non_matching, (j+1)*nbr_non_matching):
-                        if distance[k] < hardest_current[0][1]:
-                            hardest_current[0] = [negative_pairs[k][1],distance[k]]
-                            hardest_current = hardest_current[hardest_current[:,1].argsort()][::-1]  # Sort in decending order based on distance
-                    hardest_all.append(hardest_current[:,0].astype('int32'))
-                generator.update_no_match(hardest_all)        
+#                hardest_all = []
+#                nbr_hardest = 5
+#                for j in range(int(len(distance) / nbr_non_matching)):
+#                    hardest_current = np.full((nbr_hardest,2), np.inf)        # Keeps track on index in first column and distance in second
+#                    for k in range(j*nbr_non_matching, (j+1)*nbr_non_matching):
+#                        if distance[k] < hardest_current[0][1]:
+#                            hardest_current[0] = [negative_pairs[k][1],distance[k]]
+#                            hardest_current = hardest_current[hardest_current[:,1].argsort()][::-1]  # Sort in decending order based on distance
+#                    hardest_all.append(hardest_current[:,0].astype('int32'))
+#                generator.update_no_match(hardest_all)        
                 
                 
 #            if i < lvl_2:

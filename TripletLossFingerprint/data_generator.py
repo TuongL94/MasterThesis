@@ -248,6 +248,9 @@ class data_generator:
         right_pairs = np.take(data,pair_list[:,1],axis=0)
         return left_pairs, right_pairs
     
+    def get_images(self, data, image_list):
+        return np.take(data,image_list,axis=0)
+    
     def is_rotation_similar(self,angle_1,angle_2,rotation_diff):
         """ Checks if two angles differ by at most rotation_diff in absolute value.
         
@@ -418,6 +421,10 @@ class data_generator:
     def update_no_match(self,hardest_no_match):
         for i in range(len(hardest_no_match)):
             self.triplets_train[i][1] = hardest_no_match[i]
+            
+    def update_triplets(self, hardest_neg, hardest_pos):
+        for i in range(len(self.anchors_train)):
+            self.triplets_train[self.anchors_train[i]] = [hardest_pos[i], hardest_neg[i]]
     
     def three_split_array(self,input_array,percentage):
         length = len(input_array)

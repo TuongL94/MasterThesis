@@ -156,18 +156,31 @@ def placeholder_inputs(image_dims,batch_sizes):
     anchor_test - placeholder for anchor input to triplet network for testing
     positive_test - placeholder for positive input to triplet network for testing
     """
-    anchor_train = tf.placeholder(tf.float32, [batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="anchor_train")
-    positive_train = tf.placeholder(tf.float32,[batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="positive_train")
-    negative_train = tf.placeholder(tf.float32,[batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="negative_train")
+#    anchor_train = tf.placeholder(tf.float32, [batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="anchor_train")
+#    positive_train = tf.placeholder(tf.float32,[batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="positive_train")
+#    negative_train = tf.placeholder(tf.float32,[batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="negative_train")
+##    label_train = tf.placeholder(tf.float32, [batch_sizes[0],1], name="label_train") # 1 if same, 0 if different
+#    
+#    anchor_val = tf.placeholder(tf.float32,[batch_sizes[1],image_dims[0],image_dims[1],image_dims[2]], name="anchor_val")
+#    positive_val = tf.placeholder(tf.float32, [batch_sizes[1],image_dims[0],image_dims[1],image_dims[2]], name="positive_val")
+#    negative_val = tf.placeholder(tf.float32,[batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="negative_val")
+##    label_val = tf.placeholder(tf.float32, [batch_sizes[1],1], name="label_val") # 1 if same, 0 if different
+#    
+#    left_test = tf.placeholder(tf.float32, [batch_sizes[2],image_dims[0],image_dims[1],image_dims[2]], name="left_test")
+#    right_test = tf.placeholder(tf.float32, [batch_sizes[2],image_dims[0],image_dims[1],image_dims[2]], name="right_test")
+    
+    anchor_train = tf.placeholder(tf.float32, [None,image_dims[0],image_dims[1],image_dims[2]], name="anchor_train")
+    positive_train = tf.placeholder(tf.float32,[None,image_dims[0],image_dims[1],image_dims[2]], name="positive_train")
+    negative_train = tf.placeholder(tf.float32,[None,image_dims[0],image_dims[1],image_dims[2]], name="negative_train")
 #    label_train = tf.placeholder(tf.float32, [batch_sizes[0],1], name="label_train") # 1 if same, 0 if different
     
-    anchor_val = tf.placeholder(tf.float32,[batch_sizes[1],image_dims[0],image_dims[1],image_dims[2]], name="anchor_val")
-    positive_val = tf.placeholder(tf.float32, [batch_sizes[1],image_dims[0],image_dims[1],image_dims[2]], name="positive_val")
-    negative_val = tf.placeholder(tf.float32,[batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="negative_val")
+    anchor_val = tf.placeholder(tf.float32,[None,image_dims[0],image_dims[1],image_dims[2]], name="anchor_val")
+    positive_val = tf.placeholder(tf.float32, [None,image_dims[0],image_dims[1],image_dims[2]], name="positive_val")
+    negative_val = tf.placeholder(tf.float32,[None,image_dims[0],image_dims[1],image_dims[2]], name="negative_val")
 #    label_val = tf.placeholder(tf.float32, [batch_sizes[1],1], name="label_val") # 1 if same, 0 if different
     
-    left_test = tf.placeholder(tf.float32, [batch_sizes[2],image_dims[0],image_dims[1],image_dims[2]], name="left_test")
-    right_test = tf.placeholder(tf.float32, [batch_sizes[2],image_dims[0],image_dims[1],image_dims[2]], name="right_test")
+    left_test = tf.placeholder(tf.float32, [None,image_dims[0],image_dims[1],image_dims[2]], name="left_test")
+    right_test = tf.placeholder(tf.float32, [None,image_dims[0],image_dims[1],image_dims[2]], name="right_test")
     
 #    return anchor_train,positive_train,label_train,anchor_val,positive_val,label_val,anchor_test,positive_test
     return anchor_train,positive_train,negative_train,anchor_val,positive_val,negative_val,left_test,right_test
