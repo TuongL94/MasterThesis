@@ -77,31 +77,31 @@ def main(argv):
              
     # parameters for training
     batch_size_train = 300
-    train_itr = 2000000
-    learning_rate = 0.0001
+    train_itr = 1000000000000
+    learning_rate = 0.00001
     momentum = 0.99
     
     
     # Paramerters for increasing difficulty
 #    lvl_2 = 100     # Set number of iterations at when to increase difficulty to level 2
 #    lvl_3 = 200     # Set number of iterations at when to increase difficulty to level 3
-    harder_itr = 1000
-    batch_size_increase_diff = 1000
+    harder_itr = 300
+    batch_size_increase_diff = 900
    
     # parameters for validation
     batch_size_val = 300
-    val_itr = 995 # frequency in which to use validation data for computations
+    val_itr = 1000 # frequency in which to use validation data for computations
     
     # parameters for evaluation
     batch_size_test = 200
-    threshold = 0.5    
+    threshold = 0.23    
     thresh_step = 0.01
         
     dims = np.shape(generator.train_data[0])
     batch_sizes = [batch_size_train,batch_size_val,batch_size_test]
     image_dims = [dims[1],dims[2],dims[3]]
     
-    save_itr = 250000 # frequency in which the model is saved
+    save_itr = 25000 # frequency in which the model is saved
     
     tf.reset_default_graph()
     
@@ -373,7 +373,7 @@ def main(argv):
                     distance_pos.append(dist) 
                     
                 hardest_neg = []
-                nbr_hardest_neg = 5
+                nbr_hardest_neg = 1
                 for j in range(len(distance_neg)):
                     hardest_current = np.full((nbr_hardest_neg,2), np.inf)        # Keeps track on index in first column and distance in second
                     for k in range(nbr_non_matching):
@@ -388,7 +388,7 @@ def main(argv):
                     hardest_neg.append(hardest_current[:,0].astype('int32'))
                 
                 hardest_pos = []
-                maximum_nbr_hardest_pos = 3
+                maximum_nbr_hardest_pos = 1
                 for j in range(len(generator.anchors_train)):
                     if j > 0:
                         match_dist = distance_pos[j]

@@ -1,4 +1,5 @@
 Data/
+PB_database/
 Literature/
 *__pycache__*
 *.npy

@@ -54,8 +54,9 @@ def stem(input):
     output = tf.layers.conv2d(
             inputs = input,
             filters = 16,
-            kernel_size = [7,7], 
-            padding = "same",
+            kernel_size = [7,7],
+            strides = [2,2],
+            padding = "valid",
             activation = tf.nn.leaky_relu,
             reuse = tf.AUTO_REUSE,
 #            kernel_initializer = tf.random_uniform_initializer(minval=-1, maxval=1),
@@ -67,12 +68,13 @@ def stem(input):
                                      pool_size = [2,2], 
                                      strides = 2)
     
-    # Convolutional Layer 2 and pooling layer 2
+    # Convolutional Layer 2
     output = tf.layers.conv2d(
             inputs = output,
             filters = 16,
             kernel_size = [5,5],
-            padding = "same",
+            strides = [2,2],
+            padding = "valid",
             activation = tf.nn.leaky_relu,
             reuse = tf.AUTO_REUSE,
 #            kernel_initializer = tf.random_uniform_initializer(minval=-1, maxval=1),
@@ -82,6 +84,7 @@ def stem(input):
     output = tf.layers.dropout(
             output)
         
+    # Pooling layer 2
     output = tf.layers.max_pooling2d(
             inputs = output, 
             pool_size = [2,2],
@@ -128,23 +131,11 @@ def inference(input):
     
     with tf.variable_scope("inception_2"):
         output = inception_a_block(output)
-        
-    with tf.variable_scope("inception_3"):
-        output = inception_a_block(output)
-        
-    with tf.variable_scope("inception_4"):
-        output = inception_a_block(output)
-        
-    with tf.variable_scope("inception_5"):
-        output = inception_a_block(output)
-        
-    with tf.variable_scope("inception_6"):
-        output = inception_a_block(output)
-        
+                
     output = tf.layers.flatten(output)
     output = tf.layers.dense(
             output,
-            100,
+            10,
             activation = tf.nn.leaky_relu,
             reuse = tf.AUTO_REUSE,
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),

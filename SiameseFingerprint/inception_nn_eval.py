@@ -182,7 +182,7 @@ def main(argv):
    """
     
     # Set parameters for evaluation
-   threshold = 0.3
+   threshold = 1.2
    batch_size = 100
    eval_itr = 32
     

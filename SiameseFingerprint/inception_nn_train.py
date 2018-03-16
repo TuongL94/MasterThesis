@@ -216,8 +216,8 @@ def main(argv):
     with tf.Session(config=config) as sess:
         if is_model_new:
             with tf.device(gpu_device_name):
-#                train_op = su.momentum_training(train_loss, learning_rate, momentum)
-                train_op = su.adadelta_training(train_loss, learning_rate, 0.95,1e-08)
+                train_op = su.momentum_training(train_loss, learning_rate, momentum)
+#                train_op = su.adadelta_training(train_loss, learning_rate, 0.95,1e-08)
                 sess.run(tf.global_variables_initializer()) # initialize all trainable parameters
                 tf.add_to_collection("train_op",train_op)
         else:
