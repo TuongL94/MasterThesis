@@ -77,18 +77,18 @@ def main(argv):
             generator = pickle.load(input)
              
     # parameters for training
-    batch_size_train = 200
-    train_itr = 500
+    batch_size_train = 1500
+    train_itr = 500000000000000000
 
     learning_rate = 0.00001
     momentum = 0.99
    
     # parameters for validation
-    batch_size_val = 200
+    batch_size_val = 1500
     val_itr = 1000 # frequency in which to use validation data for computations
     
     # parameters for evaluation
-    batch_size_test = 200
+    batch_size_test = 1500
     threshold = 0.5    
     thresh_step = 0.01
         
@@ -114,10 +114,10 @@ def main(argv):
                 
             left_train_output = sm.inference(left_train)            
             right_train_output = sm.inference(right_train)
-            left_val_output = sm.inference(left_val)
-            right_val_output = sm.inference(right_val)
-            left_test_output = sm.inference(left_test)
-            right_test_output = sm.inference(right_test)
+            left_val_output = sm.inference(left_val, dropout = False)
+            right_val_output = sm.inference(right_val, dropout = False)
+            left_test_output = sm.inference(left_test, dropout = False)
+            right_test_output = sm.inference(right_test, dropout = False)
             
             reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
             margin = tf.constant(2.0) # margin for contrastive loss
@@ -174,7 +174,7 @@ def main(argv):
     with tf.Session(config=config) as sess:
         if is_model_new:
             with tf.device(gpu_device_name):
-                train_op = su.training(train_loss, learning_rate, momentum)
+                train_op = su.momentum_training(train_loss, learning_rate, momentum)
                 sess.run(tf.global_variables_initializer()) # initialize all trainable parameters
                 tf.add_to_collection("train_op",train_op)
         else:

@@ -10,206 +10,99 @@ from __future__ import division
 from __future__ import print_function
 import tensorflow as tf
 
-def inference(input):
-    input_layer = input
+def inference(input, dropout = True):
     
     # Convolutional layer 1
-    conv1 = tf.layers.conv2d(
-            inputs = input_layer,
-            filters = 2,
-            kernel_size = [3,3], 
-            padding = "same",
-            activation = tf.nn.leaky_relu,
+    output = tf.layers.conv2d(
+            inputs = input,
+            filters = 8,
+            kernel_size = [7,7],
+            strides = [2,2],
+            padding = "valid",
+            activation = tf.nn.relu,
             reuse = tf.AUTO_REUSE,
-#            kernel_initializer = tf.initializers.truncated_normal(mean=0.0, stddev=0.1),
-#            kernel_initializer = tf.random_uniform_initializer(minval=-0, maxval=0),
+#            kernel_initializer = tf.random_uniform_initializer(minval=-1, maxval=1),
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
-#            bias_initializer = tf.initializers.truncated_normal(mean=0.5, stddev=0.25),
             name="conv1") 
         
     # Pooling layer 1
-    pool1 = tf.layers.max_pooling2d(inputs = conv1, 
+    output = tf.layers.max_pooling2d(inputs = output, 
                                      pool_size = [2,2], 
                                      strides = 2)
-    # Convolutional layer 1
-    conv2 = tf.layers.conv2d(
-            inputs = pool1,
-            filters = 2,
-            kernel_size = [3,3], 
-            padding = "same",
-            activation = tf.nn.leaky_relu,
+    
+    # Convolutional Layer 2
+    output = tf.layers.conv2d(
+            inputs = output,
+            filters = 16,
+            kernel_size = [5,5],
+            strides = [2,2],
+            padding = "valid",
+            activation = tf.nn.relu,
             reuse = tf.AUTO_REUSE,
-#                kernel_initializer = tf.initializers.truncated_normal(mean=0.0, stddev=4.0),
-#            kernel_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.1),
+#            kernel_initializer = tf.random_uniform_initializer(minval=-1, maxval=1),
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
-#            bias_initializer = tf.initializers.truncated_normal(mean=0.3, stddev=0.1),
             name="conv2")
     
-    # Convolutional layer 1
-    conv3 = tf.layers.conv2d(
-            inputs = conv2,
-            filters = 2,
-            kernel_size = [3,3], 
+    output = tf.layers.dropout(
+            output,
+            rate = 0.5,
+            training = dropout)
+        
+    # Pooling layer 2
+    output = tf.layers.max_pooling2d(
+            inputs = output, 
+            pool_size = [2,2],
+            strides = 2)
+    
+    # Convolutional Layer 3
+    output = tf.layers.conv2d(
+            inputs = output,
+            filters = 32,
+            kernel_size = [3,3],
             padding = "same",
-            activation = tf.nn.leaky_relu,
+            activation = tf.nn.relu,
             reuse = tf.AUTO_REUSE,
-#            kernel_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.1),
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
-#            bias_initializer = tf.initializers.truncated_normal(mean=0.3, stddev=0.1),
             name="conv3")
     
-    # Convolutional layer 1
-    conv4 = tf.layers.conv2d(
-            inputs = conv3,
-            filters = 2,
-            kernel_size = [3,3], 
+    output = tf.layers.dropout(
+            output,
+            rate = 0.5,
+            training = dropout)
+        
+    # Convolutional Layer 4
+    output = tf.layers.conv2d(
+            inputs = output,
+            filters = 64,
+            kernel_size = [3,3],
             padding = "same",
-            activation = tf.nn.leaky_relu,
+            activation = tf.nn.relu,
             reuse = tf.AUTO_REUSE,
-#            kernel_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.1),
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
-#            bias_initializer = tf.initializers.truncated_normal(mean=0.2, stddev=0.1),
             name="conv4")
     
-    # Convolutional layer 2
-    conv5 = tf.layers.conv2d(
-            inputs = conv4,
-            filters = 2,
-            kernel_size = [3,3],
-            padding = "same",
-            activation = tf.nn.leaky_relu,
-            reuse = tf.AUTO_REUSE,
-#            kernel_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.1),
-            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
-#            bias_initializer = tf.initializers.truncated_normal(mean=0.2, stddev=0.1),
-            name="conv5")
-        
-    # Pooling layer 2   
-    pool2 = tf.layers.max_pooling2d(
-            inputs = conv5, 
-            pool_size = [2,2],
-            strides = 2)
+#    output = tf.layers.dropout(
+#            output)
     
-    # Convolutional layer 3
-    conv6 = tf.layers.conv2d(
-            inputs = pool2,
-            filters = 4,
-            kernel_size = [3,3],
-            padding = "same",
-            activation = tf.nn.leaky_relu,
-            reuse = tf.AUTO_REUSE,
-#            kernel_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.1),
-            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
-#            bias_initializer = tf.initializers.truncated_normal(mean=0.2, stddev=0.1),
-            name="conv6")
-            
-    # Pooling layer 3
-    pool3 = tf.layers.max_pooling2d(
-        inputs = conv6, 
-        pool_size = [2,2],
-        strides = 2)
+    output = tf.layers.flatten(
+            output)
     
-    # Convolutional Layer 4
-    conv7 = tf.layers.conv2d(
-            inputs = pool3,
-            filters = 4,
-            kernel_size = [3,3],
-            padding = "same",
-            activation = tf.nn.leaky_relu,
-            reuse = tf.AUTO_REUSE,
-#            kernel_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.1),
-            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
-#            bias_initializer = tf.initializers.truncated_normal(mean=0.2, stddev=0.1),
-            name="conv7")
-            
-    pool4 = tf.layers.max_pooling2d(
-            inputs = conv7, 
-            pool_size = [2,2],
-            strides = 2)
+    output = tf.layers.dense(
+        output,
+        100,
+        activation = tf.nn.relu,
+        reuse = tf.AUTO_REUSE,
+        kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
+        name="dense")
     
-     # Convolutional layer 1
-    conv8 = tf.layers.conv2d(
-            inputs = pool4,
-            filters = 4,
-            kernel_size = [3,3], 
-            padding = "same",
-            activation = tf.nn.leaky_relu,
-            reuse = tf.AUTO_REUSE,
-#            kernel_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.05),
-            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
-#            bias_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.1),
-            name="conv8")
+    output = tf.layers.dropout(
+            output,
+            rate = 0.4,
+            training = dropout)
     
-     # Convolutional layer 1
-    conv9 = tf.layers.conv2d(
-            inputs = conv8,
-            filters = 4,
-            kernel_size = [3,3], 
-            padding = "same",
-            activation = tf.nn.leaky_relu,
-            reuse = tf.AUTO_REUSE,
-#            kernel_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.05),
-            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
-#            bias_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.1),
-            name="conv9")
-    
-     # Convolutional layer 1
-    conv10 = tf.layers.conv2d(
-            inputs =  conv9,
-            filters = 4,
-            kernel_size = [3,3], 
-            padding = "same",
-            activation = tf.nn.leaky_relu,
-            reuse = tf.AUTO_REUSE,
-#            kernel_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.05),
-            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
-#            bias_initializer = tf.initializers.truncated_normal(mean=0, stddev=0.1),
-            name="conv10")
-    
-     # Convolutional layer 1
-    conv11 = tf.layers.conv2d(
-            inputs =  conv10,
-            filters = 8,
-            kernel_size = [3,3], 
-            padding = "same",
-            activation = tf.nn.leaky_relu,
-            reuse = tf.AUTO_REUSE,
-#            kernel_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.05),
-            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
-#            bias_initializer = tf.initializers.truncated_normal(mean=0, stddev=0.1),
-            name="conv11")
-    
-     # Convolutional layer 1
-    conv12 = tf.layers.conv2d(
-            inputs =  conv11,
-            filters = 8,
-            kernel_size = [3,3], 
-            padding = "same",
-            activation = tf.nn.leaky_relu,
-            reuse = tf.AUTO_REUSE,
-#            kernel_initializer = tf.initializers.truncated_normal(mean=0.1, stddev=0.05),
-            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
-#            bias_initializer = tf.initializers.truncated_normal(mean=0, stddev=0.1),
-            name="conv12")
-    
-    net = tf.layers.flatten(conv12)
-    
-    net = tf.layers.dense(
-            net,
-            512,
-            activation = tf.nn.leaky_relu,
-            reuse = tf.AUTO_REUSE,
-            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
-#            bias_initializer = tf.initializers.truncated_normal(mean=0.5, stddev=0.1),
-            name="dense")
-    
-    net = tf.layers.dropout(
-            inputs = net,
-            rate = 0.7)
-    
-    net = tf.nn.l2_normalize(
-            net,
+    output = tf.nn.l2_normalize(
+            output,
             axis=1)
-     
-    return net
+              
+    return output
     

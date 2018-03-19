@@ -12,20 +12,26 @@ from __future__ import print_function
 import tensorflow as tf
 import numpy as np
 
-def primary_caps(input, kernel_size, capsules, strides, padding, name):
-    net = tf.layers.conv2d(
-        inputs = input,
-        filters = caps1_n_maps*caps1_n_dims,
-        kernel_size = kernel_size,
-        strides = strides,
-        padding = padding,
-        activation = tf.nn.relu,
-        name = name)
-    
-    net = tf.reshape(net,[-1,caps1_n_caps,caps1_n_dims])
-    
-    
+def primary_caps(input, kernel_size, capsules, cap_dim, strides, padding, name="primary_caps"):
+    with tf.variable_scope(name):
+        net = tf.layers.conv2d(
+            inputs = input,
+            filters = capsules*cap_dim,
+            kernel_size = kernel_size,
+            strides = strides,
+            padding = padding,
+            activation = tf.nn.relu,
+            name = name)
         
+    net = tf.reshape(net,[-1,42*42*capsules,cap_dim])
+    return net
+    
+#def conv_capsule():
+    
+    
+    
+    
+    
 def capsule_net(input, output_size, routing_iterations, name="capsule_net"):
     net = tf.layers.conv2d(
         inputs = input,

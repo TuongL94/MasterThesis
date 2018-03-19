@@ -179,12 +179,12 @@ def main(argv):
     """ Runs evaluation on trained network 
     """
     # Set parameters for evaluation
-    threshold = 0.3
-    batch_size = 200
-    eval_itr = 16
+    threshold = 0.19
+    batch_size = 1500
+    eval_itr = 3
     
 #    dir_path = os.path.dirname(os.path.realpath(__file__))
-    output_dir = argv[1] + argv[0] + "/" # directory where the model is saved
+    output_dir = argv[0]# directory where the model is saved
     gpu_device_name = argv[-1] 
    
     # Load generator

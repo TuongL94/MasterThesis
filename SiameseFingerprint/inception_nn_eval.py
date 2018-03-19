@@ -187,7 +187,7 @@ def main(argv):
    eval_itr = 32
     
 #   dir_path = os.path.dirname(os.path.realpath(__file__))
-   output_dir = argv[1] + argv[0] + "/" # directory where the model is saved
+   output_dir = argv[0] # directory where the model is saved
    gpu_device_name = argv[-1] 
    
     # Load generator

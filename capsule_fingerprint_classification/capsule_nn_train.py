@@ -15,11 +15,12 @@ import sys
 import os
 import pickle
 
-sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)) + "../SiameseFingerprint/utilities.py")
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)) + "/../SiameseFingerprint/utilities.py")
 
 # imports from self-implemented modules
-import utilities as util
+#import utilities as util
 from data_generator import data_generator
+import capsule_nn_model as cap_model
 
 def squash(s, axis=-1, epsilon=1e-7, name=None):
     with tf.name_scope(name, default_name="squash"):
@@ -73,7 +74,7 @@ def get_classification_data(generator, nbr_of_classes):
 def main(argv):
     
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    data_path = dir_path + "../data_manager/"
+    data_path = dir_path + "/../data_manager/"
     output_dir = argv[0] # directory where the model is saved
     gpu_device_name = argv[1] # gpu device to use
     
@@ -149,16 +150,7 @@ def main(argv):
             activation = tf.nn.relu,
             name="conv1")
         
-        conv2 = tf.layers.conv2d(
-                inputs = conv1,
-                filters = caps1_n_maps*caps1_n_dims,
-                kernel_size = [9,9],
-                strides = [2,2],
-                padding = "valid",
-                activation = tf.nn.relu,
-                name = "conv2")
-        
-        caps1_raw = tf.reshape(conv2,[-1,caps1_n_caps,caps1_n_dims],name="caps1_raw")
+        caps1_raw = cap_model.primary_caps(conv1, [9,9], 32, 8, [2,2], "valid")
         caps1_output = squash(caps1_raw, name="caps1_output")
         
         caps2_n_caps = 10
