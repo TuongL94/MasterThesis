@@ -41,9 +41,15 @@ def kernel_tile(input, kernel_size, strides, padding):
 
 def mat_transform(input, output_cap_size, output_cap_dim, spatial_size, batch_size):
     input_shape = input.get_shape().as_list()
-    W_init = tf.random_normal(shape=[1, input_shape[1], output_cap_size*spatial_size*spatial_size, output_cap_dim, input_shape[-1]],
-                              stddev=0.1, dtype=tf.float32)
-    W = tf.Variable(W_init,trainable=True, name="W") # transformation matrices, will be trained with backpropagation
+
+    def W_shared():
+        with tf.variable_scope("W_shared", reuse=tf.AUTO_REUSE):
+            W = tf.get_variable("W",
+                            trainable=True, 
+                            shape=[1, input_shape[1], output_cap_size*spatial_size*spatial_size, output_cap_dim, input_shape[-1]], 
+                            initializer=tf.random_normal_initializer(mean=0.0, stddev=0.1, dtype=tf.float32))
+        return W
+    W = W_shared() 
     W_tiled = tf.tile(W, [batch_size,1,1,1,1], name="W_tiled")
     
     # add additional dimensions to output of caps1 to conform with the dimensions of W_tiled
@@ -111,10 +117,10 @@ def conv_capsule(input, kernel_size, capsules, cap_dim, strides, padding, batch_
         return net
     
 def capsule_net(input, output_size, output_dim, batch_size, name="capsule_net"):
-    with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
+    with tf.variable_scope(name):
         net = tf.layers.conv2d(
             inputs = input,
-            filters = 256,
+            filters = 64,
             kernel_size = [9,9], 
             strides = [2,2],
             padding = "valid",
@@ -125,8 +131,8 @@ def capsule_net(input, output_size, output_dim, batch_size, name="capsule_net"):
         net = primary_caps(
                 net,
                 kernel_size=[9,9],
-                capsules=32,
-                cap_dim=8,
+                capsules=8,
+                cap_dim=4,
                 strides=[2,2])
         
         net = conv_capsule(
@@ -134,7 +140,7 @@ def capsule_net(input, output_size, output_dim, batch_size, name="capsule_net"):
                 kernel_size = 3,
                 capsules = output_size,
                 cap_dim = output_dim,
-                strides = [2,2],
+                strides = [4,4],
                 padding = "VALID",
                 batch_size = batch_size,
                 routing_itr = 2)

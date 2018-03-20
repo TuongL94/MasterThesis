@@ -11,19 +11,20 @@ from __future__ import division
 from __future__ import print_function
 import tensorflow as tf
 
-def contrastive_loss(input_1,input_2,label,margin):
-    """ Computes the contrastive loss between two vectors
+
+def safe_norm(s, axis=-1, epsilon=1e-7, keepdims=False, name=None):
+    with tf.name_scope(name, default_name="safe_2_norm"):
+        squared_norm = tf.reduce_sum(tf.square(s), axis=axis, keepdims=keepdims)
+        return tf.sqrt(squared_norm)
     
-    Input:
-    input_1 - first input vector
-    input_2 - second input vector
-    label - ground truth for similarity between the vectors. 1 if they are similar, 0 otherwise.
-    margin - margin for contrastive loss, positive constant
-    Returns the contrastive loss between input_1 and input_2 with specified margin.
-    """
-    d_sq = tf.reduce_sum(tf.pow(input_1-input_2,2),1,keepdims=True)
-    max_sq = tf.square(tf.maximum(margin-d_sq,0))
-    return tf.reduce_mean(label*d_sq + (1-label)*max_sq)/2
+def scaled_pair_loss(input_1, input_2, label, epsilon=1e-7):
+    norm_1 = safe_norm(input_1, axis=-1)
+    norm_2 = safe_norm(input_2, axis=-1)
+    diff = safe_norm(input_1 - input_2)
+    loss_match = tf.reduce_sum(tf.truediv(1.0,norm_1 + norm_2 + epsilon) * diff)
+    loss_no_match = tf.reduce_sum((norm_1 + norm_2) * diff)
+    loss = tf.reduce_sum(label * loss_match + (1-label) * loss_no_match)
+    return loss
 
 def momentum_training(loss, learning_rate, momentum):
     global_step = tf.Variable(0, trainable = False)

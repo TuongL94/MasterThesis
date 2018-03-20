@@ -80,7 +80,7 @@ def main(argv):
     batch_size_train = 100
     train_itr = 300000000
 
-    learning_rate = 0.001
+    learning_rate = 0.00001
     momentum = 0.99
    
     # parameters for validation
@@ -114,10 +114,10 @@ def main(argv):
                 
             left_train_output = im.inference(left_train)            
             right_train_output = im.inference(right_train)
-            left_val_output = im.inference(left_val)
-            right_val_output = im.inference(right_val)
-            left_test_output = im.inference(left_test)
-            right_test_output = im.inference(right_test)
+            left_val_output = im.inference(left_val, dropout=False)
+            right_val_output = im.inference(right_val, dropout=False)
+            left_test_output = im.inference(left_test, dropout=False)
+            right_test_output = im.inference(right_test, dropout=False)
             
             reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
             margin = tf.constant(4.0) # margin for contrastive loss

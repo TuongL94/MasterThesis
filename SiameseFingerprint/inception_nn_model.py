@@ -48,7 +48,7 @@ def inception_a_block(input):
     output = tf.concat([conv1,conv2,conv3],axis=3)
     return output
 
-def stem(input):
+def stem(input, dropout):
     
      # Convolutional layer 1
     output = tf.layers.conv2d(
@@ -82,7 +82,9 @@ def stem(input):
             name="conv2")
     
     output = tf.layers.dropout(
-            output)
+            output,
+            rate = 0.5,
+            training = dropout)
         
     # Pooling layer 2
     output = tf.layers.max_pooling2d(
@@ -102,7 +104,9 @@ def stem(input):
             name="conv3")
     
     output = tf.layers.dropout(
-            output)
+            output,
+            rate = 0.5,
+            training = dropout)
         
     # Convolutional Layer 4
     output = tf.layers.conv2d(
@@ -116,12 +120,14 @@ def stem(input):
             name="conv4")
     
     output = tf.layers.dropout(
-            output)
+            output,
+            rate = 0.5,
+            training = dropout)
               
     return output
 
-def inference(input):
-    output = stem(input)
+def inference(input, dropout = True):
+    output = stem(input, dropout)
     with tf.variable_scope("inception_1"):
         output = inception_a_block(input)
         
@@ -141,7 +147,9 @@ def inference(input):
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
             name="dense")
     output = tf.layers.dropout(
-            output)
+            output,
+            rate = 0.2,
+            training = dropout)
     output = tf.nn.l2_normalize(
             output,
             axis=1)
