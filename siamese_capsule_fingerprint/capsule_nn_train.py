@@ -28,24 +28,37 @@ import capsule_nn_eval as ce
 import capsule_nn_utilities as cu
 
 def main(argv):
+    """ This method is used to train a capsule network for fingerprint datasets.
     
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    data_path = dir_path + "/../data_manager/"
-    output_dir = argv[0] # directory where the model is saved
-    gpu_device_name = argv[1] # gpu device to use
-    if len(argv) == 3:
+    The model is defined in the file capsule_nn_model.py.
+    If a model exists it will be used for further training, otherwise a new
+    one is created. It is also possible to evaluate the model directly after training.
+    
+     Input:
+    argv - arguments to run this method
+    argv[0] - path of the directory which the model will be saved in
+    argv[1] - path of the directory where the data is located
+    argv[2] - name of the GPU to use for training
+    argv[3] - optional argument, if this argument is given the model will train for argv[2] minutes
+              otherwise it will train for a given amount of iterations
+    """
+    
+    output_dir = argv[0]
+    data_path =  argv[1]
+    gpu_device_name = argv[2]
+    if len(argv) == 4:
         use_time = True
     else:
         use_time = False
-    
+
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
-    if not os.path.exists(data_path + "/generator_data.pk1"):
-        with open("generator_data.pk1", "wb") as output:
-            # Load fingerprint label_holders and data from file with names
+    if not os.path.exists(data_path + "generator_data.pk1"):
+        with open(data_path + "generator_data.pk1", "wb") as output:
+            # Load fingerprint labels and data from file with names
             finger_id = np.load(data_path + "finger_id.npy")
             person_id = np.load(data_path + "person_id.npy")
-            finger_data = np.load(data_path+ "fingerprints.npy")
+            finger_data = np.load(data_path + "fingerprints.npy")
             translation = np.load(data_path + "translation.npy")
             rotation = np.load(data_path + "rotation.npy")
             finger_data = util.reshape_grayscale_data(finger_data)
@@ -55,7 +68,7 @@ def main(argv):
             generator = data_generator(finger_data, finger_id, person_id, translation, rotation, nbr_of_images, rotation_res) # initialize data generator
             
             finger_id_gt_vt = np.load(data_path + "finger_id_gt_vt.npy")
-            person_id_gt_vt = np.load(data_path+ "person_id_gt_vt.npy")
+            person_id_gt_vt = np.load(data_path + "person_id_gt_vt.npy")
             finger_data_gt_vt = np.load(data_path + "fingerprints_gt_vt.npy")
             translation_gt_vt = np.load(data_path + "translation_gt_vt.npy")
             rotation_gt_vt = np.load(data_path + "rotation_gt_vt.npy")
@@ -66,7 +79,7 @@ def main(argv):
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
         # Load generator
-        with open("generator_data.pk1", 'rb') as input:
+        with open(data_path + "generator_data.pk1", 'rb') as input:
             generator = pickle.load(input)
     
     image_dims = np.shape(generator.match_train[0])
@@ -114,7 +127,8 @@ def main(argv):
             right_test_output = cap_model.capsule_net(right_test, batch_size_test)
                         
             reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-            train_loss = cu.scaled_pair_loss(left_train_output,right_train_output,label_train)
+#            train_loss = cu.scaled_pair_loss(left_train_output,right_train_output,label_train)
+            train_loss = cu.scaled_pair_loss_2(left_train_output,right_train_output,label_train)
             
             # add regularization terms to contrastive loss function
             for i in range(len(reg_losses)):
@@ -200,7 +214,9 @@ def main(argv):
     with tf.Session(config=config) as sess:
         if is_model_new:
             with tf.device(gpu_device_name):
-                train_op = cu.momentum_training(train_loss, learning_rate, momentum)
+#                train_op = cu.momentum_training(train_loss, learning_rate, momentum)
+                optimizer = tf.train.AdamOptimizer()
+                train_op = optimizer.minimize(train_loss)
                 sess.run(tf.global_variables_initializer()) # initialize all trainable parameters
                 tf.add_to_collection("train_op",train_op)
         else:
@@ -307,7 +323,7 @@ def main(argv):
             
             if use_time:
                 elapsed_time = (time.time() - start_time_train)/60.0 # elapsed time in minutes since start of training 
-                if elapsed_time >= int(argv[2]):
+                if elapsed_time >= int(argv[-1]):
                     if meta_file_exists:
                         save_path = tf.train.Saver().save(sess,output_dir + "model",global_step=i+current_itr,write_meta_graph=False)
                     else:
@@ -338,7 +354,7 @@ def main(argv):
         # Plot validation loss over time
         plt.figure()
         plt.plot(list(range(val_itr,val_itr*len(val_loss_over_time)+1,val_itr)),val_loss_over_time)
-        plt.title("Validation loss (contrastive loss) over time")
+        plt.title("Validation loss over time")
         plt.xlabel("iteration")
         plt.ylabel("validation loss")
         plt.show()
