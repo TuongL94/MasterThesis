@@ -15,11 +15,11 @@ def inference(input, dropout = True):
     # Convolutional layer 1
     output = tf.layers.conv2d(
             inputs = input,
-            filters = 8,
+            filters = 16,
             kernel_size = [7,7],
             strides = [2,2],
             padding = "valid",
-            activation = tf.nn.relu,
+            activation = tf.nn.leaky_relu,
             reuse = tf.AUTO_REUSE,
 #            kernel_initializer = tf.random_uniform_initializer(minval=-1, maxval=1),
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
@@ -37,16 +37,16 @@ def inference(input, dropout = True):
             kernel_size = [5,5],
             strides = [2,2],
             padding = "valid",
-            activation = tf.nn.relu,
+            activation = tf.nn.leaky_relu,
             reuse = tf.AUTO_REUSE,
 #            kernel_initializer = tf.random_uniform_initializer(minval=-1, maxval=1),
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
             name="conv2")
     
-    output = tf.layers.dropout(
-            output,
-            rate = 0.5,
-            training = dropout)
+#    output = tf.layers.dropout(
+#            output,
+#            rate = 0.5,
+#            training = dropout)
         
     # Pooling layer 2
     output = tf.layers.max_pooling2d(
@@ -60,15 +60,15 @@ def inference(input, dropout = True):
             filters = 32,
             kernel_size = [3,3],
             padding = "same",
-            activation = tf.nn.relu,
+            activation = tf.nn.leaky_relu,
             reuse = tf.AUTO_REUSE,
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
             name="conv3")
     
-    output = tf.layers.dropout(
-            output,
-            rate = 0.5,
-            training = dropout)
+#    output = tf.layers.dropout(
+#            output,
+#            rate = 0.5,
+#            training = dropout)
         
     # Convolutional Layer 4
     output = tf.layers.conv2d(
@@ -76,7 +76,7 @@ def inference(input, dropout = True):
             filters = 64,
             kernel_size = [3,3],
             padding = "same",
-            activation = tf.nn.relu,
+            activation = tf.nn.leaky_relu,
             reuse = tf.AUTO_REUSE,
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
             name="conv4")
@@ -89,16 +89,16 @@ def inference(input, dropout = True):
     
     output = tf.layers.dense(
         output,
-        100,
-        activation = tf.nn.relu,
+        1024,
+        activation = tf.nn.leaky_relu,
         reuse = tf.AUTO_REUSE,
         kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
         name="dense")
     
-    output = tf.layers.dropout(
-            output,
-            rate = 0.4,
-            training = dropout)
+#    output = tf.layers.dropout(
+#            output,
+#            rate = 0.5,
+#            training = dropout)
     
     output = tf.nn.l2_normalize(
             output,

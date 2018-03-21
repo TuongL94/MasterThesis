@@ -77,18 +77,18 @@ def main(argv):
             generator = pickle.load(input)
              
     # parameters for training
-    batch_size_train = 1500
+    batch_size_train = 500
     train_itr = 500000000000000000
 
     learning_rate = 0.00001
     momentum = 0.99
    
     # parameters for validation
-    batch_size_val = 1500
+    batch_size_val = 500
     val_itr = 1000 # frequency in which to use validation data for computations
     
     # parameters for evaluation
-    batch_size_test = 1500
+    batch_size_test = 500
     threshold = 0.5    
     thresh_step = 0.01
         
@@ -120,7 +120,7 @@ def main(argv):
             right_test_output = sm.inference(right_test, dropout = False)
             
             reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-            margin = tf.constant(2.0) # margin for contrastive loss
+            margin = tf.constant(4.0) # margin for contrastive loss
             train_loss = su.contrastive_loss(left_train_output,right_train_output,label_train,margin)
             # add regularization terms to contrastive loss function
             for i in range(len(reg_losses)):

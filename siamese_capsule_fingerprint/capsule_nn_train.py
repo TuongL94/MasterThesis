@@ -1,71 +1,64 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Mon Jan 29 13:44:22 2018
+Created on Thu Mar  8 11:55:13 2018
 
-@author: Tuong Lam & Simon Nilsson
+@author: Tuong Lam
 """
 
-import numpy as np
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import tensorflow as tf
-import os 
-import matplotlib.pyplot as plt
+import numpy as np
+import sys
+import os
 import pickle
 import re
-import sys
 import time
+import matplotlib.pyplot as plt
+
+#sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)) + "/../SiameseFingerprint/utilities.py")
 
 # imports from self-implemented modules
-import inception_nn_model as im
-import inception_nn_eval as ie
-import siamese_nn_utilities as su
 import utilities as util
 from data_generator import data_generator
+import capsule_nn_model as cap_model
+import capsule_nn_eval as ce
+import capsule_nn_utilities as cu
 
 def main(argv):
-    """ This method is used to train an inception network for fingerprint datasets.
     
-    The model is defined in the file inception_nn_model.py.
-    If a model exists it will be used for further training, otherwise a new
-    one is created. It is also possible to evaluate the model directly after training.
-    
-    Input:
-    argv - arguments to run this method
-    argv[0] - path of the directory which the model will be saved in
-    argv[1] - name of the GPU to use for training
-    argv[2] - optional argument, if this argument is given the model will train for argv[2] minutes
-              otherwise it will train for a given amount of iterations
-    """
-    
-    output_dir = argv[0]
-    gpu_device_name = argv[1]
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    data_path = dir_path + "/../data_manager/"
+    output_dir = argv[0] # directory where the model is saved
+    gpu_device_name = argv[1] # gpu device to use
     if len(argv) == 3:
         use_time = True
     else:
         use_time = False
-        
-    dir_path = os.path.dirname(os.path.realpath(__file__))
     
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
-    if not os.path.exists(dir_path + "/generator_data.pk1"):
-        with open('generator_data.pk1', 'wb') as output:
-            # Load fingerprint labels and data from file with names
-            finger_id = np.load(dir_path + "/finger_id.npy")
-            person_id = np.load(dir_path + "/person_id.npy")
-            finger_data = np.load(dir_path + "/fingerprints.npy")
-            translation = np.load(dir_path + "/translation.npy")
-            rotation = np.load(dir_path + "/rotation.npy")
+    if not os.path.exists(data_path + "/generator_data.pk1"):
+        with open("generator_data.pk1", "wb") as output:
+            # Load fingerprint label_holders and data from file with names
+            finger_id = np.load(data_path + "finger_id.npy")
+            person_id = np.load(data_path + "person_id.npy")
+            finger_data = np.load(data_path+ "fingerprints.npy")
+            translation = np.load(data_path + "translation.npy")
+            rotation = np.load(data_path + "rotation.npy")
             finger_data = util.reshape_grayscale_data(finger_data)
             nbr_of_images = np.shape(finger_data)[0] # number of images to use from the original data set
             
             rotation_res = 1
             generator = data_generator(finger_data, finger_id, person_id, translation, rotation, nbr_of_images, rotation_res) # initialize data generator
             
-            finger_id_gt_vt = np.load(dir_path + "/finger_id_gt_vt.npy")
-            person_id_gt_vt = np.load(dir_path + "/person_id_gt_vt.npy")
-            finger_data_gt_vt = np.load(dir_path + "/fingerprints_gt_vt.npy")
-            translation_gt_vt = np.load(dir_path + "/translation_gt_vt.npy")
-            rotation_gt_vt = np.load(dir_path + "/rotation_gt_vt.npy")
+            finger_id_gt_vt = np.load(data_path + "finger_id_gt_vt.npy")
+            person_id_gt_vt = np.load(data_path+ "person_id_gt_vt.npy")
+            finger_data_gt_vt = np.load(data_path + "fingerprints_gt_vt.npy")
+            translation_gt_vt = np.load(data_path + "translation_gt_vt.npy")
+            rotation_gt_vt = np.load(data_path + "rotation_gt_vt.npy")
             finger_data_gt_vt = util.reshape_grayscale_data(finger_data_gt_vt)
             nbr_of_images_gt_vt = np.shape(finger_data_gt_vt)[0]
             
@@ -73,31 +66,32 @@ def main(argv):
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
         # Load generator
-        with open('generator_data.pk1', 'rb') as input:
+        with open("generator_data.pk1", 'rb') as input:
             generator = pickle.load(input)
-             
+    
+    image_dims = np.shape(generator.match_train[0])
+    
     # parameters for training
-    batch_size_train = 100
-    train_itr = 300000000
-
+    batch_size_train = 3
+    train_itr = 50000000000
     learning_rate = 0.00001
     momentum = 0.99
    
     # parameters for validation
-    batch_size_val = 100
-    val_itr = 500 # frequency in which to use validation data for computations
+    batch_size_val = 3
+    val_itr = 100 # frequency in which to use validation data for computations
     
     # parameters for evaluation
-    batch_size_test = 100
-    threshold = 0.5    
-    thresh_step = 0.1
+    batch_size_test = 3
+    threshold = 0.01    
+    thresh_step = 0.001
         
     dims = np.shape(generator.train_data[0])
     batch_sizes = [batch_size_train,batch_size_val,batch_size_test]
     image_dims = [dims[1],dims[2],dims[3]]
-    
-    save_itr = 30000 # frequency in which the model is saved
-    
+
+    save_itr = 1000 # frequency in which the model is saved
+
     tf.reset_default_graph()
     
     # if models exists use the latest existing one otherwise create a new one
@@ -109,24 +103,24 @@ def main(argv):
         
         with tf.device(gpu_device_name):
              # create placeholders
-            left_train,right_train,label_train,left_val,right_val,label_val,left_test,right_test = su.placeholder_inputs(image_dims,batch_sizes)
+            left_train,right_train,label_train,left_val,right_val,label_val,left_test,right_test = cu.placeholder_inputs(image_dims,batch_sizes)
             handle = tf.placeholder(tf.string, shape=[],name="handle")
                 
-            left_train_output = im.inference(left_train)            
-            right_train_output = im.inference(right_train)
-            left_val_output = im.inference(left_val, dropout=False)
-            right_val_output = im.inference(right_val, dropout=False)
-            left_test_output = im.inference(left_test, dropout=False)
-            right_test_output = im.inference(right_test, dropout=False)
-            
+            left_train_output = cap_model.capsule_net(left_train, batch_size_train)           
+            right_train_output = cap_model.capsule_net(right_train, batch_size_train)  
+            left_val_output = cap_model.capsule_net(left_val, batch_size_val)  
+            right_val_output = cap_model.capsule_net(right_val, batch_size_val)  
+            left_test_output = cap_model.capsule_net(left_test, batch_size_test)  
+            right_test_output = cap_model.capsule_net(right_test, batch_size_test)
+                        
             reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-            margin = tf.constant(4.0) # margin for contrastive loss
-            train_loss = su.contrastive_loss(left_train_output,right_train_output,label_train,margin)
+            train_loss = cu.scaled_pair_loss(left_train_output,right_train_output,label_train)
+            
             # add regularization terms to contrastive loss function
             for i in range(len(reg_losses)):
                 train_loss += reg_losses[i]
             
-            val_loss = su.contrastive_loss(left_val_output,right_val_output,label_val,margin)
+            val_loss = cu.scaled_pair_loss(left_val_output,right_val_output,label_val)
             
             tf.add_to_collection("train_loss",train_loss)
             tf.add_to_collection("val_loss",val_loss)
@@ -134,14 +128,7 @@ def main(argv):
             tf.add_to_collection("right_val_output",right_val_output)
             tf.add_to_collection("left_test_output",left_test_output)
             tf.add_to_collection("right_test_output",right_test_output)
-            
-            tf.add_to_collection("left_train_output",left_train_output)
-            tf.add_to_collection("right_train_output",right_train_output)
-            
-#            global_vars = tf.global_variables()
-#            for i in range(len(global_vars)):
-#                print(global_vars[i])
-                
+ 
             saver = tf.train.Saver()
 
     else:
@@ -175,9 +162,6 @@ def main(argv):
             
             handle= g.get_tensor_by_name("handle:0")
             
-            left_train_output = tf.get_collection("left_train_output")[0]
-            right_train_output = tf.get_collection("right_train_output")[0]
-    
     with tf.device(gpu_device_name):
         # Setup tensorflow's batch generator
         train_match_dataset = tf.data.Dataset.from_tensor_slices(generator.match_train)
@@ -212,12 +196,11 @@ def main(argv):
     
     config = tf.ConfigProto(allow_soft_placement=True)
     config.gpu_options.allow_growth = True
-   
+    
     with tf.Session(config=config) as sess:
         if is_model_new:
             with tf.device(gpu_device_name):
-                train_op = su.momentum_training(train_loss, learning_rate, momentum)
-#                train_op = su.adadelta_training(train_loss, learning_rate, 0.95,1e-08)
+                train_op = cu.momentum_training(train_loss, learning_rate, momentum)
                 sess.run(tf.global_variables_initializer()) # initialize all trainable parameters
                 tf.add_to_collection("train_op",train_op)
         else:
@@ -225,60 +208,28 @@ def main(argv):
                 saver.restore(sess, tf.train.latest_checkpoint(output_dir))
                 train_op = tf.get_collection("train_op")[0]
                 
-        with tf.device(gpu_device_name): 
+        with tf.device(gpu_device_name):
             graph = tf.get_default_graph()
-            
             # Summary setup
             
             # get parameters of the first convolutional layer. Add filters and histograms
             # of filters and biases to summary
-            conv0_filters = graph.get_tensor_by_name("conv1/kernel:0")
-            nbr_of_filters_conv0 = sess.run(tf.shape(conv0_filters)[-1])
-            hist_conv0 = tf.summary.histogram("hist_conv0", conv0_filters)
-            conv0_filters = tf.transpose(conv0_filters, perm = [3,0,1,2])
-            filter0 = tf.summary.image('Filter_0', conv0_filters, max_outputs=nbr_of_filters_conv0)
-            conv0_bias = graph.get_tensor_by_name("conv1/bias:0")
-            hist_bias0 = tf.summary.histogram("hist_bias0", conv0_bias)
-            
-            # get filters in first inception layer and their dimensions
-            conv1_filters = graph.get_tensor_by_name("inception_1/conv1/kernel:0")
+            conv1_filters = graph.get_tensor_by_name("capsule_net/conv1/kernel:0")
             nbr_of_filters_conv1 = sess.run(tf.shape(conv1_filters)[-1])
-            conv2_filters = graph.get_tensor_by_name("inception_1/conv2/kernel:0")
-            nbr_of_filters_conv2 = sess.run(tf.shape(conv2_filters)[-1])
-            conv3_filters = graph.get_tensor_by_name("inception_1/conv3/kernel:0")
-            nbr_of_filters_conv3 = sess.run(tf.shape(conv3_filters)[-1])
-            
-            # histograms of filter weights
             hist_conv1 = tf.summary.histogram("hist_conv1", conv1_filters)
-            hist_conv2 = tf.summary.histogram("hist_conv2", conv2_filters)
-            hist_conv3 = tf.summary.histogram("hist_conv3", conv3_filters)
             
             # transpose filters to coincide with the dimensions requested by tensorflow's summary. 
             # Add filters to summary
             conv1_filters = tf.transpose(conv1_filters, perm = [3,0,1,2])
-            filter1 = tf.summary.image('Filter_1', conv1_filters, max_outputs=nbr_of_filters_conv1)
-            conv2_filters = tf.transpose(conv2_filters, perm = [3,0,1,2])
-            filter2 = tf.summary.image('Filter_2', conv2_filters, max_outputs=nbr_of_filters_conv2)
-            conv3_filters = tf.transpose(conv3_filters, perm = [3,0,1,2])
-            filter3 = tf.summary.image('Filter_3', conv3_filters, max_outputs=nbr_of_filters_conv3)
-            
-            # get biases of filters in the first inception layer
-            conv1_bias = graph.get_tensor_by_name("inception_1/conv1/bias:0")
-            conv2_bias = graph.get_tensor_by_name("inception_1/conv2/bias:0")
-            conv3_bias = graph.get_tensor_by_name("inception_1/conv3/bias:0")
-            
-            # histograms of filter biases
+            filter1 = tf.summary.image("Filter_1", conv1_filters, max_outputs=nbr_of_filters_conv1)
+            conv1_bias = graph.get_tensor_by_name("capsule_net/conv1/bias:0")
             hist_bias1 = tf.summary.histogram("hist_bias1", conv1_bias)
-            hist_bias2 = tf.summary.histogram("hist_bias2", conv2_bias)
-            hist_bias3 = tf.summary.histogram("hist_bias3", conv3_bias)
-                
+    
             summary_train_loss = tf.summary.scalar('training_loss', train_loss)
-#            x_image = tf.summary.image('left_input', left_train)
             
-#            summary_op = tf.summary.merge([summary_train_loss, x_image, filter1,filter2,filter3, hist_conv1, hist_conv2,hist_conv3, hist_bias1, hist_bias2, hist_bias3])
-            summary_op = tf.summary.merge([summary_train_loss, filter0, hist_conv0, hist_bias0, filter1, hist_conv1, hist_bias1, filter2, hist_conv2, hist_bias2, filter3, hist_conv3, hist_bias3])
+            summary_op = tf.summary.merge([summary_train_loss, filter1, hist_conv1, hist_bias1])
             train_writer = tf.summary.FileWriter(output_dir + "train_summary", graph=tf.get_default_graph())
-             
+            
             train_match_handle = sess.run(train_match_iterator.string_handle())
             val_match_handle = sess.run(val_match_iterator.string_handle())
             train_non_match_handle = sess.run(train_non_match_iterator.string_handle())
@@ -286,9 +237,6 @@ def main(argv):
             
         precision_over_time = []
         val_loss_over_time = []
-#        for i in sess.graph.get_operations():
-#            print(i.values())
-        
         start_time_train = time.time()
         print("Starting training")
         # Training loop
@@ -308,16 +256,18 @@ def main(argv):
             rnd_rotation = np.random.randint(0,generator.rotation_res)
             b_l_train,b_r_train = generator.get_pairs(generator.train_data[rnd_rotation],train_batch)
             
-            _,train_loss_value,summary,left_o,right_o = sess.run([train_op, train_loss,summary_op,left_train_output,right_train_output],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train})
-#            _,train_loss_value = sess.run([train_op, train_loss],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train})
+            _,train_loss_value,summary = sess.run([train_op, train_loss,summary_op],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train})
 
              # Use validation data set to tune hyperparameters (Classification threshold)
             if i % val_itr == 0:
                 current_val_loss = 0
-                b_sim_val_matching = np.repeat(np.ones((batch_size_val*int(val_match_dataset_length/batch_size_val),1)),generator.rotation_res,axis=0)
-                b_sim_val_non_matching = np.repeat(np.zeros((batch_size_val*int(val_match_dataset_length/batch_size_val),1)),generator.rotation_res,axis=0)
+#                b_sim_val_matching = np.repeat(np.ones((batch_size_val*int(val_match_dataset_length/batch_size_val),1)),generator.rotation_res,axis=0)
+#                b_sim_val_non_matching = np.repeat(np.zeros((batch_size_val*int(val_match_dataset_length/batch_size_val),1)),generator.rotation_res,axis=0)
+#                b_sim_full = np.append(b_sim_val_matching,b_sim_val_non_matching,axis=0)
+                b_sim_val_matching = np.repeat(np.ones((batch_size_val*5,1)),generator.rotation_res,axis=0)
+                b_sim_val_non_matching = np.repeat(np.zeros((batch_size_val*5,1)),generator.rotation_res,axis=0)
                 b_sim_full = np.append(b_sim_val_matching,b_sim_val_non_matching,axis=0)
-                for j in range(int(val_match_dataset_length/batch_size_val)):
+                for j in range(5):
                     val_batch_matching = sess.run(next_element,feed_dict={handle:val_match_handle})
                     class_id_batch = generator.same_class(val_batch_matching)
                     for k in range(generator.rotation_res):
@@ -333,7 +283,7 @@ def main(argv):
                             right_full = np.vstack((right_full,right_o))
                             class_id = np.vstack((class_id, class_id_batch))
                     
-                for j in range(int(val_match_dataset_length/batch_size_val)):
+                for j in range(5):
                     val_batch_non_matching = sess.run(next_element,feed_dict={handle:val_non_match_handle})
                     for k in range(generator.rotation_res):
                         b_l_val,b_r_val = generator.get_pairs(generator.val_data[0],val_batch_non_matching) 
@@ -345,7 +295,7 @@ def main(argv):
                         current_val_loss += val_loss_value
                         
                 val_loss_over_time.append(current_val_loss*batch_size_val/np.shape(b_sim_full)[0])
-                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = ie.get_test_diagnostics(left_full,right_full, b_sim_full,threshold, class_id)
+                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = ce.get_test_diagnostics(left_full,right_full, b_sim_full,threshold, class_id)
             
                 if false_pos > false_neg:   # Can use inter_class_errors to tune the threshold further
                     threshold -= thresh_step
@@ -392,6 +342,6 @@ def main(argv):
         plt.xlabel("iteration")
         plt.ylabel("validation loss")
         plt.show()
-        
+                
 if __name__ == "__main__":
      main(sys.argv[1:])
