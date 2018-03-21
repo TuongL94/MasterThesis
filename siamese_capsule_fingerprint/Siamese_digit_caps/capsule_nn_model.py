@@ -28,7 +28,7 @@ def primary_caps(input, kernel_size, capsules, cap_dim, strides, padding, name="
             reuse = tf.AUTO_REUSE,
             name = name)
         
-    net_shape = net.get_shape()
+#    net_shape = net.get_shape()
 #    net = tf.reshape(net,[-1,net_shape[1]*net_shape[2]*capsules,cap_dim])
     return net
     
