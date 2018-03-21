@@ -28,44 +28,44 @@ def main(argv):
     If a model exists it will be used for further training, otherwise a new
     one is created. It is also possible to evaluate the model directly after training.
     
-    Input:
+     Input:
     argv - arguments to run this method
     argv[0] - path of the directory which the model will be saved in
-    argv[1] - name of the GPU to use for training
-    argv[2] - optional argument, if this argument is given the model will train for argv[2] minutes
+    argv[1] - path of the directory where the data is located
+    argv[2] - name of the GPU to use for training
+    argv[3] - optional argument, if this argument is given the model will train for argv[2] minutes
               otherwise it will train for a given amount of iterations
     """
     
     output_dir = argv[0]
-    gpu_device_name = argv[1]
-    if len(argv) == 3:
+    data_path =  argv[1]
+    gpu_device_name = argv[2]
+    if len(argv) == 4:
         use_time = True
     else:
         use_time = False
 
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
-    if not os.path.exists(dir_path + "/generator_data.pk1"):
-        with open('generator_data.pk1', 'wb') as output:
+    if not os.path.exists(data_path + "generator_data.pk1"):
+        with open(data_path + "generator_data.pk1", "wb") as output:
             # Load fingerprint labels and data from file with names
-            finger_id = np.load(dir_path + "/finger_id.npy")
-            person_id = np.load(dir_path + "/person_id.npy")
-            finger_data = np.load(dir_path + "/fingerprints.npy")
-            translation = np.load(dir_path + "/translation.npy")
-            rotation = np.load(dir_path + "/rotation.npy")
+            finger_id = np.load(data_path + "finger_id.npy")
+            person_id = np.load(data_path + "person_id.npy")
+            finger_data = np.load(data_path + "fingerprints.npy")
+            translation = np.load(data_path + "translation.npy")
+            rotation = np.load(data_path + "rotation.npy")
             finger_data = util.reshape_grayscale_data(finger_data)
             nbr_of_images = np.shape(finger_data)[0] # number of images to use from the original data set
             
             rotation_res = 1
             generator = data_generator(finger_data, finger_id, person_id, translation, rotation, nbr_of_images, rotation_res) # initialize data generator
             
-            finger_id_gt_vt = np.load(dir_path + "/finger_id_gt_vt.npy")
-            person_id_gt_vt = np.load(dir_path + "/person_id_gt_vt.npy")
-            finger_data_gt_vt = np.load(dir_path + "/fingerprints_gt_vt.npy")
-            translation_gt_vt = np.load(dir_path + "/translation_gt_vt.npy")
-            rotation_gt_vt = np.load(dir_path + "/rotation_gt_vt.npy")
+            finger_id_gt_vt = np.load(data_path + "finger_id_gt_vt.npy")
+            person_id_gt_vt = np.load(data_path + "person_id_gt_vt.npy")
+            finger_data_gt_vt = np.load(data_path + "fingerprints_gt_vt.npy")
+            translation_gt_vt = np.load(data_path + "translation_gt_vt.npy")
+            rotation_gt_vt = np.load(data_path + "rotation_gt_vt.npy")
             finger_data_gt_vt = util.reshape_grayscale_data(finger_data_gt_vt)
             nbr_of_images_gt_vt = np.shape(finger_data_gt_vt)[0]
             
@@ -73,7 +73,7 @@ def main(argv):
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
         # Load generator
-        with open('generator_data.pk1', 'rb') as input:
+        with open(data_path + "generator_data.pk1", "rb") as input:
             generator = pickle.load(input)
              
     # parameters for training
@@ -319,7 +319,7 @@ def main(argv):
             
             if use_time:
                 elapsed_time = (time.time() - start_time_train)/60.0 # elapsed time in minutes since start of training 
-                if elapsed_time >= int(argv[2]):
+                if elapsed_time >= int(argv[-1]):
                     if meta_file_exists:
                         save_path = tf.train.Saver().save(sess,output_dir + "model",global_step=i+current_itr,write_meta_graph=False)
                     else:

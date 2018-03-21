@@ -11,7 +11,7 @@ from __future__ import division
 from __future__ import print_function
 import tensorflow as tf
 
-def inception_a_block(input):
+def inception_a_block(input, training):
     conv1 = tf.layers.conv2d(
         inputs = input,
         filters = 16,
@@ -48,7 +48,7 @@ def inception_a_block(input):
     output = tf.concat([conv1,conv2,conv3],axis=3)
     return output
 
-def stem(input, dropout):
+def stem(input, training):
     
      # Convolutional layer 1
     output = tf.layers.conv2d(
@@ -84,7 +84,7 @@ def stem(input, dropout):
     output = tf.layers.dropout(
             output,
             rate = 0.5,
-            training = dropout)
+            training = training)
         
     # Pooling layer 2
     output = tf.layers.max_pooling2d(
@@ -106,7 +106,7 @@ def stem(input, dropout):
     output = tf.layers.dropout(
             output,
             rate = 0.5,
-            training = dropout)
+            training = training)
         
     # Convolutional Layer 4
     output = tf.layers.conv2d(
@@ -122,21 +122,21 @@ def stem(input, dropout):
     output = tf.layers.dropout(
             output,
             rate = 0.5,
-            training = dropout)
+            training = training)
               
     return output
 
-def inference(input, dropout = True):
-    output = stem(input, dropout)
+def inference(input, training = True):
+    output = stem(input, training)
     with tf.variable_scope("inception_1"):
-        output = inception_a_block(input)
+        output = inception_a_block(input, training)
         
     output = tf.layers.max_pooling2d(inputs = output, 
                                      pool_size = [2,2], 
                                      strides = 2)
     
     with tf.variable_scope("inception_2"):
-        output = inception_a_block(output)
+        output = inception_a_block(output, training)
                 
     output = tf.layers.flatten(output)
     output = tf.layers.dense(
@@ -149,7 +149,7 @@ def inference(input, dropout = True):
     output = tf.layers.dropout(
             output,
             rate = 0.2,
-            training = dropout)
+            training = training)
     output = tf.nn.l2_normalize(
             output,
             axis=1)

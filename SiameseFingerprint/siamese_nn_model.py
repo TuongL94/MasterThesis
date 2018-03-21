@@ -10,7 +10,7 @@ from __future__ import division
 from __future__ import print_function
 import tensorflow as tf
 
-def inference(input, dropout = True):
+def inference(input, training = True):
     
     # Convolutional layer 1
     output = tf.layers.conv2d(
@@ -46,7 +46,7 @@ def inference(input, dropout = True):
 #    output = tf.layers.dropout(
 #            output,
 #            rate = 0.5,
-#            training = dropout)
+#            training = training)
         
     # Pooling layer 2
     output = tf.layers.max_pooling2d(
@@ -68,7 +68,7 @@ def inference(input, dropout = True):
 #    output = tf.layers.dropout(
 #            output,
 #            rate = 0.5,
-#            training = dropout)
+#            training = training)
         
     # Convolutional Layer 4
     output = tf.layers.conv2d(
@@ -81,9 +81,6 @@ def inference(input, dropout = True):
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
             name="conv4")
     
-#    output = tf.layers.dropout(
-#            output)
-    
     output = tf.layers.flatten(
             output)
     
@@ -94,12 +91,7 @@ def inference(input, dropout = True):
         reuse = tf.AUTO_REUSE,
         kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
         name="dense")
-    
-#    output = tf.layers.dropout(
-#            output,
-#            rate = 0.5,
-#            training = dropout)
-    
+        
     output = tf.nn.l2_normalize(
             output,
             axis=1)
