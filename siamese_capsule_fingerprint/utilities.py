@@ -8,7 +8,23 @@ Created on Thu Feb  1 15:12:05 2018
 import numpy as np
 import scipy.linalg as sl
 import random
+import tensorflow as tf
 
+def get_nbr_of_parameters():
+    total_parameters = 0
+    for variable in tf.trainable_variables():
+        # shape is an array of tf.Dimension
+        shape = variable.get_shape()
+        print(shape)
+        print(len(shape))
+        variable_parameters = 1
+        for dim in shape:
+            print(dim)
+            variable_parameters *= dim.value
+        print(variable_parameters)
+        total_parameters += variable_parameters
+    return total_parameters
+    
 def l2_normalize(input_array):
     """ L2-normalizes a 1D or 2D array along first dimension
     
@@ -61,4 +77,8 @@ def rand_assign_pair(left,right,image_1,image_2):
     else:
         left.append(image_2)
         right.append(image_1)
-    
+  
+def print_all_global_variables():
+    global_vars = tf.global_variables()
+    for i in range(len(global_vars)):
+        print(global_vars[i])

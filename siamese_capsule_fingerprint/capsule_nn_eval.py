@@ -6,23 +6,22 @@ Created on Wed Jan 31 14:34:36 2018
 """
 
 import numpy as np
-import scipy.linalg as sl
 import tensorflow as tf
 import os 
 import sys
 import pickle
 
 # imports from self-implemented modules
-import utilities as util
+import capsule_nn_utilities as cu
 
 def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_id=None):
     """ Computes and returns evaluation metrics.
     
     Input:
-    left_pairs_o - numpy array with rows corresponding to arrays obtained from inference step in the siamese network
-    right_pairs_o - numpy array with rows corresponding to arrays obtained from inference step in the siamese network
-    sim_labels - ground truth for pairs of arrays (1 if the arrays correspond to matching images, 0 otherwise)
-    threshold - distance threshold, if the 2-norm distanc between two arrays are less than or equal to this value 
+    left_pairs_o - numpy array with first dimension corresponding to an output from the capsule network
+    right_pairs_o - numpy array with first dimension corresponding to an output from the capsule network
+    sim_labels - ground truth for pairs of images (1 if the images correspond to matching images, 0 otherwise)
+    threshold - distance threshold, if the 2-norm distance between two grid features are less than or equal to this value 
     they are considered to correspond to a matching pair of images.
     class_id - Is optional. Contains information about which finger and person each fingerprint comes from.
     Returns:
@@ -35,19 +34,14 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_i
     inter_class_errors - number of false positive from the same finger+person (class)
     """
     matching = np.zeros(len(sim_labels))
-    l2_normalized_diff = left_pairs_o-right_pairs_o
-    l2_distances = sl.norm(l2_normalized_diff,axis=1)
+    l2_distances = cu.grid_wise_norm(left_pairs_o, right_pairs_o)
     false_pos = 0
     false_neg = 0
     inter_class_errors = 0
     p = np.sum(sim_labels)
     n = len(sim_labels) - p
     for i in range(len(sim_labels)):
-        if np.isinf(l2_normalized_diff[i,:]).any() or np.isnan(l2_normalized_diff[i,:]).any():
-#            print('Got inf or Nan in L2 norm; Change hyperparameters to avoid')
-            if sim_labels[i] == 1:
-                false_neg = false_neg + 1
-        elif l2_distances[i] < threshold:
+        if l2_distances[i] < threshold:
             matching[i] = 1
             if sim_labels[i] == 0:
                 false_pos = false_pos + 1
@@ -88,7 +82,7 @@ def evaluate_capsule_network(generator, batch_size, threshold, eval_itr, output_
     tf.reset_default_graph()
     
     if not os.path.exists(output_dir + "checkpoint"):
-        print("No siamese model exists in " + output_dir)
+        print("No model exists in " + output_dir)
         return
         
     else:
@@ -179,11 +173,10 @@ def main(argv):
     """ Runs evaluation on trained network 
     """
     # Set parameters for evaluation
-    threshold = 0.19
-    batch_size = 1500
-    eval_itr = 3
+    threshold = 0.015
+    batch_size = 4
+    eval_itr = 1
     
-#    dir_path = os.path.dirname(os.path.realpath(__file__))
     output_dir = argv[0]# directory where the model is saved
     gpu_device_name = argv[-1] 
    

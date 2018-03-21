@@ -93,7 +93,7 @@ def primary_caps(input, kernel_size, capsules, cap_dim, strides, padding="valid"
             kernel_size = kernel_size,
             strides = strides,
             padding = padding,
-            activation = tf.nn.relu,
+            activation = tf.nn.leaky_relu,
             reuse = tf.AUTO_REUSE,
             name = "conv")
         
@@ -116,7 +116,7 @@ def conv_capsule(input, kernel_size, capsules, cap_dim, strides, padding, batch_
         net = tf.reshape(net, shape=[-1,spatial_size, spatial_size, capsules, cap_dim])
         return net
     
-def capsule_net(input, output_size, output_dim, batch_size, name="capsule_net"):
+def capsule_net(input, batch_size, name="capsule_net"):
     with tf.variable_scope(name):
         net = tf.layers.conv2d(
             inputs = input,
@@ -124,7 +124,7 @@ def capsule_net(input, output_size, output_dim, batch_size, name="capsule_net"):
             kernel_size = [9,9], 
             strides = [2,2],
             padding = "valid",
-            activation = tf.nn.relu,
+            activation = tf.nn.leaky_relu,
             reuse = tf.AUTO_REUSE,
             name="conv1")
         
@@ -138,8 +138,8 @@ def capsule_net(input, output_size, output_dim, batch_size, name="capsule_net"):
         net = conv_capsule(
                 net,
                 kernel_size = 3,
-                capsules = output_size,
-                cap_dim = output_dim,
+                capsules = 8,
+                cap_dim = 4,
                 strides = [4,4],
                 padding = "VALID",
                 batch_size = batch_size,

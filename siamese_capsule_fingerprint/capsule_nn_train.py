@@ -72,25 +72,25 @@ def main(argv):
     image_dims = np.shape(generator.match_train[0])
     
     # parameters for training
-    batch_size_train = 4
-    train_itr = 50
-    learning_rate = 0.001
+    batch_size_train = 3
+    train_itr = 50000000000
+    learning_rate = 0.00001
     momentum = 0.99
    
     # parameters for validation
-    batch_size_val = 100
-    val_itr = 500 # frequency in which to use validation data for computations
+    batch_size_val = 3
+    val_itr = 100 # frequency in which to use validation data for computations
     
     # parameters for evaluation
-    batch_size_test = 100
-    threshold = 0.5    
-    thresh_step = 0.1
+    batch_size_test = 3
+    threshold = 0.01    
+    thresh_step = 0.001
         
     dims = np.shape(generator.train_data[0])
     batch_sizes = [batch_size_train,batch_size_val,batch_size_test]
     image_dims = [dims[1],dims[2],dims[3]]
 
-    save_itr = 3000 # frequency in which the model is saved
+    save_itr = 1000 # frequency in which the model is saved
 
     tf.reset_default_graph()
     
@@ -101,24 +101,18 @@ def main(argv):
         meta_file_exists = False
         current_itr = 0 # current training iteration
         
-        caps_output = 8 # number of capsules in the last convolutional capsule layer
-        caps_dim = 4 # dimension of the features of the last convolutional capsule layer
         with tf.device(gpu_device_name):
              # create placeholders
             left_train,right_train,label_train,left_val,right_val,label_val,left_test,right_test = cu.placeholder_inputs(image_dims,batch_sizes)
             handle = tf.placeholder(tf.string, shape=[],name="handle")
                 
-            left_train_output = cap_model.capsule_net(left_train, caps_output, caps_dim, batch_size_train)           
-            right_train_output = cap_model.capsule_net(right_train, caps_output, caps_dim, batch_size_train)  
-            left_val_output = cap_model.capsule_net(left_val, caps_output, caps_dim, batch_size_val)  
-            right_val_output = cap_model.capsule_net(right_val, caps_output, caps_dim, batch_size_val)  
-            left_test_output = cap_model.capsule_net(left_test, caps_output, caps_dim, batch_size_test)  
-            right_test_output = cap_model.capsule_net(right_test, caps_output, caps_dim, batch_size_test)
-            
-#            global_vars = tf.global_variables()
-#            for i in range(len(global_vars)):
-#                print(global_vars[i])
-            
+            left_train_output = cap_model.capsule_net(left_train, batch_size_train)           
+            right_train_output = cap_model.capsule_net(right_train, batch_size_train)  
+            left_val_output = cap_model.capsule_net(left_val, batch_size_val)  
+            right_val_output = cap_model.capsule_net(right_val, batch_size_val)  
+            left_test_output = cap_model.capsule_net(left_test, batch_size_test)  
+            right_test_output = cap_model.capsule_net(right_test, batch_size_test)
+                        
             reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
             train_loss = cu.scaled_pair_loss(left_train_output,right_train_output,label_train)
             
@@ -168,10 +162,6 @@ def main(argv):
             
             handle= g.get_tensor_by_name("handle:0")
             
-            left_train_output = tf.get_collection("left_train_output")[0]
-            right_train_output = tf.get_collection("right_train_output")[0]
-    
-
     with tf.device(gpu_device_name):
         # Setup tensorflow's batch generator
         train_match_dataset = tf.data.Dataset.from_tensor_slices(generator.match_train)
@@ -184,22 +174,22 @@ def main(argv):
         train_non_match_dataset = train_non_match_dataset.repeat()
         train_non_match_dataset = train_non_match_dataset.batch(int((batch_size_train+1)/2))
         
-#        val_match_dataset_length = np.shape(generator.match_val)[0]
-#        val_match_dataset = tf.data.Dataset.from_tensor_slices(generator.match_val)
-#        val_match_dataset = val_match_dataset.shuffle(buffer_size = val_match_dataset_length)
-#        val_match_dataset = val_match_dataset.repeat()
-#        val_match_dataset = val_match_dataset.batch(batch_size_val)
-#        
-#        val_non_match_dataset_length = np.shape(generator.no_match_val)[0]
-#        val_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_val[0:int(val_non_match_dataset_length/10)])
-#        val_non_match_dataset = val_non_match_dataset.shuffle(buffer_size = val_non_match_dataset_length)
-#        val_non_match_dataset = val_non_match_dataset.repeat()
-#        val_non_match_dataset = val_non_match_dataset.batch(batch_size_val)
+        val_match_dataset_length = np.shape(generator.match_val)[0]
+        val_match_dataset = tf.data.Dataset.from_tensor_slices(generator.match_val)
+        val_match_dataset = val_match_dataset.shuffle(buffer_size = val_match_dataset_length)
+        val_match_dataset = val_match_dataset.repeat()
+        val_match_dataset = val_match_dataset.batch(batch_size_val)
+        
+        val_non_match_dataset_length = np.shape(generator.no_match_val)[0]
+        val_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_val[0:int(val_non_match_dataset_length/10)])
+        val_non_match_dataset = val_non_match_dataset.shuffle(buffer_size = val_non_match_dataset_length)
+        val_non_match_dataset = val_non_match_dataset.repeat()
+        val_non_match_dataset = val_non_match_dataset.batch(batch_size_val)
         
         train_match_iterator = train_match_dataset.make_one_shot_iterator()
-#        val_match_iterator = val_match_dataset.make_one_shot_iterator()
+        val_match_iterator = val_match_dataset.make_one_shot_iterator()
         train_non_match_iterator = train_non_match_dataset.make_one_shot_iterator()
-#        val_non_match_iterator = val_non_match_dataset.make_one_shot_iterator()
+        val_non_match_iterator = val_non_match_dataset.make_one_shot_iterator()
         
         iterator = tf.data.Iterator.from_string_handle(handle, train_match_dataset.output_types)
         next_element = iterator.get_next()
@@ -211,21 +201,6 @@ def main(argv):
         if is_model_new:
             with tf.device(gpu_device_name):
                 train_op = cu.momentum_training(train_loss, learning_rate, momentum)
-                
-#                total_parameters = 0
-#                for variable in tf.trainable_variables():
-#                    # shape is an array of tf.Dimension
-#                    shape = variable.get_shape()
-#                    print(shape)
-#                    print(len(shape))
-#                    variable_parameters = 1
-#                    for dim in shape:
-#                        print(dim)
-#                        variable_parameters *= dim.value
-#                    print(variable_parameters)
-#                    total_parameters += variable_parameters
-#                print(total_parameters)
-                
                 sess.run(tf.global_variables_initializer()) # initialize all trainable parameters
                 tf.add_to_collection("train_op",train_op)
         else:
@@ -256,9 +231,9 @@ def main(argv):
             train_writer = tf.summary.FileWriter(output_dir + "train_summary", graph=tf.get_default_graph())
             
             train_match_handle = sess.run(train_match_iterator.string_handle())
-    #            val_match_handle = sess.run(val_match_iterator.string_handle())
+            val_match_handle = sess.run(val_match_iterator.string_handle())
             train_non_match_handle = sess.run(train_non_match_iterator.string_handle())
-    #            val_non_match_handle = sess.run(val_non_match_iterator.string_handle())
+            val_non_match_handle = sess.run(val_non_match_iterator.string_handle())
             
         precision_over_time = []
         val_loss_over_time = []
@@ -283,47 +258,50 @@ def main(argv):
             
             _,train_loss_value,summary = sess.run([train_op, train_loss,summary_op],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train})
 
-#             # Use validation data set to tune hyperparameters (Classification threshold)
-#            if i % val_itr == 0:
-#                current_val_loss = 0
+             # Use validation data set to tune hyperparameters (Classification threshold)
+            if i % val_itr == 0:
+                current_val_loss = 0
 #                b_sim_val_matching = np.repeat(np.ones((batch_size_val*int(val_match_dataset_length/batch_size_val),1)),generator.rotation_res,axis=0)
 #                b_sim_val_non_matching = np.repeat(np.zeros((batch_size_val*int(val_match_dataset_length/batch_size_val),1)),generator.rotation_res,axis=0)
 #                b_sim_full = np.append(b_sim_val_matching,b_sim_val_non_matching,axis=0)
-#                for j in range(int(val_match_dataset_length/batch_size_val)):
-#                    val_batch_matching = sess.run(next_element,feed_dict={handle:val_match_handle})
-#                    class_id_batch = generator.same_class(val_batch_matching)
-#                    for k in range(generator.rotation_res):
-#                        b_l_val,b_r_val = generator.get_pairs(generator.val_data[k],val_batch_matching) 
-#                        left_o,right_o,val_loss_value = sess.run([left_val_output,right_val_output, val_loss],feed_dict = {left_val:b_l_val, right_val:b_r_val, label_val:np.ones((batch_size_val,1))})
-#                        current_val_loss += val_loss_value
-#                        if j == 0 and k == 0:
-#                            left_full = left_o
-#                            right_full = right_o
-#                            class_id = class_id_batch
-#                        else:
-#                            left_full = np.vstack((left_full,left_o))
-#                            right_full = np.vstack((right_full,right_o))
-#                            class_id = np.vstack((class_id, class_id_batch))
-#                    
-#                for j in range(int(val_match_dataset_length/batch_size_val)):
-#                    val_batch_non_matching = sess.run(next_element,feed_dict={handle:val_non_match_handle})
-#                    for k in range(generator.rotation_res):
-#                        b_l_val,b_r_val = generator.get_pairs(generator.val_data[0],val_batch_non_matching) 
-#                        left_o,right_o,val_loss_value  = sess.run([left_val_output,right_val_output,val_loss],feed_dict = {left_val:b_l_val, right_val:b_r_val, label_val:np.zeros((batch_size_val,1))})
-#                        left_full = np.vstack((left_full,left_o))
-#                        right_full = np.vstack((right_full,right_o)) 
-#                        class_id_batch = generator.same_class(val_batch_non_matching)
-#                        class_id = np.vstack((class_id,class_id_batch))
-#                        current_val_loss += val_loss_value
-#                        
-#                val_loss_over_time.append(current_val_loss*batch_size_val/np.shape(b_sim_full)[0])
-#                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = ce.get_test_diagnostics(left_full,right_full, b_sim_full,threshold, class_id)
-#            
-#                if false_pos > false_neg:   # Can use inter_class_errors to tune the threshold further
-#                    threshold -= thresh_step
-#                else:
-#                    threshold += thresh_step
-#                precision_over_time.append(precision)
+                b_sim_val_matching = np.repeat(np.ones((batch_size_val*5,1)),generator.rotation_res,axis=0)
+                b_sim_val_non_matching = np.repeat(np.zeros((batch_size_val*5,1)),generator.rotation_res,axis=0)
+                b_sim_full = np.append(b_sim_val_matching,b_sim_val_non_matching,axis=0)
+                for j in range(5):
+                    val_batch_matching = sess.run(next_element,feed_dict={handle:val_match_handle})
+                    class_id_batch = generator.same_class(val_batch_matching)
+                    for k in range(generator.rotation_res):
+                        b_l_val,b_r_val = generator.get_pairs(generator.val_data[k],val_batch_matching) 
+                        left_o,right_o,val_loss_value = sess.run([left_val_output,right_val_output, val_loss],feed_dict = {left_val:b_l_val, right_val:b_r_val, label_val:np.ones((batch_size_val,1))})
+                        current_val_loss += val_loss_value
+                        if j == 0 and k == 0:
+                            left_full = left_o
+                            right_full = right_o
+                            class_id = class_id_batch
+                        else:
+                            left_full = np.vstack((left_full,left_o))
+                            right_full = np.vstack((right_full,right_o))
+                            class_id = np.vstack((class_id, class_id_batch))
+                    
+                for j in range(5):
+                    val_batch_non_matching = sess.run(next_element,feed_dict={handle:val_non_match_handle})
+                    for k in range(generator.rotation_res):
+                        b_l_val,b_r_val = generator.get_pairs(generator.val_data[0],val_batch_non_matching) 
+                        left_o,right_o,val_loss_value  = sess.run([left_val_output,right_val_output,val_loss],feed_dict = {left_val:b_l_val, right_val:b_r_val, label_val:np.zeros((batch_size_val,1))})
+                        left_full = np.vstack((left_full,left_o))
+                        right_full = np.vstack((right_full,right_o)) 
+                        class_id_batch = generator.same_class(val_batch_non_matching)
+                        class_id = np.vstack((class_id,class_id_batch))
+                        current_val_loss += val_loss_value
+                        
+                val_loss_over_time.append(current_val_loss*batch_size_val/np.shape(b_sim_full)[0])
+                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = ce.get_test_diagnostics(left_full,right_full, b_sim_full,threshold, class_id)
+            
+                if false_pos > false_neg:   # Can use inter_class_errors to tune the threshold further
+                    threshold -= thresh_step
+                else:
+                    threshold += thresh_step
+                precision_over_time.append(precision)
 
             train_writer.add_summary(summary, i)
             
@@ -345,25 +323,25 @@ def main(argv):
                     meta_file_exists = True
                 print("Trained model after {} iterations saved in path: {}".format(i,save_path))
         
-#        # Plot precision over time
-#        time_points = list(range(len(precision_over_time)))
-#        plt.plot(time_points, precision_over_time)
-#        plt.title("Precision over time")
-#        plt.xlabel("iteration")
-#        plt.ylabel("precision")
-#        plt.show()
-#
-#        print("Suggested threshold from hyperparameter tuning: %f" % threshold)
-#        if len(precision_over_time) > 0:
-#            print("Final (last computed) precision: %f" % precision_over_time[-1])
-#        
-#        # Plot validation loss over time
-#        plt.figure()
-#        plt.plot(list(range(val_itr,val_itr*len(val_loss_over_time)+1,val_itr)),val_loss_over_time)
-#        plt.title("Validation loss (contrastive loss) over time")
-#        plt.xlabel("iteration")
-#        plt.ylabel("validation loss")
-#        plt.show()
+        # Plot precision over time
+        time_points = list(range(len(precision_over_time)))
+        plt.plot(time_points, precision_over_time)
+        plt.title("Precision over time")
+        plt.xlabel("iteration")
+        plt.ylabel("precision")
+        plt.show()
+
+        print("Suggested threshold from hyperparameter tuning: %f" % threshold)
+        if len(precision_over_time) > 0:
+            print("Final (last computed) precision: %f" % precision_over_time[-1])
+        
+        # Plot validation loss over time
+        plt.figure()
+        plt.plot(list(range(val_itr,val_itr*len(val_loss_over_time)+1,val_itr)),val_loss_over_time)
+        plt.title("Validation loss (contrastive loss) over time")
+        plt.xlabel("iteration")
+        plt.ylabel("validation loss")
+        plt.show()
                 
 if __name__ == "__main__":
      main(sys.argv[1:])
