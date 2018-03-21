@@ -16,6 +16,7 @@ import os
 import pickle
 import re
 import time
+from tensorflow.python import debug as tf_debug
 
 #sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)) + "../SiameseFingerprint/utilities.py")
 
@@ -121,8 +122,11 @@ def main(argv):
     image_dims = np.shape(generator.train_data)
     
     # parameters for training
-    batch_size_train = 5
-    train_itr = 5
+    batch_size_train = 50    # OBS! Has to be multiple of 2
+    train_itr = 500
+    
+    learning_rate = 0.000001
+    momentum = 0.99
     
     # Hyper parameters
     routing_iterations = 2
@@ -130,7 +134,7 @@ def main(argv):
     digit_caps_dims = 8
     
     caps1_n_maps = 16 
-    caps1_n_dims = 4
+    caps1_n_dims = 8
     
     save_itr = 3000 # frequency in which the model is saved
 
@@ -224,7 +228,7 @@ def main(argv):
         train_match_dataset = tf.data.Dataset.from_tensor_slices(generator.match_train)
         train_match_dataset = train_match_dataset.shuffle(buffer_size=np.shape(generator.match_train)[0])
         train_match_dataset = train_match_dataset.repeat()
-        train_match_dataset = train_match_dataset.batch(batch_size_train)
+        train_match_dataset = train_match_dataset.batch(batch_size_train // 2)
         
         train_match_iterator = train_match_dataset.make_one_shot_iterator()
         iterator = tf.data.Iterator.from_string_handle(handle, train_match_dataset.output_types)
@@ -233,7 +237,7 @@ def main(argv):
         train_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_train)
         train_non_match_dataset = train_non_match_dataset.shuffle(buffer_size=np.shape(generator.no_match_train)[0])
         train_non_match_dataset = train_non_match_dataset.repeat()
-        train_non_match_dataset = train_non_match_dataset.batch(batch_size_train)
+        train_non_match_dataset = train_non_match_dataset.batch(batch_size_train // 2)
         
         train_non_match_iterator = train_non_match_dataset.make_one_shot_iterator()
         
@@ -313,8 +317,8 @@ def main(argv):
 #        correct = tf.equal(label_holder, y_pred, name="correct")
 #        accuracy = tf.reduce_mean(tf.cast(correct, tf.float32), name="accuracy")
         
-        optimizer = tf.train.AdamOptimizer()
-        train_op = optimizer.minimize(train_loss, name="train_op")
+#        optimizer = tf.train.AdamOptimizer()
+#        train_op = optimizer.minimize(train_loss, name="train_op")
         
 #        init = tf.global_variables_initializer()
         saver = tf.train.Saver()
@@ -338,9 +342,13 @@ def main(argv):
     
     with tf.Session(config=config) as sess:
         with tf.device(gpu_device_name):
+#            sess = tf_debug.LocalCLIDebugWrapperSession(sess)
+#            sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
             if is_model_new:
 #                with tf.device(gpu_device_name):
 #                train_op = cu.momentum_training(train_loss, learning_rate, momentum)
+                optimizer = tf.train.AdamOptimizer()
+                train_op = optimizer.minimize(train_loss, name="train_op")
                 sess.run(tf.global_variables_initializer()) # initialize all trainable parameters
 #                init.run()
                 tf.add_to_collection("train_op",train_op)
@@ -383,6 +391,7 @@ def main(argv):
 #            filter1 = tf.summary.image('Filter_1', conv1_filters, max_outputs=nbr_of_filters_conv1)
 
             summary_train_loss = tf.summary.scalar('training_loss', train_loss)
+#            summary_op = tf.summary.scalar('training_loss', train_loss)
             
             summary_op = tf.summary.merge([summary_train_loss, filter1, hist_conv1, hist_bias1, hist_conv2, hist_bias2])
             train_writer = tf.summary.FileWriter(output_dir + "train_summary", graph=tf.get_default_graph())
@@ -399,7 +408,7 @@ def main(argv):
                 
                 train_batch = np.append(train_batch_matching,train_batch_non_matching,axis=0)
                 gt_train_batch = np.append(gt_matching,gt_non_matching,axis=0)
-                permutation = np.random.permutation(batch_size_train*2)
+                permutation = np.random.permutation(batch_size_train)
                 train_batch = np.take(train_batch,permutation,axis=0)
                 gt_train_batch = np.take(gt_train_batch,permutation,axis=0)
                 
