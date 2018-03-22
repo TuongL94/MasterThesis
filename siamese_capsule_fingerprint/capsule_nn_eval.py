@@ -173,15 +173,16 @@ def main(argv):
     """ Runs evaluation on trained network 
     """
     # Set parameters for evaluation
-    threshold = 0.015
-    batch_size = 4
-    eval_itr = 1
+    threshold = 0.0001
+    batch_size = 3
+    eval_itr = 100
     
     output_dir = argv[0]# directory where the model is saved
+    data_path =  argv[1]
     gpu_device_name = argv[-1] 
    
     # Load generator
-    with open('generator_data.pk1', 'rb') as input:
+    with open(data_path + "generator_data.pk1", "rb") as input:
         generator = pickle.load(input)
     
     evaluate_capsule_network(generator, batch_size, threshold, eval_itr, output_dir, gpu_device_name)

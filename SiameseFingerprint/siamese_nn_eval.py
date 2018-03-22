@@ -179,18 +179,18 @@ def main(argv):
     """ Runs evaluation on trained network 
     """
     # Set parameters for evaluation
-    threshold = 0.19
-    batch_size = 1500
-    eval_itr = 3
+    threshold = 0.6
+    batch_size = 200
+    eval_itr = 2
     
-#    dir_path = os.path.dirname(os.path.realpath(__file__))
     output_dir = argv[0]# directory where the model is saved
+    data_path =  argv[1]
     gpu_device_name = argv[-1] 
    
     # Load generator
-    with open('generator_data.pk1', 'rb') as input:
+    with open(data_path + "generator_data.pk1", "rb") as input:
         generator = pickle.load(input)
-    
+   
     evaluate_siamese_network(generator, batch_size, threshold, eval_itr, output_dir, gpu_device_name)
     
 if __name__ == "__main__":

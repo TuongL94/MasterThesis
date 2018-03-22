@@ -49,6 +49,7 @@ def mat_transform(input, output_cap_size, output_cap_dim, spatial_size, batch_si
                             shape=[1, input_shape[1], output_cap_size*spatial_size*spatial_size, output_cap_dim, input_shape[-1]], 
                             initializer=tf.random_normal_initializer(mean=0.0, stddev=0.1, dtype=tf.float32))
         return W
+    
     W = W_shared() 
     W_tiled = tf.tile(W, [batch_size,1,1,1,1], name="W_tiled")
     
@@ -78,7 +79,7 @@ def dynamic_routing(input, batch_size, routing_itr):
     
     counter = 1
     b_0 = tf.zeros([batch_size, input_shape[1], input_shape[2], 1, 1],dtype=tf.float32)
-    b_final = tf.while_loop(condition, loop_body, [b_0, counter], maximum_iterations=routing_itr)
+    b_final = tf.while_loop(condition, loop_body, [b_0, counter], maximum_iterations=routing_itr, swap_memory=True)
     routing_weights = tf.nn.softmax(b_final[0], axis=2)
     weighted_predictions = tf.multiply(routing_weights, input)
     weighted_sum = tf.reduce_sum(weighted_predictions, axis=1, keepdims=True)
@@ -94,6 +95,7 @@ def primary_caps(input, kernel_size, capsules, cap_dim, strides, padding="valid"
             strides = strides,
             padding = padding,
             activation = tf.nn.leaky_relu,
+            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
             reuse = tf.AUTO_REUSE,
             name = "conv")
         
@@ -125,6 +127,7 @@ def capsule_net(input, batch_size, name="capsule_net"):
             strides = [2,2],
             padding = "valid",
             activation = tf.nn.leaky_relu,
+            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
             reuse = tf.AUTO_REUSE,
             name="conv1")
         
