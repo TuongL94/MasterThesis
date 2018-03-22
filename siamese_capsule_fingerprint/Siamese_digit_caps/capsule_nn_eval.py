@@ -182,9 +182,9 @@ def main(argv):
     """ Runs evaluation on trained network 
     """
     # Set parameters for evaluation
-    threshold = 0.0001
+    threshold = 0.0008
     batch_size = 500
-    eval_itr = 1
+    eval_itr = 7
     
     output_dir = argv[0]# directory where the model is saved
     gpu_device_name = argv[-1] 
