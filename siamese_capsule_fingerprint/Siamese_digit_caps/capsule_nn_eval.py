@@ -182,9 +182,10 @@ def main(argv):
     """ Runs evaluation on trained network 
     """
     # Set parameters for evaluation
-    threshold = 0.00002
+
+    threshold = 0.0008
     batch_size = 500
-    eval_itr = 10
+    eval_itr = 7
     
     output_dir = argv[0]# directory where the model is saved
     data_path =  argv[1]

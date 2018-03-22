@@ -28,29 +28,6 @@ import capsule_utility as cu
 import capsule_nn_eval as ce
 import capsule_nn_model as cm
 
-def squash(s, axis=-1, epsilon=1e-7, name=None):
-    with tf.name_scope(name, default_name="squash"):
-        squared_norm = tf.reduce_sum(tf.square(s), axis=axis, keepdims=True)
-        safe_norm = tf.sqrt(squared_norm + epsilon)
-        squash_factor = squared_norm/(1. + squared_norm)
-        unit_vector = s / safe_norm
-        return squash_factor * unit_vector
-    
-def safe_norm(s, axis=-1, epsilon=1e-7, keepdims=False, name=None):
-    with tf.name_scope(name, default_name="safe_2_norm"):
-        squared_norm = tf.reduce_sum(tf.square(s), axis=axis, keepdims=keepdims)
-        return tf.sqrt(squared_norm)
-
-def margin_loss(caps_input, gt, m_plus=0.9, m_minus=0.1, lambda_=0.5):
-    caps_input_norms = safe_norm(caps_input, axis=-2, keepdims=True)
-    present_errors = tf.square(tf.maximum(0.0, m_plus - caps_input_norms))
-    present_errors = tf.reshape(present_errors, shape=[-1,10])
-    absent_errors = tf.square(tf.maximum(0.0, caps_input_norms - m_minus))
-    absent_errors = tf.reshape(absent_errors, shape=[-1,10])
-    loss = tf.add(gt * present_errors, lambda_ * (1.0 - gt) * absent_errors)
-    loss = tf.reduce_mean(tf.reduce_sum(loss, axis=1))
-    return loss
-
 def get_classification_data(generator, nbr_of_classes):
     
     breakpoints = generator.breakpoints_train
@@ -138,12 +115,13 @@ def main(argv):
     
     # Paramters for validation set
     batch_size_val = 500
-    val_itr = 33
-    threshold = 0.0001
-    thresh_step = 0.00001
-    nbr_val_itr = 3
+
+    val_itr = 20
+    threshold = 0.00001
+    thresh_step = 0.000001
+    nbr_val_itr = 1
     
-    save_itr = 250 # frequency in which the model is saved
+    save_itr = 100 # frequency in which the model is saved
 
     tf.reset_default_graph()
     
@@ -162,12 +140,6 @@ def main(argv):
             right_train_output = cm.capsule_net(right_image_holder, routing_iterations, digit_caps_classes, digit_caps_dims,
                                                 caps1_n_maps, caps1_n_dims, batch_size_train, name="right_train")
             
-#            anchor_val_output = sm.inference(anchor_val)
-#            pos_val_output = sm.inference(pos_val)
-#            
-#            left_test_output = sm.inference(left_test)
-#            right_test_output = sm.inference(right_test)
-            
 #            reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
 #            margin = tf.constant(4.0) # margin for contrastive loss
 #            train_loss = sm.triplet_loss(anchor_train_output,pos_train_output,neg_train_output,margin)
@@ -175,24 +147,16 @@ def main(argv):
 #            for i in range(len(reg_losses)):
 #                train_loss += reg_losses[i]
             
-#            val_loss = sm.triplet_loss(anchor_val_output,pos_val_output,neg_val_output,margin)
+#            train_loss = cu.scaled_pair_loss(left_train_output, right_train_output, label_holder)
             
-            train_loss = cu.scaled_pair_loss(left_train_output, right_train_output, label_holder)
+            margin = tf.constant(4.0)
+            train_loss = cu.contrastive_caps_loss(left_train_output, right_train_output, label_holder, margin)
             
             tf.add_to_collection("train_loss",train_loss)
-#            tf.add_to_collection("val_loss",val_loss)
             tf.add_to_collection("left_train_output",left_train_output)
             tf.add_to_collection("right_train_output",right_train_output)
-#            tf.add_to_collection("neg_val_output",neg_val_output)
-#            tf.add_to_collection("left_test_output",left_test_output)
-#            tf.add_to_collection("right_test_output",right_test_output)
             
-#            global_vars = tf.global_variables()
-#            for i in range(len(global_vars)):
-#                print(global_vars[i])
-                
             saver = tf.train.Saver()
-
     else:
         print("Using latest existing model in the directory " + output_dir)
         is_model_new = False
@@ -213,24 +177,13 @@ def main(argv):
             left_image_holder = g.get_tensor_by_name("left_image_holder:0")
             right_image_holder = g.get_tensor_by_name("right_image_holder:0")
             label_holder = g.get_tensor_by_name("label_holder:0")
-#            label_train = g.get_tensor_by_name("label_train:0")
             train_loss = tf.get_collection("train_loss")[0]
             left_train_output = tf.get_collection("left_train_output")[0]
             right_train_output = tf.get_collection("right_train_output")[0]
             
-#            left_val = g.get_tensor_by_name("left_val:0")
-#            right_val = g.get_tensor_by_name("right_val:0")
-#            label_val = g.get_tensor_by_name("label_val:0")
-#            val_loss = tf.get_collection("val_loss")[0]
-            
             handle= g.get_tensor_by_name("handle:0")
     
     with tf.device(gpu_device_name):
-    # create placeholders
-#        image_holder = tf.placeholder(dtype=tf.float32, shape=[None, image_dims[1], image_dims[1], image_dims[-1]], name="image_holder") 
-#        label_holder = tf.placeholder(dtype=tf.int64, shape=[None], name="label_holder")
-#        handle = tf.placeholder(tf.string, shape=[],name="handle")
-        
         # Setup tensorflow's batch generator
         train_match_dataset = tf.data.Dataset.from_tensor_slices(generator.match_train)
         train_match_dataset = train_match_dataset.shuffle(buffer_size=np.shape(generator.match_train)[0])
@@ -263,129 +216,25 @@ def main(argv):
         val_match_iterator = val_match_dataset.make_one_shot_iterator()
         val_non_match_iterator = val_non_match_dataset.make_one_shot_iterator()
         
-    
-#    caps1_n_maps = 32 
-#    caps1_n_caps = caps1_n_maps * 42 * 42
-#    caps1_n_dims = 8
-#    
-#    with tf.device(gpu_device_name):
-#        conv1 = tf.layers.conv2d(
-#            inputs = image_holder,
-#            filters = 256,
-#            kernel_size = [9,9], 
-#            strides = [2,2],
-#            padding = "valid",
-#            activation = tf.nn.relu,
-#            name="conv1")
-#        
-#        conv2 = tf.layers.conv2d(
-#                inputs = conv1,
-#                filters = caps1_n_maps*caps1_n_dims,
-#                kernel_size = [9,9],
-#                strides = [2,2],
-#                padding = "valid",
-#                activation = tf.nn.relu,
-#                name = "conv2")
-#        
-#        caps1_raw = tf.reshape(conv2,[-1,caps1_n_caps,caps1_n_dims],name="caps1_raw")
-#        caps1_output = squash(caps1_raw, name="caps1_output")
-#        
-#        caps2_n_caps = 10
-#        caps2_n_dims = 16
-#        
-#        W_init = tf.random_normal(shape=[1, caps1_n_caps, caps2_n_caps, caps2_n_dims, caps1_n_dims],
-#                                  stddev=0.1, dtype=tf.float32, name = "W_init")
-#        W = tf.Variable(W_init,trainable=True, name="W") # transformation matrices, will be trained with backpropagation
-#        W_tiled = tf.tile(W, [batch_size_train,1,1,1,1], name="W_tiled")
-#        
-#        # add additional dimensions to output of caps1 to conform with the dimensions of W_tiled
-#        caps1_output_expanded = tf.expand_dims(caps1_output, axis=-1, name="caps1_output_expanded")
-#        caps1_output_tile = tf.expand_dims(caps1_output_expanded, axis=2, name="caps1_output_tile")
-#        caps1_output_tiled = tf.tile(caps1_output_tile, [1,1,caps2_n_caps,1,1], name="caps1_output_tiled")
-#        
-#        caps2_predicted = tf.matmul(W_tiled, caps1_output_tiled, name="caps2_predicted")
-#        
-#        nbr_of_routing_iterations = 2
-#        counter = 1
-#        b_0 = tf.zeros([batch_size_train, caps1_n_caps, caps2_n_caps, 1, 1],dtype=tf.float32)
-#    
-#        def condition(b_coeff, counter):
-#            return tf.less(counter, 100)
-#    
-#        def loop_body(b_coeff, counter):
-#            routing_weights = tf.nn.softmax(b_coeff, axis=2, name="routing_weights")
-#            weighted_predictions = tf.multiply(routing_weights, caps2_predicted, name="weighted_predictions")
-#            weighted_sum = tf.reduce_sum(weighted_predictions, axis=1, keepdims=True, name="weighted_sum")
-#            v = squash(weighted_sum, axis=-2)
-#            v_tiled = tf.tile(v, [1, caps1_n_caps, 1, 1, 1], name="v_tiled")
-#            agreement = tf.matmul(caps2_predicted, v_tiled, transpose_a=True, name="agreement")
-#            new_b_coeff = tf.add(b_coeff, agreement)
-#            return [new_b_coeff,tf.add(1,counter)]
-#        
-#        b_final = tf.while_loop(condition, loop_body, [b_0, counter], maximum_iterations=nbr_of_routing_iterations)
-#            
-#        routing_weights = tf.nn.softmax(b_final[0], axis=2)
-#        weighted_predictions = tf.multiply(routing_weights, caps2_predicted)
-#        weighted_sum = tf.reduce_sum(weighted_predictions, axis=1, keepdims=True)
-#        caps2_output = squash(weighted_sum, axis=-2)
-            
-#        y_prob = safe_norm(caps2_output, axis=-2)
-#        y_prob_argmax = tf.argmax(y_prob, axis=2)
-#        y_pred = tf.squeeze(y_prob_argmax, axis=[1,2])
-#        
-#        gt = tf.one_hot(label_holder, depth=caps2_n_caps)
-#        loss = margin_loss(caps2_output, gt)
-        
-#        correct = tf.equal(label_holder, y_pred, name="correct")
-#        accuracy = tf.reduce_mean(tf.cast(correct, tf.float32), name="accuracy")
-        
-#        optimizer = tf.train.AdamOptimizer()
-#        train_op = optimizer.minimize(train_loss, name="train_op")
-        
-#        init = tf.global_variables_initializer()
         saver = tf.train.Saver()
     
     config = tf.ConfigProto(allow_soft_placement=True)
     config.gpu_options.allow_growth = True
-    
-#    total_parameters = 0
-#    for variable in tf.trainable_variables():
-#        # shape is an array of tf.Dimension
-#        shape = variable.get_shape()
-#        print(shape)
-#        print(len(shape))
-#        variable_parameters = 1
-#        for dim in shape:
-#            print(dim)
-#            variable_parameters *= dim.value
-#        print(variable_parameters)
-#        total_parameters += variable_parameters
-#    print(total_parameters)
     
     with tf.Session(config=config) as sess:
         with tf.device(gpu_device_name):
 #            sess = tf_debug.LocalCLIDebugWrapperSession(sess)
 #            sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
             if is_model_new:
-#                with tf.device(gpu_device_name):
 #                train_op = cu.momentum_training(train_loss, learning_rate, momentum)
                 optimizer = tf.train.AdamOptimizer()
                 train_op = optimizer.minimize(train_loss, name="train_op")
                 sess.run(tf.global_variables_initializer()) # initialize all trainable parameters
-#                init.run()
                 tf.add_to_collection("train_op",train_op)
             else:
-#                with tf.device(gpu_device_name):
                 saver.restore(sess, tf.train.latest_checkpoint(output_dir))
                 train_op = tf.get_collection("train_op")[0]
         
-#        with tf.device(gpu_device_name):
-#            if not os.path.exists(output_dir + "checkpoint"):
-#                print("No previous model exists, creating a new one.")
-#                init.run()
-#            else:
-#                saver.restore(sess, output_dir)
-
             train_match_handle = sess.run(train_match_iterator.string_handle())
             train_non_match_handle = sess.run(train_non_match_iterator.string_handle())
             val_match_handle = sess.run(val_match_iterator.string_handle())
@@ -425,8 +274,6 @@ def main(argv):
             val_loss_over_time = []
             start_time_train = time.time()
             for i in range(1, train_itr + 1):
-#                image_batch, gt_batch = sess.run(next_element,feed_dict={handle:train_match_handle})
-                
                 train_batch_matching = sess.run(next_element,feed_dict={handle:train_match_handle})
                 gt_matching = np.ones((np.shape(train_batch_matching)[0]),dtype=np.int32)
                 train_batch_non_matching = sess.run(next_element,feed_dict={handle:train_non_match_handle})

@@ -11,19 +11,22 @@ from __future__ import division
 from __future__ import print_function
 import tensorflow as tf
 
-def contrastive_loss(input_1,input_2,label,margin):
-    """ Computes the contrastive loss between two vectors
-    
-    Input:
-    input_1 - first input vector
-    input_2 - second input vector
-    label - ground truth for similarity between the vectors. 1 if they are similar, 0 otherwise.
-    margin - margin for contrastive loss, positive constant
-    Returns the contrastive loss between input_1 and input_2 with specified margin.
-    """
-    d_sq = tf.reduce_sum(tf.pow(input_1-input_2,2),1,keepdims=True)
-    max_sq = tf.square(tf.maximum(margin-d_sq,0))
-    return tf.reduce_mean(label*d_sq + (1-label)*max_sq)/2
+
+#### ------------------------- Loss functions -------------------------- ####
+
+#def contrastive_loss(input_1,input_2,label,margin):
+#    """ Computes the contrastive loss between two vectors
+#    
+#    Input:
+#    input_1 - first input vector
+#    input_2 - second input vector
+#    label - ground truth for similarity between the vectors. 1 if they are similar, 0 otherwise.
+#    margin - margin for contrastive loss, positive constant
+#    Returns the contrastive loss between input_1 and input_2 with specified margin.
+#    """
+#    d_sq = tf.reduce_sum(tf.pow(input_1-input_2,2),1,keepdims=True)
+#    max_sq = tf.square(tf.maximum(margin-d_sq,0))
+#    return tf.reduce_mean(label*d_sq + (1-label)*max_sq)/2
 
 def margin_loss(caps_input, gt, m_plus=0.9, m_minus=0.1, lambda_=0.5):
     caps_input_norms = safe_norm(caps_input, axis=-2, keepdims=True)
@@ -38,11 +41,26 @@ def margin_loss(caps_input, gt, m_plus=0.9, m_minus=0.1, lambda_=0.5):
 def scaled_pair_loss(input_1, input_2, label, epsilon=1e-7):
     norm_1 = safe_norm(input_1, axis=-2)
     norm_2 = safe_norm(input_2, axis=-2)
-    diff = safe_norm(input_1 - input_2)
-    loss_match = tf.reduce_sum(tf.truediv(1.0,norm_1 + norm_2 + epsilon) * diff)
-    loss_no_match = tf.reduce_sum((norm_1 + norm_2) * diff)
+    diff = safe_norm(input_1 - input_2, axis=-2)
+    loss_match = tf.reduce_sum(tf.truediv(1.0,norm_1 + norm_2 + epsilon) * diff, axis=2)
+    loss_no_match = tf.reduce_sum((norm_1 + norm_2) * diff, axis=2)
     loss = tf.reduce_mean(label * loss_match + (1-label) * loss_no_match)
     return loss
+
+def triplet_caps_loss(anchor, pos, neg, margin):   
+    dist_pos = tf.reduce_sum(tf.reduce_sum(tf.square(anchor - pos), axis=-2), axis=-2)  # Change axis depending on which typ of CapsNet (Check dimensions on output)
+    dist_neg = tf.reduce_sum(tf.reduce_sum(tf.square(anchor- neg), axis=-2), axis=-2)
+    loss = tf.maximum(0., margin + dist_pos - dist_neg)
+    loss = tf.reduce_mean(loss)
+    return loss
+
+def contrastive_caps_loss(input_1, input_2, label, margin):
+    dist = tf.reduce_sum(tf.reduce_sum(tf.square(input_1 - input_2), axis=-2), axis=-2)
+    margin_max = tf.square(tf.maximum(0., margin - dist))
+    loss = tf.reduce_mean(label*dist + (1-label) * margin_max) / 2
+    return loss
+
+###################################################################################
 
 def squash(s, axis=-1, epsilon=1e-7, name=None):
     with tf.name_scope(name, default_name="squash"):
