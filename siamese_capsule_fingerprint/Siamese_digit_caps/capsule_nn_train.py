@@ -99,7 +99,7 @@ def main(argv):
     image_dims = np.shape(generator.train_data)
     
     # parameters for training
-    batch_size_train = 500    # OBS! Has to be multiple of 2
+    batch_size_train = 470    # OBS! Has to be multiple of 2
     train_itr = 500000000
     
     learning_rate = 0.000001
@@ -114,14 +114,14 @@ def main(argv):
     caps1_n_dims = 8
     
     # Paramters for validation set
-    batch_size_val = 500
+    batch_size_val = 470
 
-    val_itr = 20
-    threshold = 0.00001
-    thresh_step = 0.000001
+    val_itr = 100
+    threshold = 0.2
+    thresh_step = 0.01
     nbr_val_itr = 1
     
-    save_itr = 100 # frequency in which the model is saved
+    save_itr = 500 # frequency in which the model is saved
 
     tf.reset_default_graph()
     

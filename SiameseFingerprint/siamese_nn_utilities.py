@@ -25,10 +25,16 @@ def contrastive_loss(input_1,input_2,label,margin):
     max_sq = tf.square(tf.maximum(margin-d_sq,0))
     return tf.reduce_mean(label*d_sq + (1-label)*max_sq)/2
 
+def cross_entropy_loss(input, label, pos_weight):
+    losses = tf.nn.weighted_cross_entropy_with_logits(label, input, pos_weight)
+    return tf.reduce_mean(losses, keepdims=False)
+    
 def momentum_training(loss, learning_rate, momentum):
     global_step = tf.Variable(0, trainable = False)
     optimizer = tf.train.MomentumOptimizer(learning_rate,momentum, use_nesterov=True)
-    train_op = optimizer.minimize(loss,global_step = global_step)
+    update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+    with tf.control_dependencies(update_ops):
+        train_op = optimizer.minimize(loss,global_step = global_step)
     return train_op
 
 def adadelta_training(loss,learning_rate,rho,epsilon):
@@ -58,11 +64,11 @@ def placeholder_inputs(image_dims,batch_sizes):
     """
     left_train = tf.placeholder(tf.float32, [batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="left_train")
     right_train = tf.placeholder(tf.float32,[batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="right_train")
-    label_train = tf.placeholder(tf.float32, [batch_sizes[0],1], name="label_train") # 1 if same, 0 if different
+    label_train = tf.placeholder(tf.int32, [batch_sizes[0],1], name="label_train") # 1 if same, 0 if different
     
     left_val = tf.placeholder(tf.float32,[batch_sizes[1],image_dims[0],image_dims[1],image_dims[2]], name="left_val")
     right_val = tf.placeholder(tf.float32, [batch_sizes[1],image_dims[0],image_dims[1],image_dims[2]], name="right_val")
-    label_val = tf.placeholder(tf.float32, [batch_sizes[1],1], name="label_val") # 1 if same, 0 if different
+    label_val = tf.placeholder(tf.int32, [batch_sizes[1],1], name="label_val") # 1 if same, 0 if different
     
     left_test = tf.placeholder(tf.float32, [batch_sizes[2],image_dims[0],image_dims[1],image_dims[2]], name="left_test")
     right_test = tf.placeholder(tf.float32, [batch_sizes[2],image_dims[0],image_dims[1],image_dims[2]], name="right_test")

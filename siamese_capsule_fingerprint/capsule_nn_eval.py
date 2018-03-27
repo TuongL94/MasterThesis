@@ -175,7 +175,7 @@ def main(argv):
     # Set parameters for evaluation
     threshold = 0.0001
     batch_size = 3
-    eval_itr = 100
+    eval_itr = 2
     
     output_dir = argv[0]# directory where the model is saved
     data_path =  argv[1]

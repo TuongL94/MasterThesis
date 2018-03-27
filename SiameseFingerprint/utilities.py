@@ -66,7 +66,15 @@ def reshape_grayscale_data(input_data, *dims):
         dim = int(np.sqrt(dim_squarred))
         input_data_moded = input_data.reshape((nbr_of_images,dim,dim,1))
     return input_data_moded
-    
+        
+def image_standardization(images):
+    dims = np.shape(images)
+    means = np.mean(images, axis=(1,2,3), keepdims=True)
+    stds = np.std(images, axis=(1,2,3), keepdims=True)
+    adjusted_stds = np.maximum(stds,1.0/np.sqrt(dims[1]*dims[2])) # avoid division by zero
+    images = (images - means)/stds 
+    return images
+
 def rand_assign_pair(left,right,image_1,image_2):
     """ Appends images of an image pair randomly to two lists.
     

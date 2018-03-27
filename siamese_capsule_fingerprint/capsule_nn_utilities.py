@@ -32,9 +32,9 @@ def safe_norm(s, axis=-1, epsilon=1e-7, keepdims=False, name=None):
 def scaled_pair_loss(input_1, input_2, label, epsilon=1e-7):
     norm_1 = safe_norm(input_1, axis=-1)
     norm_2 = safe_norm(input_2, axis=-1)
-    diff = safe_norm(input_1 - input_2)
-    loss_match = tf.reduce_sum(tf.truediv(1.0,norm_1 + norm_2 + epsilon) * diff)
-    loss_no_match = tf.reduce_sum((norm_1 + norm_2) * diff)
+    diff = safe_norm(input_1 - input_2, axis=-1)
+    loss_match = tf.reduce_sum(tf.truediv(1.0,norm_1 + norm_2 + epsilon) * diff, axis=[1,2,3])
+    loss_no_match = tf.reduce_sum((norm_1 + norm_2) * diff, axis=[1,2,3])
     loss = tf.reduce_mean(label * loss_match + (1-label) * loss_no_match)
     return loss
 
