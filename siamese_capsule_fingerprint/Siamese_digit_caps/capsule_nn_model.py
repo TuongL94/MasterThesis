@@ -123,7 +123,10 @@ def capsule_net(input, routing_iterations, digit_caps_classes, digit_caps_dims, 
     weighted_predictions = tf.multiply(routing_weights, caps2_predicted)
     weighted_sum = tf.reduce_sum(weighted_predictions, axis=1, keepdims=True)
     caps2_output = cu.squash(weighted_sum, axis=-2)
-
+    
+    # Create reconstruction network
+#    image_size = input.get_shape()
+#    reconstruct = reconstruction_net(caps2_output, image_size[1:3])
 
 #    total_parameters = 0
 #    for variable in tf.trainable_variables():
@@ -139,7 +142,43 @@ def capsule_net(input, routing_iterations, digit_caps_classes, digit_caps_dims, 
 #        total_parameters += variable_parameters
 #    print(total_parameters)
 
-
     return caps2_output
+
+
+
+def reconstruction_net(digit_caps, image_size, name="Reconstruction_net"):
+    caps_flat = tf.layers.flatten(digit_caps)
+    
+    net = tf.layers.dense(
+            caps_flat,
+            512,
+            activation = tf.nn.relu,
+            reuse = tf.AUTO_REUSE,
+            name = "recon1")
+    
+    net = tf.layers.dense(
+            net,
+            1024,
+            activation = tf.nn.relu,
+            reuse = tf.AUTO_REUSE,
+            name = "recon2")
+
+    net = tf.layers.dense(
+            net,
+            image_size[0] * image_size[1],
+            activation = tf.nn.sigmoid,
+            reuse = tf.AUTO_REUSE,
+            name = "reconstruction_output")
+
+    return net
+
+
+
+
+
+
+
+
+
     
     

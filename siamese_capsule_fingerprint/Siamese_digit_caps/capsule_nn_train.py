@@ -3,7 +3,7 @@
 """
 Created on Thu Mar  8 11:55:13 2018
 
-@author: Tuong Lam
+@author: Tuong Lam & Simon Nilsson
 """
 
 from __future__ import absolute_import
@@ -28,31 +28,6 @@ import capsule_utility as cu
 import capsule_nn_eval as ce
 import capsule_nn_model as cm
 
-def get_classification_data(generator, nbr_of_classes):
-    
-    breakpoints = generator.breakpoints_train
-    matches = generator.match_train
-    index_list = [np.array([],dtype=np.int64) for i in range(len(breakpoints)-1)]
-    image_dims = np.shape(generator.train_data[0])
-    images = np.zeros((0,image_dims[1],image_dims[1],image_dims[-1]))
-    gt = np.zeros(0)
-    counter = 1
-    
-    for i in range(1,len(breakpoints)):
-        for j in range(breakpoints[i-1], breakpoints[i]):
-            ind = np.where(matches == j)
-            if np.shape(ind[0])[0] > 0:
-                index_list[i-1] = np.append(index_list[i-1],j)
-    
-    for e in index_list:
-        e = np.unique(e)
-        
-    index_list.sort(key = lambda x: len(x))
-    for i in range(len(index_list)-1,len(index_list)-nbr_of_classes-1,-1):
-        images = np.append(images, np.take(generator.train_data[0],index_list[i],axis=0), axis=0)
-        gt = np.append(gt,counter*np.ones(len(index_list[i])))
-        counter += 1
-    return images,gt
 
 def main(argv):
     
@@ -97,7 +72,6 @@ def main(argv):
         with open("generator_data.pk1", 'rb') as input:
             generator = pickle.load(input)
     
-#    train_images, train_gt = get_classification_data(generator,10)
     image_dims = np.shape(generator.train_data)
     
     # parameters for training
@@ -117,9 +91,9 @@ def main(argv):
     
     # Paramters for validation set
     batch_size_val = 500
-    val_itr = 20
-    threshold = 0.00001
-    thresh_step = 0.000001
+    val_itr = 2000000
+    threshold = 0.1
+    thresh_step = 0.01
     nbr_val_itr = 1
     
     save_itr = 100 # frequency in which the model is saved
@@ -135,11 +109,36 @@ def main(argv):
         with tf.device(gpu_device_name):
             # create placeholders
             left_image_holder, right_image_holder, label_holder, handle = cu.placeholder_inputs(image_dims)
-                
+              
+            # Create CapsNet graph
             left_train_output = cm.capsule_net(left_image_holder, routing_iterations, digit_caps_classes, digit_caps_dims, 
                                                caps1_n_maps, caps1_n_dims, batch_size_train, name="left_train")
             right_train_output = cm.capsule_net(right_image_holder, routing_iterations, digit_caps_classes, digit_caps_dims,
                                                 caps1_n_maps, caps1_n_dims, batch_size_train, name="right_train")
+            
+            
+#            # Create Reconstruction graph
+            shape = left_train_output.get_shape().as_list()[1:]
+            shape.insert(0, None)
+            reconstruct_holder_left = tf.placeholder(dtype=tf.float32, shape=shape, name="reconstruct_holder_left") 
+            reconstruct_holder_right = tf.placeholder(dtype=tf.float32, shape=shape, name="reconstruct_holder_right") 
+            reconstruct_left = cm.reconstruction_net(reconstruct_holder_left, image_dims[2:4])
+            reconstruct_right = cm.reconstruction_net(reconstruct_holder_right, image_dims[2:4])
+            
+            # Placeholders reconstruct images
+            shape = reconstruct_left.get_shape().as_list()[1:]
+            shape.insert(0, None)
+            image_left = tf.placeholder(dtype=tf.float32, shape = shape, name ="image_left")
+            image_right= tf.placeholder(dtype=tf.float32, shape = shape, name ="image_right")
+            
+            # Create loss function
+            margin = tf.constant(4.0)
+            train_loss = cu.contrastive_caps_loss(left_train_output, right_train_output, label_holder, margin)
+            
+            # Add reconstruction loss
+            alpha = 0.005      # Scaling parameter of reconstructions contribution to the total loss
+            train_loss += cu.reconstruction_loss(left_image_holder, right_image_holder, reconstruct_left, reconstruct_right, alpha)
+#            train_loss += cu.reconstruction_loss(left_image_holder, right_image_holder, image_left, image_right, alpha)
             
 #            reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
 #            margin = tf.constant(4.0) # margin for contrastive loss
@@ -150,12 +149,11 @@ def main(argv):
             
 #            train_loss = cu.scaled_pair_loss(left_train_output, right_train_output, label_holder)
             
-            margin = tf.constant(4.0)
-            train_loss = cu.contrastive_caps_loss(left_train_output, right_train_output, label_holder, margin)
-            
             tf.add_to_collection("train_loss",train_loss)
             tf.add_to_collection("left_train_output",left_train_output)
             tf.add_to_collection("right_train_output",right_train_output)
+            tf.add_to_collection("reconstruct_left",reconstruct_left)
+            tf.add_to_collection("reconstruct_right",reconstruct_right)
             
             saver = tf.train.Saver()
     else:
@@ -181,6 +179,13 @@ def main(argv):
             train_loss = tf.get_collection("train_loss")[0]
             left_train_output = tf.get_collection("left_train_output")[0]
             right_train_output = tf.get_collection("right_train_output")[0]
+            
+            reconstruct_left = tf.get_collection("reconstruct_left")[0]
+            reconstruct_right = tf.get_collection("reconstruct_right")[0]
+            reconstruct_holder_left = g.get_tensor_by_name("reconstruct_holder_left:0")
+            reconstruct_holder_right = g.get_tensor_by_name("reconstruct_holder_right:0")
+            image_left = g.get_tensor_by_name("image_left:0")
+            image_right= g.get_tensor_by_name("image_right:0")
             
             handle= g.get_tensor_by_name("handle:0")
     
@@ -290,8 +295,26 @@ def main(argv):
                 rnd_rotation = np.random.randint(0,generator.rotation_res)
                 b_l_train,b_r_train = generator.get_pairs(generator.train_data[rnd_rotation],train_batch)
                 
-                _, train_loss_value, summary = sess.run([train_op, train_loss, summary_op], feed_dict={left_image_holder:b_l_train, right_image_holder:b_r_train, label_holder:gt_train_batch})
+#                _, train_loss_value, summary = sess.run([train_op, train_loss, summary_op], 
+#                                                        feed_dict={left_image_holder:b_l_train, 
+#                                                                   right_image_holder:b_r_train, 
+#                                                                   label_holder:gt_train_batch})
                 
+                left_o, right_o = sess.run([left_train_output, right_train_output], 
+                                                        feed_dict={left_image_holder:b_l_train, 
+                                                                   right_image_holder:b_r_train})
+                recon_left, recon_right = sess.run([reconstruct_left, reconstruct_right], 
+                                                   feed_dict={reconstruct_holder_left:left_o, 
+                                                              reconstruct_holder_right:right_o})
+                _, train_loss_value, summary = sess.run([train_op, train_loss, summary_op], 
+                                               feed_dict={left_image_holder:b_l_train,
+                                                          right_image_holder:b_r_train,
+                                                          image_left:recon_left,
+                                                          image_right:recon_right,
+                                                          label_holder:gt_train_batch,
+                                                          reconstruct_holder_left:left_o,
+                                                          reconstruct_holder_right:right_o})            
+    
                 
                 if use_time:
                     elapsed_time = (time.time() - start_time_train)/60.0 # elapsed time in minutes since start of training 
@@ -326,7 +349,8 @@ def main(argv):
                         class_id_batch = generator.same_class(val_batch_matching)
                         for k in range(generator.rotation_res):
                             b_l_val,b_r_val = generator.get_pairs(generator.val_data[k],val_batch_matching) 
-                            left_o,right_o,val_loss_value = sess.run([left_train_output,right_train_output, train_loss],feed_dict = {left_image_holder:b_l_val, right_image_holder:b_r_val, label_holder:np.ones(batch_size_val)})
+                            left_o,right_o,val_loss_value = sess.run([left_train_output,right_train_output, train_loss],
+                                                                     feed_dict = {left_image_holder:b_l_val, right_image_holder:b_r_val, label_holder:np.ones(batch_size_val)})
                             current_val_loss += val_loss_value
                             if j == 0 and k == 0:
                                 left_full = left_o
@@ -341,7 +365,8 @@ def main(argv):
                         val_batch_non_matching = sess.run(next_element,feed_dict={handle:val_non_match_handle})
                         for k in range(generator.rotation_res):
                             b_l_val,b_r_val = generator.get_pairs(generator.val_data[0],val_batch_non_matching) 
-                            left_o,right_o,val_loss_value = sess.run([left_train_output,right_train_output, train_loss],feed_dict = {left_image_holder:b_l_val, right_image_holder:b_r_val, label_holder:np.zeros(batch_size_val)})
+                            left_o,right_o,val_loss_value = sess.run([left_train_output,right_train_output, train_loss],
+                                                                     feed_dict = {left_image_holder:b_l_val, right_image_holder:b_r_val, label_holder:np.zeros(batch_size_val)})
                             left_full = np.vstack((left_full,left_o))
                             right_full = np.vstack((right_full,right_o)) 
                             class_id_batch = generator.same_class(val_batch_non_matching)
@@ -358,6 +383,17 @@ def main(argv):
                     precision_over_time.append(precision)
                     
                 train_writer.add_summary(summary, i)
+            
+            reconstruct_images_left, reconstruct_images_right = sess.run([reconstruct_left, reconstruct_left],
+                                                                         feed_dict={reconstruct_holder_left:left_o,
+                                                                                    reconstruct_holder_right:right_o})
+            reconstruct_images_left = np.reshape(reconstruct_images_left, (-1,192,192))
+            reconstruct_images_right = np.reshape(reconstruct_images_right, (-1,192,192))
+            for k in range(10):
+                plt.imshow(reconstruct_images_left[k])
+                plt.show()
+                plt.imshow(b_l_train[k,:,:,0])
+                plt.show()
                 
                 
         # Plot precision over time

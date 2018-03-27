@@ -182,7 +182,7 @@ def main(argv):
     """ Runs evaluation on trained network 
     """
     # Set parameters for evaluation
-    threshold = 0.0008
+    threshold = 0.4
     batch_size = 500
     eval_itr = 7
     

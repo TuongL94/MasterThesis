@@ -60,6 +60,20 @@ def contrastive_caps_loss(input_1, input_2, label, margin):
     loss = tf.reduce_mean(label*dist + (1-label) * margin_max) / 2
     return loss
 
+#####------------------ Reconstruction loss --------------------######
+    
+def reconstruction_loss(left_image, right_image, recon_left, recon_right, alpha):
+    image_dims = right_image.get_shape()
+    left_image_flat = tf.reshape(left_image, [-1, image_dims[1] * image_dims[2]], name = "flat_left_image")
+    right_image_flat = tf.reshape(right_image, [-1, image_dims[1] * image_dims[2]], name = "flat_right_image")
+    
+    squared_diff_left = tf.square(left_image_flat - recon_left, name="squared_diff_left")
+    squared_diff_right= tf.square(right_image_flat - recon_left, name="squared_diff_right")
+    
+    reconstruct_loss = alpha * tf.reduce_mean(squared_diff_left + squared_diff_right, name = "reconstruction_loss")
+    return reconstruct_loss
+
+
 ###################################################################################
 
 def squash(s, axis=-1, epsilon=1e-7, name=None):
