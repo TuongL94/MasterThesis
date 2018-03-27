@@ -184,14 +184,14 @@ def main(argv):
     # Set parameters for evaluation
    threshold = 1.2
    batch_size = 100
-   eval_itr = 32
+   eval_itr = 35
     
-#   dir_path = os.path.dirname(os.path.realpath(__file__))
-   output_dir = argv[0] # directory where the model is saved
+   output_dir = argv[0]# directory where the model is saved
+   data_path =  argv[1]
    gpu_device_name = argv[-1] 
    
-    # Load generator
-   with open('generator_data.pk1', 'rb') as input:
+   # Load generator
+   with open(data_path + "generator_data_old.pk1", "rb") as input:
        generator = pickle.load(input)
     
    evaluate_inception_network(generator, batch_size, threshold, eval_itr, output_dir, gpu_device_name)

@@ -114,10 +114,10 @@ def main(argv):
                 
             left_train_output = im.inference(left_train)            
             right_train_output = im.inference(right_train)
-            left_val_output = im.inference(left_val, dropout=False)
-            right_val_output = im.inference(right_val, dropout=False)
-            left_test_output = im.inference(left_test, dropout=False)
-            right_test_output = im.inference(right_test, dropout=False)
+            left_val_output = im.inference(left_val, training=False)
+            right_val_output = im.inference(right_val, training=False)
+            left_test_output = im.inference(left_test, training=False)
+            right_test_output = im.inference(right_test, training=False)
             
             reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
             margin = tf.constant(4.0) # margin for contrastive loss
@@ -137,11 +137,7 @@ def main(argv):
             
             tf.add_to_collection("left_train_output",left_train_output)
             tf.add_to_collection("right_train_output",right_train_output)
-            
-#            global_vars = tf.global_variables()
-#            for i in range(len(global_vars)):
-#                print(global_vars[i])
-                
+                            
             saver = tf.train.Saver()
 
     else:

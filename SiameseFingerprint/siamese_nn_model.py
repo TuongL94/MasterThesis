@@ -18,7 +18,7 @@ def inference(input, training = True):
             filters = 16,
             kernel_size = [7,7],
             strides = [2,2],
-            padding = "valid",
+            padding = "same",
             activation = tf.nn.leaky_relu,
             reuse = tf.AUTO_REUSE,
 #            kernel_initializer = tf.random_uniform_initializer(minval=-1, maxval=1),
@@ -36,7 +36,7 @@ def inference(input, training = True):
             filters = 16,
             kernel_size = [5,5],
             strides = [2,2],
-            padding = "valid",
+            padding = "same",
             activation = tf.nn.leaky_relu,
             reuse = tf.AUTO_REUSE,
 #            kernel_initializer = tf.random_uniform_initializer(minval=-1, maxval=1),
@@ -91,7 +91,12 @@ def inference(input, training = True):
         reuse = tf.AUTO_REUSE,
         kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
         name="dense")
-        
+    
+    output = tf.layers.dropout(
+        output,
+        rate = 0.5,
+        training = training)
+    
     output = tf.nn.l2_normalize(
             output,
             axis=1)

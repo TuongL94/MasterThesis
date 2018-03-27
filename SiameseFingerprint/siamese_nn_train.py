@@ -50,11 +50,11 @@ def main(argv):
     if not os.path.exists(data_path + "generator_data.pk1"):
         with open(data_path + "generator_data.pk1", "wb") as output:
             # Load fingerprint labels and data from file with names
-            finger_id = np.load(data_path + "finger_id.npy")
-            person_id = np.load(data_path + "person_id.npy")
-            finger_data = np.load(data_path + "fingerprints.npy")
-            translation = np.load(data_path + "translation.npy")
-            rotation = np.load(data_path + "rotation.npy")
+            finger_id = np.load(data_path + "finger_id_mt_vt_112.npy")
+            person_id = np.load(data_path + "person_id_mt_vt_112.npy")
+            finger_data = np.load(data_path + "fingerprints_mt_vt_112.npy")
+            translation = np.load(data_path + "translation_mt_vt_112.npy")
+            rotation = np.load(data_path + "rotation_mt_vt_112.npy")
             finger_data = util.reshape_grayscale_data(finger_data)
             nbr_of_images = np.shape(finger_data)[0] # number of images to use from the original data set
             
@@ -77,18 +77,18 @@ def main(argv):
             generator = pickle.load(input)
              
     # parameters for training
-    batch_size_train = 500
+    batch_size_train = 200
     train_itr = 500000000000000000
 
     learning_rate = 0.00001
     momentum = 0.99
    
     # parameters for validation
-    batch_size_val = 500
-    val_itr = 1000 # frequency in which to use validation data for computations
+    batch_size_val = 200
+    val_itr = 200 # frequency in which to use validation data for computations
     
     # parameters for evaluation
-    batch_size_test = 500
+    batch_size_test = 200
     threshold = 0.5    
     thresh_step = 0.01
         
@@ -114,10 +114,10 @@ def main(argv):
                 
             left_train_output = sm.inference(left_train)            
             right_train_output = sm.inference(right_train)
-            left_val_output = sm.inference(left_val, dropout = False)
-            right_val_output = sm.inference(right_val, dropout = False)
-            left_test_output = sm.inference(left_test, dropout = False)
-            right_test_output = sm.inference(right_test, dropout = False)
+            left_val_output = sm.inference(left_val, training = False)
+            right_val_output = sm.inference(right_val, training = False)
+            left_test_output = sm.inference(left_test, training = False)
+            right_test_output = sm.inference(right_test, training = False)
             
             reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
             margin = tf.constant(4.0) # margin for contrastive loss
@@ -184,9 +184,6 @@ def main(argv):
             
 #            for i in sess.graph.get_operations():
 #                print(i.values())
-#            global_vars = tf.global_variables()
-#            for i in range(len(global_vars)):
-#                print(global_vars[i])
                 
         with tf.device(gpu_device_name): 
             graph = tf.get_default_graph()

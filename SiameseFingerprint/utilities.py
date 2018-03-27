@@ -10,6 +10,11 @@ import scipy.linalg as sl
 import random
 import tensorflow as tf
 
+def print_all_global_variables():
+    global_vars = tf.global_variables()
+    for i in range(len(global_vars)):
+        print(global_vars[i])
+    
 def get_nbr_of_parameters():
     total_parameters = 0
     for variable in tf.trainable_variables():

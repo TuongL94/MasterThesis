@@ -31,24 +31,22 @@ import capsule_nn_model as cm
 
 def main(argv):
     
-#    dir_path = os.path.dirname(os.path.realpath(__file__))
-    data_path = argv[1]# + "../data_manager/"
-    output_dir = argv[1] + "models/" + argv[0] # directory where the model is saved
-    gpu_device_name = argv[2] # gpu device to use
-    
+    output_dir = argv[0]
+    data_path =  argv[1]
+    gpu_device_name = argv[2]
     if len(argv) == 4:
         use_time = True
     else:
         use_time = False
-    
+
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
-    if not os.path.exists(data_path + "/generator_data.pk1"):
-        with open("generator_data.pk1", "wb") as output:
-            # Load fingerprint label_holders and data from file with names
+    if not os.path.exists(data_path + "generator_data.pk1"):
+        with open(data_path + "generator_data.pk1", "wb") as output:
+            # Load fingerprint labels and data from file with names
             finger_id = np.load(data_path + "finger_id.npy")
             person_id = np.load(data_path + "person_id.npy")
-            finger_data = np.load(data_path+ "fingerprints.npy")
+            finger_data = np.load(data_path + "fingerprints.npy")
             translation = np.load(data_path + "translation.npy")
             rotation = np.load(data_path + "rotation.npy")
             finger_data = util.reshape_grayscale_data(finger_data)
@@ -58,7 +56,7 @@ def main(argv):
             generator = data_generator(finger_data, finger_id, person_id, translation, rotation, nbr_of_images, rotation_res) # initialize data generator
             
             finger_id_gt_vt = np.load(data_path + "finger_id_gt_vt.npy")
-            person_id_gt_vt = np.load(data_path+ "person_id_gt_vt.npy")
+            person_id_gt_vt = np.load(data_path + "person_id_gt_vt.npy")
             finger_data_gt_vt = np.load(data_path + "fingerprints_gt_vt.npy")
             translation_gt_vt = np.load(data_path + "translation_gt_vt.npy")
             rotation_gt_vt = np.load(data_path + "rotation_gt_vt.npy")
@@ -69,14 +67,14 @@ def main(argv):
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
         # Load generator
-        with open("generator_data.pk1", 'rb') as input:
+        with open(data_path + "generator_data.pk1", 'rb') as input:
             generator = pickle.load(input)
     
     image_dims = np.shape(generator.train_data)
     
     # parameters for training
     batch_size_train = 500    # OBS! Has to be multiple of 2
-    train_itr = 500
+    train_itr = 500000000
     
     learning_rate = 0.000001
     momentum = 0.99
@@ -318,7 +316,7 @@ def main(argv):
                 
                 if use_time:
                     elapsed_time = (time.time() - start_time_train)/60.0 # elapsed time in minutes since start of training 
-                    if elapsed_time >= int(argv[3]):
+                    if elapsed_time >= int(argv[-1]):
                         if meta_file_exists:
                             save_path = tf.train.Saver().save(sess,output_dir + "model",global_step=i+current_itr,write_meta_graph=False)
                         else:
