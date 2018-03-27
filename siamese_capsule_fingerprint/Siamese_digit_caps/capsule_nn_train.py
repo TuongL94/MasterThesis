@@ -73,7 +73,7 @@ def main(argv):
     image_dims = np.shape(generator.train_data)
     
     # parameters for training
-    batch_size_train = 500    # OBS! Has to be multiple of 2
+    batch_size_train = 400    # OBS! Has to be multiple of 2
     train_itr = 500000000
     
     learning_rate = 0.000001
@@ -88,13 +88,13 @@ def main(argv):
     caps1_n_dims = 8
     
     # Paramters for validation set
-    batch_size_val = 500
-    val_itr = 2000000
-    threshold = 0.1
-    thresh_step = 0.01
+    batch_size_val = 400
+    val_itr = 200
+    threshold = 0.001
+    thresh_step = 0.0001
     nbr_val_itr = 1
     
-    save_itr = 100 # frequency in which the model is saved
+    save_itr = 3000 # frequency in which the model is saved
 
     tf.reset_default_graph()
     
@@ -347,9 +347,11 @@ def main(argv):
                         class_id_batch = generator.same_class(val_batch_matching)
                         for k in range(generator.rotation_res):
                             b_l_val,b_r_val = generator.get_pairs(generator.val_data[k],val_batch_matching) 
-                            left_o,right_o,val_loss_value = sess.run([left_train_output,right_train_output, train_loss],
-                                                                     feed_dict = {left_image_holder:b_l_val, right_image_holder:b_r_val, label_holder:np.ones(batch_size_val)})
-                            current_val_loss += val_loss_value
+#                            left_o,right_o,val_loss_value = sess.run([left_train_output,right_train_output, train_loss],
+#                                                                     feed_dict = {left_image_holder:b_l_val, right_image_holder:b_r_val, label_holder:np.ones(batch_size_val)})
+                            left_o,right_o = sess.run([left_train_output,right_train_output],
+                                                                     feed_dict = {left_image_holder:b_l_val, right_image_holder:b_r_val})
+#                            current_val_loss += val_loss_value
                             if j == 0 and k == 0:
                                 left_full = left_o
                                 right_full = right_o
@@ -363,13 +365,15 @@ def main(argv):
                         val_batch_non_matching = sess.run(next_element,feed_dict={handle:val_non_match_handle})
                         for k in range(generator.rotation_res):
                             b_l_val,b_r_val = generator.get_pairs(generator.val_data[0],val_batch_non_matching) 
-                            left_o,right_o,val_loss_value = sess.run([left_train_output,right_train_output, train_loss],
-                                                                     feed_dict = {left_image_holder:b_l_val, right_image_holder:b_r_val, label_holder:np.zeros(batch_size_val)})
+#                            left_o,right_o,val_loss_value = sess.run([left_train_output,right_train_output, train_loss],
+#                                                                     feed_dict = {left_image_holder:b_l_val, right_image_holder:b_r_val, label_holder:np.zeros(batch_size_val)})
+                            left_o,right_o = sess.run([left_train_output,right_train_output],
+                                                                     feed_dict = {left_image_holder:b_l_val, right_image_holder:b_r_val})
                             left_full = np.vstack((left_full,left_o))
                             right_full = np.vstack((right_full,right_o)) 
                             class_id_batch = generator.same_class(val_batch_non_matching)
                             class_id = np.vstack((class_id,class_id_batch))
-                            current_val_loss += val_loss_value
+#                            current_val_loss += val_loss_value
                             
                     val_loss_over_time.append(current_val_loss*batch_size_val/np.shape(b_sim_full)[0])
                     precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = ce.get_test_diagnostics(left_full,right_full, b_sim_full,threshold, class_id)
