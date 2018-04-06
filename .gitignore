@@ -6,3 +6,5 @@ Literature/
 *.pk1
 train_models*/
 models*/
+*/test.py
+.directory
