@@ -27,40 +27,6 @@ def adjust_contrast(input_image, output_image, factor):
 #    out.save(output_image)
     return out
 
-def fingerprint_parser(index_file_dir, index_file_name):
-    """ Parser for Precise Biometrics fingerprint database with alignment data.
-    
-    Input:
-    index_file_dir - directory of the index file (ending with a forward slash "/")
-    index_file_name - name of the index file
-    Returns: lists with information used in the siamese network for fingerprint verification    
-    """
-    person_id = []
-    finger_id = []
-    fingerprints = []
-    translation = []
-    rotation = []
-    counter = 0
-
-    with open(index_file_dir + index_file_name,"r") as file:
-        for line in file:
-            words = re.split("\t",line)
-            if len(words) > 4 and words[0] != "#":
-                if len(words[4]) > 40: # only consider data that contains alignment information 
-                    last_word = re.split(":",words[-1])
-                    alignment_word = last_word[-1].split()
-                    person_id.append(int(words[0]))
-                    finger_id.append(int(words[1]))
-                    fingerprint_path = last_word[0].strip()
-#                    if counter % 100 == 0:
-#                        print(counter)
-                    finger = imio.imread(index_file_dir + fingerprint_path)
-                    fingerprints.append(np.ndarray.flatten(np.array(finger)))
-                    translation.append([int(alignment_word[1]),int(alignment_word[2])])
-                    rotation.append(int(alignment_word[3]))
-                    counter += 1
-                
-    return person_id, finger_id, fingerprints, translation, rotation
 
 def enhance_database(image_path, output_path, contrast_factor):
     
@@ -71,7 +37,7 @@ def enhance_database(image_path, output_path, contrast_factor):
     try:
         img = scipy.ndimage.imread(image_path)
     except OSError as ex:
-        print('Could not find any filed named' + image_path)
+        print('Could not find any file named:  ' + image_path)
         return
         
 #    if(len(img.shape)>2):

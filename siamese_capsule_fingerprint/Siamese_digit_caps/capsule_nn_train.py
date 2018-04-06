@@ -73,7 +73,7 @@ def main(argv):
     image_dims = np.shape(generator.train_data)
     
     # parameters for training
-    batch_size_train = 200    # OBS! Has to be multiple of 2
+    batch_size_train = 10    # OBS! Has to be multiple of 2
     train_itr = 500000000
     
     learning_rate = 0.000001
@@ -81,18 +81,18 @@ def main(argv):
     
     # Hyper parameters
     routing_iterations = 3
-    digit_caps_classes = 40
+    digit_caps_classes = 100
     digit_caps_dims = 8
     
     caps1_n_maps = 16 
     caps1_n_dims = 8
     
     # Paramters for validation set
-    batch_size_val = 200
+    batch_size_val = 10
     val_itr = 200
     threshold = 0.5
     thresh_step = 0.001
-    nbr_val_itr = 1
+    nbr_val_itr = 10
     
     save_itr = 3000 # frequency in which the model is saved
 
@@ -130,11 +130,14 @@ def main(argv):
             image_right= tf.placeholder(dtype=tf.float32, shape = shape, name ="image_right")
             
             # Create loss function
-            margin = tf.constant(4.0)
+            '''Contrastive loss'''
+#            margin = tf.constant(3.0)
             train_loss = cu.contrastive_caps_loss(left_train_output, right_train_output, label_holder, margin)
+            '''Scaled pair loss'''
+#            train_loss = cu.scaled_pair_loss(left_train_output, right_train_output, label_holder)
             
             # Add reconstruction loss
-            alpha = tf.constant(1.0)      # Scaling parameter of reconstructions contribution to the total loss
+            alpha = tf.constant(0.2)      # Scaling parameter of reconstructions contribution to the total loss
             train_loss += cu.reconstruction_loss(left_image_holder, right_image_holder, reconstruct_left, reconstruct_right, alpha)
 #            train_loss += cu.reconstruction_loss(left_image_holder, right_image_holder, image_left, image_right, alpha)
             
@@ -390,9 +393,9 @@ def main(argv):
             reconstruct_images_left = np.reshape(reconstruct_images_left, (-1,192,192))
             reconstruct_images_right = np.reshape(reconstruct_images_right, (-1,192,192))
             for k in range(10):
-                plt.imshow(reconstruct_images_left[k])
+                plt.imshow(reconstruct_images_left[k],cmap='Greys_r')
                 plt.show()
-                plt.imshow(b_l_train[k,:,:,0])
+                plt.imshow(b_l_train[k,:,:,0],cmap='Greys_r')
                 plt.show()
                 
                 

@@ -51,10 +51,10 @@ def capsule_net(input, routing_iterations, digit_caps_classes, digit_caps_dims, 
         kernel_regularizer = tf.contrib.layers.l2_regularizer(0.1),
         name="conv1")
     
-    net = tf.layers.max_pooling2d(
-        inputs = net, 
-        pool_size = [2,2],
-        strides = 2)
+#    net = tf.layers.max_pooling2d(
+#        inputs = net, 
+#        pool_size = [2,2],
+#        strides = 2)
     
     net = tf.layers.conv2d(
         inputs = net,
