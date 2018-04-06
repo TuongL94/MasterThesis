@@ -73,25 +73,25 @@ def main(argv):
     image_dims = np.shape(generator.train_data)
     
     # parameters for training
-    batch_size_train = 400    # OBS! Has to be multiple of 2
+    batch_size_train = 200    # OBS! Has to be multiple of 2
     train_itr = 500000000
     
     learning_rate = 0.000001
     momentum = 0.99
     
     # Hyper parameters
-    routing_iterations = 2
-    digit_caps_classes = 20
+    routing_iterations = 3
+    digit_caps_classes = 40
     digit_caps_dims = 8
     
     caps1_n_maps = 16 
     caps1_n_dims = 8
     
     # Paramters for validation set
-    batch_size_val = 400
+    batch_size_val = 200
     val_itr = 200
-    threshold = 0.001
-    thresh_step = 0.0001
+    threshold = 0.5
+    thresh_step = 0.001
     nbr_val_itr = 1
     
     save_itr = 3000 # frequency in which the model is saved
@@ -134,16 +134,14 @@ def main(argv):
             train_loss = cu.contrastive_caps_loss(left_train_output, right_train_output, label_holder, margin)
             
             # Add reconstruction loss
-            alpha = 0.005      # Scaling parameter of reconstructions contribution to the total loss
+            alpha = tf.constant(1.0)      # Scaling parameter of reconstructions contribution to the total loss
             train_loss += cu.reconstruction_loss(left_image_holder, right_image_holder, reconstruct_left, reconstruct_right, alpha)
 #            train_loss += cu.reconstruction_loss(left_image_holder, right_image_holder, image_left, image_right, alpha)
             
-#            reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-#            margin = tf.constant(4.0) # margin for contrastive loss
-#            train_loss = sm.triplet_loss(anchor_train_output,pos_train_output,neg_train_output,margin)
-#            # add regularization terms to triplet loss function
-#            for i in range(len(reg_losses)):
-#                train_loss += reg_losses[i]
+            # Add regularization terms to loss function
+            reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+            for i in range(len(reg_losses)):
+                train_loss += reg_losses[i]
             
 #            train_loss = cu.scaled_pair_loss(left_train_output, right_train_output, label_holder)
             

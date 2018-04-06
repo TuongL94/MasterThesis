@@ -26,6 +26,7 @@ def primary_caps(input, kernel_size, capsules, cap_dim, strides, padding, name="
             padding = padding,
             activation = tf.nn.relu,
             reuse = tf.AUTO_REUSE,
+#            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
             name = name)
         
 #    net_shape = net.get_shape()
@@ -47,6 +48,7 @@ def capsule_net(input, routing_iterations, digit_caps_classes, digit_caps_dims, 
         padding = "valid",
         activation = tf.nn.relu,
         reuse = tf.AUTO_REUSE,
+        kernel_regularizer = tf.contrib.layers.l2_regularizer(0.1),
         name="conv1")
     
     net = tf.layers.max_pooling2d(
@@ -62,6 +64,7 @@ def capsule_net(input, routing_iterations, digit_caps_classes, digit_caps_dims, 
         padding = "valid",
         activation = tf.nn.relu,
         reuse = tf.AUTO_REUSE,
+        kernel_regularizer = tf.contrib.layers.l2_regularizer(0.1),
         name="conv2")
     
     net = primary_caps(

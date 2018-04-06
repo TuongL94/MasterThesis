@@ -73,7 +73,9 @@ def ridge_filter(im, orient, freq, kx, ky):
 
     # Generate filters corresponding to these distinct frequencies and
     # orientations in 'angleInc' increments.
-    
+    if len(unfreq) == 0:
+        unfreq = np.array([1])
+        
     sigmax = 1/unfreq[0]*kx;
     sigmay = 1/unfreq[0]*ky;
     
