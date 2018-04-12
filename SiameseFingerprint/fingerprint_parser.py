@@ -46,6 +46,7 @@ def fingerprint_parser(index_file_dir, index_file_name):
                 
     return person_id, finger_id, fingerprints, translation, rotation
     
+
 def main(argv):
     dir_path = os.path.dirname(os.path.realpath(__file__)) # directory of file being executed
     person_id, finger_id, fingerprints, translation, rotation = fingerprint_parser(argv[0],argv[1])
@@ -58,11 +59,11 @@ def main(argv):
     rotation = np.array(rotation,dtype='float32')/65536*360 
 
     # save paths
-    filename_1 = dir_path + "/person_id_gt_vt"
-    filename_2 = dir_path + "/finger_id_gt_vt"
-    filename_3 = dir_path + "/fingerprints_gt_vt" 
-    filename_4 = dir_path + "/translation_gt_vt" 
-    filename_5 = dir_path + "/rotation_gt_vt" 
+    filename_1 = dir_path + "/person_id_gabor"
+    filename_2 = dir_path + "/finger_id_gabor"
+    filename_3 = dir_path + "/fingerprints_gabor" 
+    filename_4 = dir_path + "/translation_gabor" 
+    filename_5 = dir_path + "/rotation_gabor" 
     
     # saves numpy arrays
     np.save(filename_1,person_id)
@@ -70,6 +71,7 @@ def main(argv):
     np.save(filename_3,fingerprints)
     np.save(filename_4, translation)
     np.save(filename_5, rotation)
+    
     
 if __name__ == "__main__":
     main(sys.argv[1:])

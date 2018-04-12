@@ -47,7 +47,7 @@ def main(argv):
 
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
-    if not os.path.exists(data_path + "generator_data.pk1"):
+    if not os.path.exists(data_path + "generator_data_gabor.pk1"):
         with open(data_path + "generator_data.pk1", "wb") as output:
             # Load fingerprint labels and data from file with names
             finger_id = np.load(data_path + "finger_id_mt_vt_112.npy")
@@ -73,7 +73,7 @@ def main(argv):
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
         # Load generator
-        with open(data_path + "generator_data.pk1", "rb") as input:
+        with open(data_path + "generator_data_gabor.pk1", "rb") as input:
             generator = pickle.load(input)
              
     # parameters for training
@@ -85,7 +85,7 @@ def main(argv):
    
     # parameters for validation
     batch_size_val = 200
-    val_itr = 200 # frequency in which to use validation data for computations
+    val_itr = 2000 # frequency in which to use validation data for computations
     
     # parameters for evaluation
     batch_size_test = 200
