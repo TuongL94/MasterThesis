@@ -131,7 +131,7 @@ def main(argv):
             
             # Create loss function
             '''Contrastive loss'''
-#            margin = tf.constant(3.0)
+            margin = tf.constant(3.0)
             train_loss = cu.contrastive_caps_loss(left_train_output, right_train_output, label_holder, margin)
             '''Scaled pair loss'''
 #            train_loss = cu.scaled_pair_loss(left_train_output, right_train_output, label_holder)

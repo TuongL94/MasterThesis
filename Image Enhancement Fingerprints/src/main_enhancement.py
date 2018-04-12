@@ -32,8 +32,8 @@ if(len(sys.argv)<2):
     print('loading sample image');
     img_name = 'GT2.png'
     try:
-#        img = scipy.ndimage.imread('../images/' + img_name);
-        img = scipy.ndimage.imread('/home/PRECISE/exjobb/Documents/MasterThesis/PB_database/CNN/PBFPC1020/PNG_192x192_v8_db/000000001/._GT_000000001-01-000.png')
+        img = scipy.ndimage.imread('../images/' + img_name);
+#        img = scipy.ndimage.imread('/home/PRECISE/exjobb/Documents/MasterThesis/PB_database/CNN/PBFPC1020/PNG_192x192_v8_db/000000001/._GT_000000001-01-000.png')
     except OSError as ex:
         print('Image file does not exist')
         
