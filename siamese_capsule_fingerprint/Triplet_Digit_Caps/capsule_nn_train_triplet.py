@@ -41,8 +41,8 @@ def main(argv):
 
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
-    if not os.path.exists(data_path + "generator_data.pk1"):
-        with open(data_path + "generator_data.pk1", "wb") as output:
+    if not os.path.exists(data_path + "generator_data_triplet.pk1"):
+        with open(data_path + "generator_data_triplet.pk1", "wb") as output:
             # Load fingerprint labels and data from file with names
             finger_id = np.load(data_path + "finger_id.npy")
             person_id = np.load(data_path + "person_id.npy")
@@ -67,7 +67,7 @@ def main(argv):
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
         # Load generator
-        with open(data_path + "generator_data.pk1", 'rb') as input:
+        with open(data_path + "generator_data_triplet.pk1", 'rb') as input:
             generator = pickle.load(input)
     
     image_dims = np.shape(generator.train_data)
@@ -75,9 +75,6 @@ def main(argv):
     # parameters for training
     batch_size_train = 10    # OBS! Has to be multiple of 2
     train_itr = 500000000
-    
-    learning_rate = 0.000001
-    momentum = 0.99
     
     # Hyper parameters
     routing_iterations = 3
@@ -89,10 +86,19 @@ def main(argv):
     
     # Paramters for validation set
     batch_size_val = 10
-    val_itr = 200
+    validation_at_itr = 30
     threshold = 0.5
-    thresh_step = 0.001
-    nbr_val_itr = 10
+    thresh_step = 0.05
+    nbr_val_itr = 5
+    
+    # Adam optimizer
+    learning_rate = 0.0001
+    beta1 = 0.99
+    beta2 =0.99
+    
+    # Momentum optimizer
+#    learning_rate = 0.0001
+#    momentum = 0.99
     
     save_itr = 3000 # frequency in which the model is saved
 
@@ -106,7 +112,7 @@ def main(argv):
         
         with tf.device(gpu_device_name):
             # create placeholders
-            anchor_holder, positive_holder, negative_holder, label_holder, handle = cu.placeholder_inputs(image_dims)
+            anchor_holder, positive_holder, negative_holder, handle = cu.placeholder_inputs(image_dims)
               
             # Create CapsNet graph
             anchor_output = cm.capsule_net(anchor_holder, routing_iterations, digit_caps_classes, digit_caps_dims, 
@@ -182,7 +188,7 @@ def main(argv):
             anchor_holder = g.get_tensor_by_name("anchor_holder:0")
             positive_holder = g.get_tensor_by_name("positive_holder:0")
             negative_holder = g.get_tensor_by_name("negative_holder:0")
-            label_holder = g.get_tensor_by_name("label_holder:0")
+#            label_holder = g.get_tensor_by_name("label_holder:0")
             train_loss = tf.get_collection("train_loss")[0]
             anchor_output = tf.get_collection("anchor_output")[0]
             positive_output = tf.get_collection("positive_output")[0]
@@ -199,10 +205,10 @@ def main(argv):
     
     with tf.device(gpu_device_name):
         # Setup tensorflow's batch generator
-        train_dataset = tf.data.Dataset.from_tensor_slices(generator.match_train)
-        train_dataset = train_dataset.shuffle(buffer_size=np.shape(generator.match_train)[0])
+        train_dataset = tf.data.Dataset.from_tensor_slices(generator.anchors_train)
+        train_dataset = train_dataset.shuffle(buffer_size=np.shape(generator.anchors_train)[0])
         train_dataset = train_dataset.repeat()
-        train_dataset = train_dataset.batch(batch_size_train // 2)
+        train_dataset = train_dataset.batch(batch_size_train)
         
         train_iterator = train_dataset.make_one_shot_iterator()
         iterator = tf.data.Iterator.from_string_handle(handle, train_dataset.output_types)
@@ -215,8 +221,8 @@ def main(argv):
         
 #        train_non_match_iterator = train_non_match_dataset.make_one_shot_iterator()
         
-        val_dataset_length = np.shape(generator.match_val)[0]
-        val_dataset = tf.data.Dataset.from_tensor_slices(generator.match_val)
+        val_dataset_length = np.shape(generator.anchors_val)[0]
+        val_dataset = tf.data.Dataset.from_tensor_slices(generator.anchors_val)
         val_dataset = val_dataset.shuffle(buffer_size = val_dataset_length)
         val_dataset = val_dataset.repeat()
         val_dataset = val_dataset.batch(batch_size_val)
@@ -242,7 +248,7 @@ def main(argv):
 #            sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
             if is_model_new:
 #                train_op = cu.momentum_training(train_loss, learning_rate, momentum)
-                optimizer = tf.train.AdamOptimizer()
+                optimizer = tf.train.AdamOptimizer(learning_rate = learning_rate, beta1 = beta1, beta2 = beta2)
                 train_op = optimizer.minimize(train_loss, name="train_op")
                 sess.run(tf.global_variables_initializer()) # initialize all trainable parameters
                 tf.add_to_collection("train_op",train_op)
@@ -287,22 +293,30 @@ def main(argv):
             # training loop 
             precision_over_time = []
             val_loss_over_time = []
+            fpr_over_time = []
+            recall_over_time = []
             start_time_train = time.time()
             for i in range(1, train_itr + 1):
                 train_batch = sess.run(next_element,feed_dict={handle:train_handle})
-                gt_positive = np.ones((np.shape(train_batch)[0]),dtype=np.int32)
+#                gt_positive = np.ones((np.shape(train_batch)[0]),dtype=np.int32)
 #                train_batch_non_matching = sess.run(next_element,feed_dict={handle:train_non_match_handle})
-                gt_negative = np.zeros((np.shape(train_batch)[0]),dtype=np.int32)
+#                gt_negative = np.zeros((np.shape(train_batch)[0]),dtype=np.int32)
                 
 #                train_batch = np.append(train_batch,train_batch_non_matching,axis=0)
-                gt_train_batch = np.append(gt_positive,gt_negative,axis=0)
+#                gt_train_batch = np.append(gt_positive,gt_negative,axis=0)
                 permutation = np.random.permutation(batch_size_train)
                 train_batch = np.take(train_batch,permutation,axis=0)
-                gt_train_batch = np.take(gt_train_batch,permutation,axis=0)
+#                gt_train_batch = np.take(gt_train_batch,permutation,axis=0)
                 
                 # Randomize rotation of batch              
                 rnd_rotation = np.random.randint(0,generator.rotation_res)
-                b_l_train,b_r_train = generator.get_pairs(generator.train_data[rnd_rotation],train_batch)
+#                b_l_train,b_r_train = generator.get_pairs(generator.train_data[rnd_rotation],train_batch)
+                b_anch_train,b_pos_train,b_neg_train = generator.get_triplet(generator.train_data[rnd_rotation], generator.triplets_train, train_batch)
+                
+                _,train_loss_value, summary = sess.run([train_op, train_loss, summary_op],
+                                                       feed_dict={anchor_holder:b_anch_train, 
+                                                                  positive_holder:b_pos_train, 
+                                                                  negative_holder:b_neg_train})
                 
 #                _, train_loss_value, summary = sess.run([train_op, train_loss, summary_op], 
 #                                                        feed_dict={anchor_holder:b_l_train, 
@@ -345,55 +359,51 @@ def main(argv):
                 
                 
                 # Use validation data set to tune hyperparameters (Classification threshold)
-#                if i % val_itr == 0:
-#                    current_val_loss = 0
-#    #                b_sim_val_matching = np.repeat(np.ones((batch_size_val*int(val_dataset_length/batch_size_val),1)),generator.rotation_res,axis=0)
-#    #                b_sim_val_non_matching = np.repeat(np.zeros((batch_size_val*int(val_dataset_length/batch_size_val),1)),generator.rotation_res,axis=0)
-#    #                b_sim_full = np.append(b_sim_val_matching,b_sim_val_non_matching,axis=0)
-#                    b_sim_val_matching = np.repeat(np.ones(batch_size_val*nbr_val_itr),generator.rotation_res,axis=0)
-#                    b_sim_val_non_matching = np.repeat(np.zeros((batch_size_val*nbr_val_itr)),generator.rotation_res,axis=0)
-#                    b_sim_full = np.append(b_sim_val_matching,b_sim_val_non_matching,axis=0)
-#                    for j in range(nbr_val_itr):
-#                        val_batch_matching = sess.run(next_element,feed_dict={handle:val_match_handle})
-#                        class_id_batch = generator.same_class(val_batch_matching)
-#                        for k in range(generator.rotation_res):
-#                            b_l_val,b_r_val = generator.get_pairs(generator.val_data[k],val_batch_matching) 
-##                            left_o,right_o,val_loss_value = sess.run([anchor_output,positive_output, train_loss],
-##                                                                     feed_dict = {anchor_holder:b_l_val, positive_holder:b_r_val, label_holder:np.ones(batch_size_val)})
-#                            left_o,right_o = sess.run([anchor_output,positive_output],
-#                                                                     feed_dict = {anchor_holder:b_l_val, positive_holder:b_r_val})
-##                            current_val_loss += val_loss_value
-#                            if j == 0 and k == 0:
-#                                left_full = left_o
-#                                right_full = right_o
+                if i % validation_at_itr == 0:
+                    current_val_loss = 0
+                    labels = np.vstack((np.ones((batch_size_val,1)), np.zeros((batch_size_val,1))))
+                    for j in range(nbr_val_itr):
+                        val_batch_anchors = sess.run(next_element,feed_dict={handle:val_handle})
+#                        class_id_batch = generator.same_class(val_batch_anchors)
+                        for k in range(generator.rotation_res):
+#                            b_l_val,b_r_val = generator.get_pairs(generator.val_data[k],val_batch_anchors) 
+#                            difficulty_lvl = np.random.randint(1,4)
+#                            b_anch_val,b_pos_val,b_neg_val= generator.get_triplet(generator.val_data[k], generator.triplets_val, val_batch_anchors, difficulty_lvl)
+                            b_anch_val,b_pos_val,b_neg_val= generator.get_triplet(generator.val_data[k], generator.triplets_val, val_batch_anchors)
+                            anchor_o,pos_o,neg_o,val_loss_value = sess.run([anchor_output,positive_output, negative_output,train_loss],
+                                                                           feed_dict = {anchor_holder:b_anch_val, 
+                                                                                        positive_holder:b_pos_val, 
+                                                                                        negative_holder:b_neg_val})
+                            current_val_loss += val_loss_value
+                            if j == 0 and k == 0:
+                                anchor_full = np.vstack((anchor_o,anchor_o))
+                                candidates_full = np.vstack((pos_o,neg_o))
+                                labels_full = labels
 #                                class_id = class_id_batch
-#                            else:
-#                                left_full = np.vstack((left_full,left_o))
-#                                right_full = np.vstack((right_full,right_o))
+                            else:
+                                anchor_full = np.vstack((anchor_full,anchor_o,anchor_o))
+                                candidates_full = np.vstack((candidates_full,pos_o,neg_o))
+                                labels_full = np.vstack((labels_full,labels))
 #                                class_id = np.vstack((class_id, class_id_batch))
-#                        
-#                    for j in range(nbr_val_itr):
-#                        val_batch_non_matching = sess.run(next_element,feed_dict={handle:val_non_match_handle})
-#                        for k in range(generator.rotation_res):
-#                            b_l_val,b_r_val = generator.get_pairs(generator.val_data[0],val_batch_non_matching) 
-##                            left_o,right_o,val_loss_value = sess.run([anchor_output,positive_output, train_loss],
-##                                                                     feed_dict = {anchor_holder:b_l_val, positive_holder:b_r_val, label_holder:np.zeros(batch_size_val)})
-#                            left_o,right_o = sess.run([anchor_output,positive_output],
-#                                                                     feed_dict = {anchor_holder:b_l_val, positive_holder:b_r_val})
-#                            left_full = np.vstack((left_full,left_o))
-#                            right_full = np.vstack((right_full,right_o)) 
-#                            class_id_batch = generator.same_class(val_batch_non_matching)
-#                            class_id = np.vstack((class_id,class_id_batch))
-##                            current_val_loss += val_loss_value
-#                            
-#                    val_loss_over_time.append(current_val_loss*batch_size_val/np.shape(b_sim_full)[0])
-#                    precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = ce.get_test_diagnostics(left_full,right_full, b_sim_full,threshold, class_id)
-#                
+                    
+                        
+                    val_loss_over_time.append(current_val_loss*batch_size_val/np.shape(labels_full)[0])
+                    precision, false_pos, false_neg, recall, fnr, fpr, _ = ce.get_test_diagnostics(anchor_full,candidates_full, labels_full,threshold)
+            
 #                    if false_pos > false_neg:   # Can use inter_class_errors to tune the threshold further
 #                        threshold -= thresh_step
 #                    else:
 #                        threshold += thresh_step
 #                    precision_over_time.append(precision)
+                    
+                    if fpr > 0.01:
+                        threshold -= thresh_step
+                    else:
+                        threshold += thresh_step
+                    fpr_over_time.append(fpr)
+                    recall_over_time.append(recall)
+                
+                
                     
                 train_writer.add_summary(summary, i)
             
@@ -409,12 +419,20 @@ def main(argv):
 #                plt.show()
                 
                 
-        # Plot precision over time
-        time_points = list(range(len(precision_over_time)))
-        plt.plot(time_points, precision_over_time)
-        plt.title("Precision over time")
+        # Plot false positive rate over time
+        time_points = list(range(len(fpr_over_time)))
+        plt.plot(time_points, fpr_over_time)
+        plt.title("False Positive Rate over time")
         plt.xlabel("iteration")
-        plt.ylabel("precision")
+        plt.ylabel("False Positive Rate")
+        plt.show()
+        
+        # Plot recall over time
+        time_points = list(range(len(recall_over_time)))
+        plt.plot(time_points, recall_over_time)
+        plt.title("Recall over time")
+        plt.xlabel("iteration")
+        plt.ylabel("Recall")
         plt.show()
 
         print("Suggested threshold from hyperparameter tuning: %f" % threshold)
@@ -423,7 +441,7 @@ def main(argv):
         
         # Plot validation loss over time
         plt.figure()
-        plt.plot(list(range(val_itr,val_itr*len(val_loss_over_time)+1,val_itr)),val_loss_over_time)
+        plt.plot(list(range(validation_at_itr,validation_at_itr*len(val_loss_over_time)+1,validation_at_itr)),val_loss_over_time)
         plt.title("Validation loss (contrastive loss) over time")
         plt.xlabel("iteration")
         plt.ylabel("validation loss")

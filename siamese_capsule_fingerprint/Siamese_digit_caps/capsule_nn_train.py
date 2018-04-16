@@ -89,7 +89,7 @@ def main(argv):
     
     # Paramters for validation set
     batch_size_val = 10
-    val_itr = 200
+    validation_at_itr = 1
     threshold = 0.5
     thresh_step = 0.001
     nbr_val_itr = 10
@@ -335,7 +335,7 @@ def main(argv):
                 
                 
                 # Use validation data set to tune hyperparameters (Classification threshold)
-                if i % val_itr == 0:
+                if i % validation_at_itr == 0:
                     current_val_loss = 0
     #                b_sim_val_matching = np.repeat(np.ones((batch_size_val*int(val_match_dataset_length/batch_size_val),1)),generator.rotation_res,axis=0)
     #                b_sim_val_non_matching = np.repeat(np.zeros((batch_size_val*int(val_match_dataset_length/batch_size_val),1)),generator.rotation_res,axis=0)

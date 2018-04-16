@@ -118,7 +118,7 @@ def placeholder_inputs(image_dims):
     anchor_holder = tf.placeholder(dtype=tf.float32, shape=[None, image_dims[2], image_dims[3], image_dims[-1]], name="anchor_holder") 
     positive_holder = tf.placeholder(dtype=tf.float32, shape=[None, image_dims[2], image_dims[3], image_dims[-1]], name="positive_holder") 
     negative_holder = tf.placeholder(dtype=tf.float32, shape=[None, image_dims[2], image_dims[3], image_dims[-1]], name="negative_holder") 
-    label_holder = tf.placeholder(dtype=tf.float32, shape=[None], name="label_holder")
+#    label_holder = tf.placeholder(dtype=tf.float32, shape=[None], name="label_holder")
     handle = tf.placeholder(tf.string, shape=[],name="handle")
     
-    return anchor_holder, positive_holder, negative_holder, label_holder, handle
+    return anchor_holder, positive_holder, negative_holder, handle

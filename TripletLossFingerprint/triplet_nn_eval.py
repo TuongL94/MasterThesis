@@ -161,6 +161,8 @@ def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_
 #                        
 #                        class_id_batch = generator.same_class(test_batch,test=True)
 #                        class_id = np.vstack((class_id, class_id_batch))
+                            
+                            
 
                 
                 precision, false_pos, false_neg, recall, fnr, fpr = get_test_diagnostics(left_full,right_full,labels_full,threshold)
