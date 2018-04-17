@@ -147,11 +147,11 @@ def evaluate_siamese_network(generator, batch_size, threshold, eval_itr, output_
             left_test = g.get_tensor_by_name("left_test:0")
             right_test = g.get_tensor_by_name("right_test:0")
             
-#            left_test_inference = tf.get_collection("left_test_output")[0]
-#            right_test_inference = tf.get_collection("right_test_output")[0]
+            left_test_inference = tf.get_collection("left_test_output")[0]
+            right_test_inference = tf.get_collection("right_test_output")[0]
             
-            predictions = tf.get_collection("test_predictions")[0]
-            decision_test_output = tf.get_collection("decision_test_output")[0]
+#            predictions = tf.get_collection("test_predictions")[0]
+#            decision_test_output = tf.get_collection("decision_test_output")[0]
             handle= g.get_tensor_by_name("handle:0")
         
         config = tf.ConfigProto(allow_soft_placement=True)
@@ -186,47 +186,47 @@ def evaluate_siamese_network(generator, batch_size, threshold, eval_itr, output_
                     for j in range(generator.rotation_res):
                         b_l_test,b_r_test = generator.get_pairs(generator.test_data[j],test_batch)
                         class_id_batch = generator.same_class(test_batch,test=True)
-#                        left_o,right_o = sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_l_test, right_test:b_r_test})
+                        left_o,right_o = sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_l_test, right_test:b_r_test})
                         
-                        preds, decision_o = sess.run([predictions, decision_test_output],feed_dict = {left_test:b_l_test, right_test:b_r_test})
+#                        preds, decision_o = sess.run([predictions, decision_test_output],feed_dict = {left_test:b_l_test, right_test:b_r_test})
 #                        preds= sess.run(predictions,feed_dict = {left_test:b_l_test, right_test:b_r_test})
-#                        if i == 0 and j == 0:
-#                            left_full = left_o
-#                            right_full = right_o
-#                            class_id = class_id_batch
-#                        else:
-#                            left_full = np.vstack((left_full,left_o))
-#                            right_full = np.vstack((right_full,right_o))
-#                            class_id = np.vstack((class_id, class_id_batch))
-                        
                         if i == 0 and j == 0:
-                            preds_full = preds
-                            decision_o_full = decision_o
+                            left_full = left_o
+                            right_full = right_o
                             class_id = class_id_batch
                         else:
-                            preds_full = np.vstack((preds_full,preds))
+                            left_full = np.vstack((left_full,left_o))
+                            right_full = np.vstack((right_full,right_o))
                             class_id = np.vstack((class_id, class_id_batch))
-                            decision_o_full = np.append(decision_o_full, decision_o, axis=0)
+                        
+#                        if i == 0 and j == 0:
+#                            preds_full = preds
+#                            decision_o_full = decision_o
+#                            class_id = class_id_batch
+#                        else:
+#                            preds_full = np.vstack((preds_full,preds))
+#                            class_id = np.vstack((class_id, class_id_batch))
+#                            decision_o_full = np.append(decision_o_full, decision_o, axis=0)
     
                 for i in range(eval_itr):
                     test_batch = sess.run(next_element,feed_dict={handle:test_non_match_handle})
                     for j in range(generator.rotation_res):
                         b_l_test,b_r_test = generator.get_pairs(generator.test_data[j],test_batch) 
-#                        left_o,right_o = sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_l_test, right_test:b_r_test})
-#                        left_full = np.vstack((left_full,left_o))
-#                        right_full = np.vstack((right_full,right_o))
+                        left_o,right_o = sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_l_test, right_test:b_r_test})
+                        left_full = np.vstack((left_full,left_o))
+                        right_full = np.vstack((right_full,right_o))
                         
-                        preds = sess.run(predictions,feed_dict = {left_test:b_l_test, right_test:b_r_test})
-                        preds_full = np.vstack((preds_full,preds))
-                        decision_o_full = np.append(decision_o_full, decision_o, axis=0)
+#                        preds = sess.run(predictions,feed_dict = {left_test:b_l_test, right_test:b_r_test})
+#                        preds_full = np.vstack((preds_full,preds))
+#                        decision_o_full = np.append(decision_o_full, decision_o, axis=0)
                         
                         class_id_batch = generator.same_class(test_batch,test=True)
                         class_id = np.vstack((class_id, class_id_batch))
 
                 
-#                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = get_test_diagnostics(left_full,right_full,sim_full,threshold,class_id)
+                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = get_test_diagnostics(left_full,right_full,sim_full,threshold,class_id)
     
-                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = get_test_diagnostics_2(preds_full,sim_full,class_id)
+#                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = get_test_diagnostics_2(preds_full,sim_full,class_id)
                 
                 print("Precision: %f " % precision)
                 print("# False positive: %d " % false_pos)
@@ -243,16 +243,16 @@ def main(argv):
     """ Runs evaluation on trained network 
     """
     # Set parameters for evaluation
-    threshold = 0.29
-    batch_size = 200
-    eval_itr = 17
+    threshold = 0.4
+    batch_size = 50
+    eval_itr = 11
     
     output_dir = argv[0]# directory where the model is saved
     data_path =  argv[1]
     gpu_device_name = argv[-1] 
    
     # Load generator
-    with open(data_path + "generator_data_old_rotdiff5_transdiff30.pk1", "rb") as input:
+    with open(data_path + "generator_data.pk1", "rb") as input:
         generator = pickle.load(input)
    
     evaluate_siamese_network(generator, batch_size, threshold, eval_itr, output_dir, gpu_device_name)

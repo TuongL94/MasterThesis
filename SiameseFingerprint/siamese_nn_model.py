@@ -15,6 +15,7 @@ def inference(input, training = True):
 #    output = tf.layers.batch_normalization(
 #            input,
 #            training = training,
+#            name = "batch_norm_1",
 #            reuse = tf.AUTO_REUSE)
     
     # Convolutional layer 1
@@ -27,7 +28,7 @@ def inference(input, training = True):
             activation = tf.nn.leaky_relu,
             reuse = tf.AUTO_REUSE,
 #            kernel_initializer = tf.random_uniform_initializer(minval=-1, maxval=1),
-            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
+            kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
             name="conv1") 
         
     # Pooling layer 1
@@ -38,6 +39,7 @@ def inference(input, training = True):
 #    output = tf.layers.batch_normalization(
 #        output,
 #        training = training,
+#        name = "batch_norm_2",
 #        reuse = tf.AUTO_REUSE)
     
     # Convolutional Layer 2
@@ -50,7 +52,7 @@ def inference(input, training = True):
             activation = tf.nn.leaky_relu,
             reuse = tf.AUTO_REUSE,
 #            kernel_initializer = tf.random_uniform_initializer(minval=-1, maxval=1),
-            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
+            kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
             name="conv2")
     
 #    output = tf.layers.dropout(
@@ -67,6 +69,7 @@ def inference(input, training = True):
 #    output = tf.layers.batch_normalization(
 #        output,
 #        training = training,
+#        name = "batch_norm_3",
 #        reuse = tf.AUTO_REUSE)
     
     # Convolutional Layer 3
@@ -77,17 +80,18 @@ def inference(input, training = True):
             padding = "same",
             activation = tf.nn.leaky_relu,
             reuse = tf.AUTO_REUSE,
-            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
+            kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
             name="conv3")
     
-#    output = tf.layers.dropout(
-#            output,
-#            rate = 0.5,
-#            training = training)
-        
+##    output = tf.layers.dropout(
+##            output,
+##            rate = 0.5,
+##            training = training)
+#        
 #    output = tf.layers.batch_normalization(
 #        output,
 #        training = training,
+#        name = "batch_norm_4",
 #        reuse = tf.AUTO_REUSE)
     
     # Convolutional Layer 4
@@ -98,7 +102,7 @@ def inference(input, training = True):
             padding = "same",
             activation = tf.nn.leaky_relu,
             reuse = tf.AUTO_REUSE,
-            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
+            kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
             name="conv4")
     
     output = tf.layers.flatten(
@@ -107,15 +111,16 @@ def inference(input, training = True):
 #    output = tf.layers.batch_normalization(
 #        output,
 #        training = training,
+#        name = "batch_norm_5",
 #        reuse = tf.AUTO_REUSE)
     
-#    output = tf.layers.dense(
-#        output,
-#        1024,
-#        activation = tf.nn.leaky_relu,
-#        reuse = tf.AUTO_REUSE,
-#        kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
-#        name="dense")
+    output = tf.layers.dense(
+        output,
+        1024,
+        activation = tf.nn.leaky_relu,
+        reuse = tf.AUTO_REUSE,
+        kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
+        name="dense")
     
 #    output = tf.layers.dropout(
 #        output,
@@ -125,6 +130,7 @@ def inference(input, training = True):
 #    output = tf.layers.batch_normalization(
 #        output,
 #        training = training,
+#        name = "batch_norm_6",
 #        reuse = tf.AUTO_REUSE)
     
     output = tf.nn.l2_normalize(
@@ -135,12 +141,20 @@ def inference(input, training = True):
     
 def decision_layer(input):
     output = tf.layers.dense(
-    input,
-    2,
-    activation = tf.sigmoid,
-    reuse = tf.AUTO_REUSE,
-#        kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
-    name="dense")
+        input,
+        128,
+        activation = tf.nn.leaky_relu,
+        reuse = tf.AUTO_REUSE,
+        kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
+        name="dense1")
+    
+    output = tf.layers.dense(
+        output,
+        2,
+        activation = tf.sigmoid,
+        reuse = tf.AUTO_REUSE,
+    #        kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
+        name="dense2")
     
     return output
         
