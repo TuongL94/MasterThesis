@@ -75,28 +75,34 @@ def main(argv):
         # Load generator
         with open(data_path + "generator_data_gabor.pk1", "rb") as input:
             generator = pickle.load(input)
-             
+#        util.get_no_matching_subset(generator, data_path, "generator_data.pk1")
+        
+    util.image_standardization(generator.train_data[0])     
+    
     # parameters for training
-    batch_size_train = 200
+    batch_size_train = 1000
     train_itr = 500000000000000000
-
-    learning_rate = 0.00001
+    
+    # margin setup for contrastive loss
+    margin = 0.5
+    margin_factor = 1.25
+    max_margin = 1.5 # maximum allowed margin value
+    margin_itr = 500 # frequency in which to increase the margin in loss function 
+    
+    learning_rate = 0.0001
     momentum = 0.99
    
     # parameters for validation
-    batch_size_val = 200
-    val_itr = 2000 # frequency in which to use validation data for computations
-    
-    # parameters for evaluation
-    batch_size_test = 200
+    batch_size_val = 471
+    val_itr = 200 # frequency in which to use validation data for computations
     threshold = 0.5    
     thresh_step = 0.01
         
     dims = np.shape(generator.train_data[0])
-    batch_sizes = [batch_size_train,batch_size_val,batch_size_test]
+#    batch_sizes = [batch_size_train,batch_size_val,batch_size_test]
     image_dims = [dims[1],dims[2],dims[3]]
     
-    save_itr = 100000 # frequency in which the model is saved
+    save_itr = 2000 # frequency in which the model is saved
     
     tf.reset_default_graph()
     
@@ -109,24 +115,44 @@ def main(argv):
         
         with tf.device(gpu_device_name):
              # create placeholders
-            left_train,right_train,label_train,left_val,right_val,label_val,left_test,right_test = su.placeholder_inputs(image_dims,batch_sizes)
+#            left_train,right_train,label_train,left_val,right_val,label_val,left_test,right_test = su.placeholder_inputs(image_dims,batch_sizes)
+            left_train,right_train,label_train,left_val,right_val,label_val,left_test,right_test = su.create_placeholders(image_dims)
             handle = tf.placeholder(tf.string, shape=[],name="handle")
+            margin_holder = tf.placeholder(tf.float32, shape=[], name="margin_holder")
                 
             left_train_output = sm.inference(left_train)            
             right_train_output = sm.inference(right_train)
+            
+#            decision_train_output = sm.decision_layer(left_train_output - right_train_output)
+            
             left_val_output = sm.inference(left_val, training = False)
             right_val_output = sm.inference(right_val, training = False)
+            
+#            decision_val_output = sm.decision_layer(left_val_output - right_val_output)
+#            val_predictions = tf.argmax(decision_val_output, axis=1)
+#            val_predictions = tf.expand_dims(val_predictions, axis=-1)
+            
             left_test_output = sm.inference(left_test, training = False)
             right_test_output = sm.inference(right_test, training = False)
             
+#            decision_test_output = sm.decision_layer(left_test_output-right_test_output)
+#            test_predictions = tf.argmax(decision_test_output, axis=1)
+#            test_predictions = tf.expand_dims(test_predictions, axis=-1)
+            
             reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-            margin = tf.constant(4.0) # margin for contrastive loss
-            train_loss = su.contrastive_loss(left_train_output,right_train_output,label_train,margin)
+#            margin = tf.constant(4.0) # margin for contrastive loss
+            train_loss = su.contrastive_loss(left_train_output,right_train_output,label_train,margin_holder)
+            
+#            pos_weight = 0.5 # <1 to decrease false positives, >1 to decrease false negatives
+#            one_hot_label_train = tf.squeeze(tf.one_hot(label_train, depth=2, dtype=tf.float32))
+#            train_loss = su.cross_entropy_loss(decision_train_output, one_hot_label_train, pos_weight)
             # add regularization terms to contrastive loss function
             for i in range(len(reg_losses)):
                 train_loss += reg_losses[i]
             
-            val_loss = su.contrastive_loss(left_val_output,right_val_output,label_val,margin)
+            val_loss = su.contrastive_loss(left_val_output,right_val_output,label_val,margin_holder)
+#            one_hot_label_val = tf.squeeze(tf.one_hot(label_val, depth=2, dtype=tf.float32))
+#            val_loss = su.cross_entropy_loss(decision_val_output, one_hot_label_val, pos_weight)
             
             tf.add_to_collection("train_loss",train_loss)
             tf.add_to_collection("val_loss",val_loss)
@@ -134,6 +160,11 @@ def main(argv):
             tf.add_to_collection("right_val_output",right_val_output)
             tf.add_to_collection("left_test_output",left_test_output)
             tf.add_to_collection("right_test_output",right_test_output)
+            
+            
+#            tf.add_to_collection("test_predictions", test_predictions)
+#            tf.add_to_collection("val_predictions", val_predictions)
+#            tf.add_to_collection("decision_test_output", decision_test_output)
             
             saver = tf.train.Saver()
 
@@ -161,12 +192,15 @@ def main(argv):
             left_val_output = tf.get_collection("left_val_output")[0]
             right_val_output = tf.get_collection("right_val_output")[0]
             
+#            val_predictions = tf.get_collection("val_predictions")[0]
+            
             left_val = g.get_tensor_by_name("left_val:0")
             right_val = g.get_tensor_by_name("right_val:0")
             label_val = g.get_tensor_by_name("label_val:0")
             val_loss = tf.get_collection("val_loss")[0]
             
             handle= g.get_tensor_by_name("handle:0")
+            margin_holder = g.get_tensor_by_name("margin_holder:0")
     
     config = tf.ConfigProto(allow_soft_placement=True)
     config.gpu_options.allow_growth = True
@@ -212,11 +246,12 @@ def main(argv):
         
         with tf.device(gpu_device_name):
             # Setup tensorflow's batch generator
+            
             train_match_dataset = tf.data.Dataset.from_tensor_slices(generator.match_train)
             train_match_dataset = train_match_dataset.shuffle(buffer_size=np.shape(generator.match_train)[0])
             train_match_dataset = train_match_dataset.repeat()
             train_match_dataset = train_match_dataset.batch(int(batch_size_train/2))
-            
+
             train_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_train)
             train_non_match_dataset = train_non_match_dataset.shuffle(buffer_size=np.shape(generator.no_match_train)[0])
             train_non_match_dataset = train_non_match_dataset.repeat()
@@ -253,6 +288,9 @@ def main(argv):
         start_time_train = time.time()
         # Training loop
         for i in range(1,train_itr + 1):
+            
+            if i % margin_itr == 0 and margin < max_margin:
+                margin *= margin_factor
             train_batch_matching = sess.run(next_element,feed_dict={handle:train_match_handle})
             b_sim_train_matching = np.ones((np.shape(train_batch_matching)[0],1),dtype=np.int32)
             train_batch_non_matching = sess.run(next_element,feed_dict={handle:train_non_match_handle})
@@ -268,7 +306,7 @@ def main(argv):
             rnd_rotation = np.random.randint(0,generator.rotation_res)
             b_l_train,b_r_train = generator.get_pairs(generator.train_data[rnd_rotation],train_batch)
             
-            _,train_loss_value, summary = sess.run([train_op, train_loss, summary_op],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train})
+            _,train_loss_value, summary = sess.run([train_op, train_loss, summary_op],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train, margin_holder:margin})
 
              # Use validation data set to tune hyperparameters (Classification threshold)
             if i % val_itr == 0:
@@ -280,8 +318,10 @@ def main(argv):
                     val_batch_matching = sess.run(next_element,feed_dict={handle:val_match_handle})
                     class_id_batch = generator.same_class(val_batch_matching)
                     for k in range(generator.rotation_res):
-                        b_l_val,b_r_val = generator.get_pairs(generator.val_data[k],val_batch_matching) 
-                        left_o,right_o,val_loss_value = sess.run([left_val_output,right_val_output, val_loss],feed_dict = {left_val:b_l_val, right_val:b_r_val, label_val:np.ones((batch_size_val,1))})
+                        b_l_val,b_r_val = generator.get_pairs(generator.val_data[k],val_batch_matching)
+                        left_o,right_o,val_loss_value = sess.run([left_val_output,right_val_output, val_loss],feed_dict = {left_val:b_l_val, right_val:b_r_val, label_val:np.ones((batch_size_val,1)), margin_holder:margin})
+                        
+#                        preds, val_loss_value = sess.run([val_predictions, val_loss],feed_dict = {left_val:b_l_val, right_val:b_r_val,label_val:np.ones((batch_size_val,1),dtype=np.int32)})
                         current_val_loss += val_loss_value
                         if j == 0 and k == 0:
                             left_full = left_o
@@ -291,21 +331,32 @@ def main(argv):
                             left_full = np.vstack((left_full,left_o))
                             right_full = np.vstack((right_full,right_o))
                             class_id = np.vstack((class_id, class_id_batch))
+                        
+                        if j == 0 and k == 0:
+#                            preds_full = preds
+                            class_id = class_id_batch
+                        else:
+#                            preds_full = np.vstack((preds_full,preds))
+                            class_id = np.vstack((class_id, class_id_batch))
                     
                 for j in range(int(val_match_dataset_length/batch_size_val)):
                     val_batch_non_matching = sess.run(next_element,feed_dict={handle:val_non_match_handle})
                     for k in range(generator.rotation_res):
-                        b_l_val,b_r_val = generator.get_pairs(generator.val_data[0],val_batch_non_matching) 
-                        left_o,right_o,val_loss_value  = sess.run([left_val_output,right_val_output,val_loss],feed_dict = {left_val:b_l_val, right_val:b_r_val, label_val:np.zeros((batch_size_val,1))})
+                        b_l_val,b_r_val = generator.get_pairs(generator.val_data[0],val_batch_non_matching)
+                        left_o,right_o,val_loss_value  = sess.run([left_val_output,right_val_output,val_loss],feed_dict = {left_val:b_l_val, right_val:b_r_val, label_val:np.zeros((batch_size_val,1)), margin_holder:margin})
                         left_full = np.vstack((left_full,left_o))
                         right_full = np.vstack((right_full,right_o)) 
+                        
+#                        preds, val_loss_value = sess.run([val_predictions, val_loss],feed_dict = {left_val:b_l_val, right_val:b_r_val, label_val:np.zeros((batch_size_val,1),dtype=np.int32)})
                         class_id_batch = generator.same_class(val_batch_non_matching)
                         class_id = np.vstack((class_id,class_id_batch))
                         current_val_loss += val_loss_value
                         
+#                        preds_full = np.vstack((preds_full,preds))
+                        
                 val_loss_over_time.append(current_val_loss*batch_size_val/np.shape(b_sim_full)[0])
                 precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = sme.get_test_diagnostics(left_full,right_full, b_sim_full,threshold, class_id)
-            
+#                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = sme.get_test_diagnostics_2(preds_full, b_sim_full, class_id)
                 if false_pos > false_neg:   # Can use inter_class_errors to tune the threshold further
                     threshold -= thresh_step
                 else:
@@ -341,6 +392,7 @@ def main(argv):
         plt.show()
 
         print("Suggested threshold from hyperparameter tuning: %f" % threshold)
+        print("Latest margin value {}".format(margin))
         if len(precision_over_time) > 0:
             print("Final (last computed) precision: %f" % precision_over_time[-1])
         

@@ -74,6 +74,7 @@ def main(argv):
     
     # parameters for training
     batch_size_train = 10    # OBS! Has to be multiple of 2
+
     train_itr = 500000000
     
     learning_rate = 0.000001
