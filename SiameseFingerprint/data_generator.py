@@ -18,20 +18,20 @@ class data_generator:
         The input data_size specifies the number of examples one wants to use
         from the original input data.
         Input:
-        images - 4D numpy array of the format [nbr_of_images,height,width,1]
-        finger_id - numpy array containing finger ids specified as integers (1,2,3,6,7,8)
-        person_id - numpy array containing person ids specified as integers [0,inf)
-        translation - 2D numpy array with rows corresponding to 2D translations
-        rotation - numpy array containing rotation of images given in degrees
-        data_size - amount of data one wants to use from original data 
+            images - 4D numpy array of the format [nbr_of_images,height,width,1]
+            finger_id - numpy array containing finger ids specified as integers (1,2,3,6,7,8)
+            person_id - numpy array containing person ids specified as integers [0,inf)
+            translation - 2D numpy array with rows corresponding to 2D translations
+            rotation - numpy array containing rotation of images given in degrees
+            data_size - amount of data one wants to use from original data
+            rotation_res - number of rotated versions of input data
         """
 
         # Split fingerprint data into training, validation and testing sets
         percentages = [0.8,0.1]
-        self.train_data, self.val_data, self.test_data = self.three_split_array(images[0:data_size,:,:,:], percentages)
+        self.train_data, self.val_data, self.test_data = self.three_split_array(images[0:data_size], percentages)
         self.train_finger_id, self.val_finger_id, self.test_finger_id = self.three_split_array(finger_id[0:data_size], percentages)
         self.train_person_id, self.val_person_id, self.test_person_id= self.three_split_array(person_id[0:data_size], percentages)
-        
         self.train_translation, self.val_translation, self.test_translation= self.three_split_array(translation[0:data_size], percentages)
         self.train_rotation, self.val_rotation, self.test_rotation= self.three_split_array(rotation[0:data_size], percentages)
         
@@ -50,22 +50,21 @@ class data_generator:
 #        # All combinations of training data
 #        self.match_train, self.no_match_train = self.all_combinations(self.breakpoints_train, self.train_rotation, self.train_translation, rot_diff, trans_diff)
 #        
-#        # All combinations of training data
+#        # All combinations of validation data
 #        self.match_val, self.no_match_val= self.all_combinations(self.breakpoints_val, self.val_rotation, self.val_translation, rot_diff, trans_diff)
 #        
-#        # All combinations of training data
+#        # All combinations of test data
 #        self.match_test, self.no_match_test= self.all_combinations(self.breakpoints_test, self.test_rotation, self.test_translation, rot_diff, trans_diff)
         
-        '''Make easy matching and non matching sets'''
         margin_trans = 192
         margin_rot = 20
-        # All combinations of training data
+        # Easy combinations of training data
         self.match_train, self.no_match_train = self.all_combinations_easy(self.breakpoints_train, self.train_rotation, self.train_translation, rot_diff, trans_diff, margin_rot, margin_trans)
         
-        # All combinations of training data
+        # Easy combinations of validation data
         self.match_val, self.no_match_val= self.all_combinations_easy(self.breakpoints_val, self.val_rotation, self.val_translation, rot_diff, trans_diff, margin_rot, margin_trans)
         
-        # All combinations of training data
+        # Easy combinations of test data
         self.match_test, self.no_match_test= self.all_combinations_easy(self.breakpoints_test, self.test_rotation, self.test_translation, rot_diff, trans_diff, margin_rot, margin_trans)
         
         self.rotation_res = rotation_res
@@ -73,7 +72,7 @@ class data_generator:
     
     def add_new_data(self, images, finger_id, person_id, translation, rotation, data_size):
         percentages = [0.8,0.1]
-        train_data, val_data, test_data = self.three_split_array(images[0:data_size,:,:,:], percentages)
+        train_data, val_data, test_data = self.three_split_array(images[0:data_size], percentages)
         train_finger_id, val_finger_id, test_finger_id = self.three_split_array(finger_id[0:data_size], percentages)
         train_person_id, val_person_id, test_person_id= self.three_split_array(person_id[0:data_size], percentages)
         train_translation, val_translation, test_translation= self.three_split_array(translation[0:data_size], percentages)
@@ -115,13 +114,14 @@ class data_generator:
         trans_diff = 10
         margin_trans = 192
         margin_rot = 20
-        # All combinations of training data
+        
+        # Easy combinations of training data
         match_train, no_match_train = self.all_combinations_easy(breakpoints_train, self.train_rotation, self.train_translation, rot_diff, trans_diff, margin_rot, margin_trans)
         
-        # All combinations of training data
+        # Easy combinations of validation data
         match_val, no_match_val= self.all_combinations_easy(breakpoints_val, self.val_rotation, self.val_translation, rot_diff, trans_diff, margin_rot, margin_trans)
         
-        # All combinations of training data
+        # Easy combinations of test data
         match_test, no_match_test= self.all_combinations_easy(breakpoints_test, self.test_rotation, self.test_translation, rot_diff, trans_diff, margin_rot, margin_trans)
        
         # Add new pair indices to the pair indices of the current generator
@@ -171,6 +171,16 @@ class data_generator:
                     self.test_data[i] = np.append(self.test_data[i],rotated_test_images,axis=0)
                           
     def get_breakpoints(self, person_id, finger_id):
+        """ Returns a list containing breakpoint indices
+        
+        Breakpoints indices are indices where either the person id
+        or the finger id has changed.
+        Input:
+            person_id - numpy array containing person ids
+            finger_id - numpy array containing finger ids
+        Return:
+            breakpoints - list of breakpoint indices
+        """
         breakpoints = []
         idx_counter = 0
         nbr_of_persons = person_id[-1]
@@ -198,11 +208,12 @@ class data_generator:
         """ Checks if two angles differ by at most rotation_diff in absolute value.
         
         Input:
-        angle_1 - first angle, specified in degrees [0,360]
-        angle_2 - second angle, specified in degrees [0,360]
-        rotation_diff - difference in rotation
-        Returns: True if the angles differ by at most rotation_diff in absolute value,
-        otherwise False
+            angle_1 - first angle, specified in degrees [0,360]
+            angle_2 - second angle, specified in degrees [0,360]
+            rotation_diff - difference in rotation
+        Returns: 
+            True if the angles differ by at most rotation_diff in absolute value,
+            otherwise False
         """
         rot_cand_interval = np.zeros(2)
         rot_match = False
@@ -229,11 +240,12 @@ class data_generator:
         
         The translatios are assumed to be relative to a fixed point in 2D space.
         Input:
-        translation_1 - first translation, specified as a numpy array of two elements (x,y)
-        translation_2 - second translation, specified as a numpy array of two elements (x,y)
-        translation_diff - maximum distance between the translations in each axis
-        Returns: True if the distance between the translations is at most translation_diff in each axis,
-        otherwise False
+            translation_1 - first translation, specified as a numpy array of two elements (x,y)
+            translation_2 - second translation, specified as a numpy array of two elements (x,y)
+            translation_diff - maximum distance between the translations in each axis
+        Returns: 
+            True if the distance between the translations is at most translation_diff in each axis,
+            otherwise False
         """
         translation_match = False
         dx = np.abs(translation_1[0] - translation_2[0])
@@ -245,6 +257,18 @@ class data_generator:
         return translation_match
     
     def all_combinations(self, breakpoints, rotation, translation, rotation_diff, translation_diff):
+        """ Returns two arrays containing indices for all combinations of matching and non-matching image pairs respectively
+        
+        Two images are considered to match if the rotation difference and
+        translation difference are smaller than some specified values
+        Input:
+            breakpoints - a list of breakpoint indices
+            rotation - numpy array containing rotation of each image
+            translation - numpy array containing 2D-translation of each image
+            rotation_diff - maximum allowed rotation difference, in each direction, between two matching images
+            translation_diff - a float number specifying the maximum allowed translation in each dimension
+                                , between two images
+        """
         match = [] # matching pair indices
         no_match = [] # non-matching pair indices 
         
@@ -268,13 +292,35 @@ class data_generator:
                         match.append([breakpoints[i]+k, j])
                     else:
                         no_match.append([breakpoints[i]+k, j])
-                    
+                
+                # current image combined with an image from another person and/or another finger
+                # is added to non-matching pairs
                 for n in range(breakpoints[i+1], rotation.shape[0]):
                     no_match.append([breakpoints[i]+k, n])
             
         return np.array(match,dtype="int32"),np.array(no_match,dtype="int32")
     
     def all_combinations_easy(self, breakpoints, rotation, translation, rotation_diff, translation_diff, margin_rot, margin_trans):
+        """ Returns two arrays containing indices for matching and non-matching image pairs respectively
+        
+        Two images are considered to match if the rotation difference and
+        translation difference are smaller than some specified values.
+        This method will discard non-matching pairs whose translation difference is
+        close to that of the allowed limits for matching pairs (but still larger).
+        This results in pairs where it is easier to discriminate between
+        matching and non-matching examples.
+        Input:
+            breakpoints - a list of breakpoint indices
+            rotation - numpy array containing rotation of each image
+            translation - numpy array containing 2D-translation of each image
+            rotation_diff - maximum allowed rotation difference, in each direction, between two matching images
+            translation_diff - a float number specifying the maximum allowed translation in each dimension
+                                , between two images
+            margin_rot - this argument is currently not used
+            margin_trans - a float number specifying the maximum allowed translation in each dimension for discarded pairs.
+                            If the translation difference is larger than translation_diff but less than or equal to
+                            margin_trans the corresponding image pair is discarded (not added to non-matching pairs)
+        """
         match = [] # matching pair indices
         no_match = [] # non-matching pair indices 
         
@@ -307,13 +353,25 @@ class data_generator:
                         continue
                     else:
                         no_match.append([breakpoints[i]+k, j])
-                    
+                
+                # current image combined with an image from another person and/or another finger
+                # is added to non-matching pairs
                 for n in range(breakpoints[i+1], rotation.shape[0]):
                     no_match.append([breakpoints[i]+k, n])
             
         return np.array(match,dtype="int32"),np.array(no_match,dtype="int32")
     
     def three_split_array(self,input_array,percentage):
+        """Partitions an array into three subsets, where the sizes of the last two sets are equal
+        
+        Input:
+            input_array - the array to partition
+            percentage - an array of size 2 specifying the amount of elements that will be used in each subset in percentages
+        Return:
+            first_split - first subset
+            second_split - second subset
+            third_split - third_subset
+        """
         length = len(input_array)
         split_ind = [math.floor(length*percentage[0]), math.floor(length*percentage[0])+math.floor(length*percentage[1])]
         
@@ -324,6 +382,7 @@ class data_generator:
     
     def same_class(self, pairs, test = False):
         """Finds which pairs belongs to the same class (same finger and person i.e. same fingerprint)
+        
         Input:
             pairs - (N x 2) matrix with pairs on each row
             test - optinal boolean to be set if the class test is to be run on the test set

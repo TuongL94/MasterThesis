@@ -22,7 +22,8 @@ class data_generator:
         person_id - numpy array containing person ids specified as integers [0,inf)
         translation - 2D numpy array with rows corresponding to 2D translations
         rotation - numpy array containing rotation of images given in degrees
-        data_size - amount of data one wants to use from original data 
+        data_size - amount of data one wants to use from original data
+        rotation_res - number of rotated versions of original input data
         """
 
         # Split fingerprint data into training, validation and testing sets
@@ -45,9 +46,9 @@ class data_generator:
         
         rot_diff = 5
         trans_diff = 30
-        '''Make easy matching and non matching sets'''
         margin_trans = 192
         margin_rot = 20
+        
 #        # All combinations of training data
 #        self.triplets_train, self.anchors_train = self.all_triplets_naive(self.breakpoints_train, self.train_person_id, self.train_rotation, self.train_translation, rot_diff, trans_diff, margin_rot, margin_trans)
 #        
@@ -56,13 +57,14 @@ class data_generator:
 #        
 #        # All combinations of training data
 #        self.triplets_test, self.anchors_test= self.all_triplets_naive(self.breakpoints_test, self.test_person_id, self.test_rotation, self.test_translation, rot_diff, trans_diff, margin_rot, margin_trans)
+        
         # All combinations of training data
         self.triplets_train, self.anchors_train = self.all_triplets_easy(self.breakpoints_train, self.train_rotation, self.train_translation, rot_diff, trans_diff, margin_rot, margin_trans)
         
-        # All combinations of training data
+        # All combinations of validation data
         self.triplets_val, self.anchors_val= self.all_triplets_easy(self.breakpoints_val, self.val_rotation, self.val_translation, rot_diff, trans_diff, margin_rot, margin_trans)
         
-        # All combinations of training data
+        # All combinations of test data
         self.triplets_test, self.anchors_test= self.all_triplets_easy(self.breakpoints_test, self.test_rotation, self.test_translation, rot_diff, trans_diff, margin_rot, margin_trans)
         
         self.rotation_res = rotation_res
@@ -73,7 +75,6 @@ class data_generator:
         self.triplets_val_original = self.triplets_val
         self.triplets_test_original = self.triplets_test
         
-    
     def add_new_data(self, images, finger_id, person_id, translation, rotation, data_size):
         percentages = [0.8,0.1]
         train_data, val_data, test_data = self.three_split_array(images[0:data_size,:,:,:], percentages)

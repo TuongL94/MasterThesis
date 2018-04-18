@@ -26,7 +26,7 @@ def main(argv):
     
     The model is defined in the file inception_nn_model.py.
     If a model exists it will be used for further training, otherwise a new
-    one is created. It is also possible to evaluate the model directly after training.
+    one is created.
     
     Input:
     argv - arguments to run this method
@@ -79,6 +79,8 @@ def main(argv):
     # parameters for training
     batch_size_train = 100
     train_itr = 300000000
+    learning_rate = 0.00001
+    momentum = 0.99
     
     # margin setup for contrastive loss
     margin = 0.5
@@ -86,14 +88,9 @@ def main(argv):
     max_margin = 1.3 # maximum allowed margin value
     margin_itr = 500 # frequency in which to increase the margin in loss function 
 
-    learning_rate = 0.00001
-    momentum = 0.99
-   
     # parameters for validation
     batch_size_val = 100
     val_itr = 500 # frequency in which to use validation data for computations
-    
-    # parameters for evaluation
     threshold = 0.5    
     thresh_step = 0.1
         
@@ -127,7 +124,8 @@ def main(argv):
             reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
             margin = tf.constant(4.0) # margin for contrastive loss
             train_loss = su.contrastive_loss(left_train_output,right_train_output,label_train,margin)
-            # add regularization terms to contrastive loss function
+            
+            # add regularization terms to loss function
             for i in range(len(reg_losses)):
                 train_loss += reg_losses[i]
             
@@ -393,7 +391,7 @@ def main(argv):
         # Plot validation loss over time
         plt.figure()
         plt.plot(list(range(val_itr,val_itr*len(val_loss_over_time)+1,val_itr)),val_loss_over_time)
-        plt.title("Validation loss (contrastive loss) over time")
+        plt.title("Validation loss over time")
         plt.xlabel("iteration")
         plt.ylabel("validation loss")
         plt.show()

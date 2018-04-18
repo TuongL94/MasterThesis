@@ -26,9 +26,9 @@ def main(argv):
     
     The model is defined in the file siamese_nn_model.py.
     If a model exists it will be used for further training, otherwise a new
-    one is created. It is also possible to evaluate the model directly after training.
+    one is created.
     
-     Input:
+    Input:
     argv - arguments to run this method
     argv[0] - path of the directory which the model will be saved in
     argv[1] - path of the directory where the data is located
@@ -138,13 +138,13 @@ def main(argv):
 #            test_predictions = tf.expand_dims(test_predictions, axis=-1)
             
             reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-#            margin = tf.constant(4.0) # margin for contrastive loss
             train_loss = su.contrastive_loss(left_train_output,right_train_output,label_train,margin_holder)
             
 #            pos_weight = 0.5 # <1 to decrease false positives, >1 to decrease false negatives
 #            one_hot_label_train = tf.squeeze(tf.one_hot(label_train, depth=2, dtype=tf.float32))
 #            train_loss = su.cross_entropy_loss(decision_train_output, one_hot_label_train, pos_weight)
-            # add regularization terms to contrastive loss function
+            
+            # add regularization terms to loss function
             for i in range(len(reg_losses)):
                 train_loss += reg_losses[i]
             
@@ -305,7 +305,7 @@ def main(argv):
             
             _,train_loss_value, summary = sess.run([train_op, train_loss, summary_op],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train, margin_holder:margin})
 
-             # Use validation data set to tune hyperparameters (Classification threshold)
+             # Use validation data set to tune hyperparameters (threshold)
             if i % val_itr == 0:
                 current_val_loss = 0
                 b_sim_val_matching = np.repeat(np.ones((batch_size_val*int(val_match_dataset_length/batch_size_val),1)),generator.rotation_res,axis=0)
@@ -396,7 +396,7 @@ def main(argv):
         # Plot validation loss over time
         plt.figure()
         plt.plot(list(range(val_itr,val_itr*len(val_loss_over_time)+1,val_itr)),val_loss_over_time)
-        plt.title("Validation loss (contrastive loss) over time")
+        plt.title("Validation loss over time")
         plt.xlabel("iteration")
         plt.ylabel("validation loss")
         plt.show()

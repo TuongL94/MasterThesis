@@ -100,7 +100,7 @@ def inference(input):
     return net
     
 def triplet_loss(anchor, positive, negative, margin):
-    """ Computes the contrastive loss between two vectors
+    """ Computes the triplet loss
     
     Input:
         anchor - output from network when input is the anchor image
@@ -110,6 +110,7 @@ def triplet_loss(anchor, positive, negative, margin):
     Returns:
         loss - the triplet loss 
     """
+    
     distance_pos = tf.reduce_sum(tf.square(anchor - positive),1)
     distance_neg = tf.reduce_sum(tf.square(anchor - negative),1)
     

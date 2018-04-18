@@ -72,11 +72,11 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_i
     return precision, false_pos, false_neg, recall, fnr, fpr, tnr#, inter_class_errors
  
 def evaluate_siamese_network(generator, batch_size, threshold, eval_itr, output_dir, metrics_path, gpu_device_name):
-    """ This method is used to evaluate a siamese network for fingerprint datasets.
+    """ This method is used to evaluate a triplet network for fingerprint datasets.
     
     The model is defined in the file triplet_nn_model.py and trained in 
     the file triplet_nn_train.py. Evaluation will only be performed if
-    a model exists. The method will print evaluation metrics.
+    a model exists.
     
     Input:
     generator - an instance of a data_generator object used in training
@@ -91,7 +91,7 @@ def evaluate_siamese_network(generator, batch_size, threshold, eval_itr, output_
     tf.reset_default_graph()
     
     if not os.path.exists(output_dir + "checkpoint"):
-        print("No siamese model exists in " + output_dir)
+        print("No model exists in " + output_dir)
         return
         
     else:
@@ -200,7 +200,7 @@ def main(argv):
     gpu_device_name = argv[-1] 
    
     # Load generator
-    with open(data_path + "generator_data.pk1", "rb") as input:
+    with open(data_path + "generator_triplet_data.pk1", "rb") as input:
         generator = pickle.load(input)
     
     for i in range(len(thresholds)):

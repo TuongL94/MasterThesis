@@ -80,7 +80,7 @@ def evaluate_inception_network(generator, batch_size, threshold, eval_itr, outpu
     
     The model is defined in the file ínception_nn_model.py and trained in 
     the file inception_nn_train.py. Evaluation will only be performed if
-    a model exists. The method will print evaluation metrics.
+    a model exists.
     
     Input:
     generator - an instance of a data_generator object used in training
@@ -95,9 +95,8 @@ def evaluate_inception_network(generator, batch_size, threshold, eval_itr, outpu
     tf.reset_default_graph()
     
     if not os.path.exists(output_dir + "checkpoint"):
-        print("No siamese model exists in " + output_dir)
+        print("No model exists in " + output_dir)
         return
-        
     else:
         print("Using existing model in the directory " + output_dir + " for evaluation")  
         for file in os.listdir(output_dir):

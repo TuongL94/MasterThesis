@@ -120,7 +120,7 @@ def evaluate_siamese_network(generator, batch_size, threshold, eval_itr, output_
     
     The model is defined in the file siamese_nn_model.py and trained in 
     the file siamese_nn_train.py. Evaluation will only be performed if
-    a model exists. The method will print evaluation metrics.
+    a model exists.
     
     Input:
     generator - an instance of a data_generator object used in training
@@ -135,9 +135,8 @@ def evaluate_siamese_network(generator, batch_size, threshold, eval_itr, output_
     tf.reset_default_graph()
     
     if not os.path.exists(output_dir + "checkpoint"):
-        print("No siamese model exists in " + output_dir)
-        return
-        
+        print("No model exists in " + output_dir)
+        return    
     else:
         print("Using existing model in the directory " + output_dir + " for evaluation")  
         for file in os.listdir(output_dir):
@@ -247,17 +246,17 @@ def evaluate_siamese_network(generator, batch_size, threshold, eval_itr, output_
 def main(argv):
     """ Runs evaluation on trained network 
     """
-    # Set parameters for evaluation
+    # set parameters for evaluation
     thresholds = np.linspace(0, 1.5, num=20)
     batch_size = 50
     eval_itr = 11
     
-    output_dir = argv[0] # directories where the models are saved
+    output_dir = argv[0] # directory where the model is saved
     data_path =  argv[1]
     metrics_path = argv[2]
     gpu_device_name = argv[-1] 
    
-    # Load generator
+    # load generator
     with open(data_path + "generator_data.pk1", "rb") as input:
         generator = pickle.load(input)
    
@@ -267,7 +266,7 @@ def main(argv):
     # get evaluation metrics for varying thresholds
     fpr_vals, fnr_vals, recall_vals, tnr_vals = util.get_evaluation_metrics_vals(metrics_path + ".txt")
     
-    # Plots of evaluation metrics
+    # plots of evaluation metrics
     util.plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, tnr_vals)
     
 if __name__ == "__main__":
