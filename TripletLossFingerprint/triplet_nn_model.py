@@ -99,20 +99,6 @@ def inference(input):
      
     return net
     
-def contrastive_loss(input_1,input_2,label,margin):
-    """ Computes the contrastive loss between two vectors
-    
-    Input:
-    input_1 - first input vector
-    input_2 - second input vector
-    label - ground truth for similarity between the vectors. 1 if they are similar, 0 otherwise.
-    margin - margin for contrastive loss, positive constant
-    Returns the contrastive loss between input_1 and input_2 with specified margin.
-    """
-    d_sq = tf.reduce_sum(tf.pow(input_1-input_2,2),1,keepdims=True)
-    max_sq = tf.square(tf.maximum(margin-d_sq,0))
-    return tf.reduce_mean(label*d_sq + (1-label)*max_sq)/2
-
 def triplet_loss(anchor, positive, negative, margin):
     """ Computes the contrastive loss between two vectors
     
@@ -137,51 +123,34 @@ def training(loss, learning_rate, momentum):
     train_op = optimizer.minimize(loss,global_step = global_step)
     return train_op
     
-def placeholder_inputs(image_dims,batch_sizes):
+def placeholder_inputs(image_dims):
     """ Creates placeholders for triplet neural network.
     
     This method returns placeholders for inputs to the triplet network in both
-    training, validation and testing. It also returns a placeholder for ground truth of 
-    image pairs for training and validation.
+    training, validation and testing.
     Input:
     image_dims - list of following structure: [height width 1] (the 1 is for grayscale images)
-    batch_sizes - list of batch sizes for training,validation and testing respectively 
     Returns:
     anchor_train - placeholder for anchor input to triplet network for training
     positive_train - placeholder for positive input to triplet network for training
-    label_train - placeholder for ground truths of image pairs for training
+    negative_train - placeholder for negative input to triplet network for training
     anchor_val - placeholder for anchor input to triplet network for validation
     positive_val - placeholder for positive input to triplet network for validation
-    label_val - placeholder for ground truths of image pairs for validation
-    anchor_test - placeholder for anchor input to triplet network for testing
-    positive_test - placeholder for positive input to triplet network for testing
+    negative_cal - placeholder for negative input to triplet network for validation
+    left_test - placeholder for left input to triplet network for testing
+    right_test - placeholder for right input to triplet network for testing
     """
-#    anchor_train = tf.placeholder(tf.float32, [batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="anchor_train")
-#    positive_train = tf.placeholder(tf.float32,[batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="positive_train")
-#    negative_train = tf.placeholder(tf.float32,[batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="negative_train")
-##    label_train = tf.placeholder(tf.float32, [batch_sizes[0],1], name="label_train") # 1 if same, 0 if different
-#    
-#    anchor_val = tf.placeholder(tf.float32,[batch_sizes[1],image_dims[0],image_dims[1],image_dims[2]], name="anchor_val")
-#    positive_val = tf.placeholder(tf.float32, [batch_sizes[1],image_dims[0],image_dims[1],image_dims[2]], name="positive_val")
-#    negative_val = tf.placeholder(tf.float32,[batch_sizes[0],image_dims[0],image_dims[1],image_dims[2]], name="negative_val")
-##    label_val = tf.placeholder(tf.float32, [batch_sizes[1],1], name="label_val") # 1 if same, 0 if different
-#    
-#    left_test = tf.placeholder(tf.float32, [batch_sizes[2],image_dims[0],image_dims[1],image_dims[2]], name="left_test")
-#    right_test = tf.placeholder(tf.float32, [batch_sizes[2],image_dims[0],image_dims[1],image_dims[2]], name="right_test")
     
     anchor_train = tf.placeholder(tf.float32, [None,image_dims[0],image_dims[1],image_dims[2]], name="anchor_train")
     positive_train = tf.placeholder(tf.float32,[None,image_dims[0],image_dims[1],image_dims[2]], name="positive_train")
     negative_train = tf.placeholder(tf.float32,[None,image_dims[0],image_dims[1],image_dims[2]], name="negative_train")
-#    label_train = tf.placeholder(tf.float32, [batch_sizes[0],1], name="label_train") # 1 if same, 0 if different
     
     anchor_val = tf.placeholder(tf.float32,[None,image_dims[0],image_dims[1],image_dims[2]], name="anchor_val")
     positive_val = tf.placeholder(tf.float32, [None,image_dims[0],image_dims[1],image_dims[2]], name="positive_val")
     negative_val = tf.placeholder(tf.float32,[None,image_dims[0],image_dims[1],image_dims[2]], name="negative_val")
-#    label_val = tf.placeholder(tf.float32, [batch_sizes[1],1], name="label_val") # 1 if same, 0 if different
     
     left_test = tf.placeholder(tf.float32, [None,image_dims[0],image_dims[1],image_dims[2]], name="left_test")
     right_test = tf.placeholder(tf.float32, [None,image_dims[0],image_dims[1],image_dims[2]], name="right_test")
     
-#    return anchor_train,positive_train,label_train,anchor_val,positive_val,label_val,anchor_test,positive_test
     return anchor_train,positive_train,negative_train,anchor_val,positive_val,negative_val,left_test,right_test
     

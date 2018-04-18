@@ -33,7 +33,7 @@ def main(argv):
     argv[0] - path of the directory which the model will be saved in
     argv[1] - path of the directory where the data is located
     argv[2] - name of the GPU to use for training
-    argv[3] - optional argument, if this argument is given the model will train for argv[2] minutes
+    argv[3] - optional argument, if this argument is given the model will train for argv[3] minutes
               otherwise it will train for a given amount of iterations
     """
     

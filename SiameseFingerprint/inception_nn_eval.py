@@ -33,6 +33,7 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_i
     fnr - false negative rate (false negative/total number of positive examples)
     fpr - false positive rate (false positive/total number of negative examples)
     inter_class_errors - number of false positive from the same finger+person (class)
+    tnr - true negative rate (nbr of true negative/total number of negative examples)
     """
     matching = np.zeros(len(sim_labels))
 #    l2_normalized_diff = util.l2_normalize(left_pairs_o-right_pairs_o)
@@ -61,14 +62,18 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_i
     
     precision = np.sum((matching == sim_labels.T))/len(sim_labels)
     tp = 0
+    tn = 0
     for i in range(len(sim_labels)):
         if matching[i] == 1 and sim_labels[i] == 1:
             tp += 1
+        elif matching[i] == 0 and sim_labels[i] == 0:
+            tn += 1
     recall = tp/p
+    tnr = tn/n
     fnr = 1 - recall
     fpr = false_pos/n
     
-    return precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors
+    return precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr
  
 def evaluate_inception_network(generator, batch_size, threshold, eval_itr, output_dir, metrics_path, gpu_device_name):
     """ This method is used to evaluate an inception network for fingerprint datasets.
@@ -167,16 +172,16 @@ def evaluate_inception_network(generator, batch_size, threshold, eval_itr, outpu
                 
                 precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr = get_test_diagnostics(left_full,right_full,sim_full,threshold,class_id)
     
-                print("Precision: %f " % precision)
-                print("# False positive: %d " % false_pos)
-                print("# False negative: %d " % false_neg)
-                print("# Number of false positive from the same class: %d " % inter_class_errors)
-                print("# Recall: %f " % recall)
-                print("# Miss rate/false negative rate: %f " % fnr)
-                print("# fall-out/false positive rate: %f " % fpr)
-                      
-                nbr_same_class = np.sum(class_id[eval_itr*batch_size:])
-                print("Number of fingerprints in the same class in the non matching set: %d " % nbr_same_class)
+#                print("Precision: %f " % precision)
+#                print("# False positive: %d " % false_pos)
+#                print("# False negative: %d " % false_neg)
+#                print("# Number of false positive from the same class: %d " % inter_class_errors)
+#                print("# Recall: %f " % recall)
+#                print("# Miss rate/false negative rate: %f " % fnr)
+#                print("# fall-out/false positive rate: %f " % fpr)
+#                      
+#                nbr_same_class = np.sum(class_id[eval_itr*batch_size:])
+#                print("Number of fingerprints in the same class in the non matching set: %d " % nbr_same_class)
                 
                 metrics = (fpr, fnr, recall, tnr)
                 # save evaluation metrics to a file 
@@ -197,7 +202,7 @@ def main(argv):
     gpu_device_name = argv[-1]  
    
     # Load generator
-    with open(data_path + "generator_data_old.pk1", "rb") as input:
+    with open(data_path + "generator_data.pk1", "rb") as input:
         generator = pickle.load(input)
         
     for i in range(len(thresholds)):

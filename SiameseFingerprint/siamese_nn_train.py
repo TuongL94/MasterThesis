@@ -33,7 +33,7 @@ def main(argv):
     argv[0] - path of the directory which the model will be saved in
     argv[1] - path of the directory where the data is located
     argv[2] - name of the GPU to use for training
-    argv[3] - optional argument, if this argument is given the model will train for argv[4] minutes
+    argv[3] - optional argument, if this argument is given the model will train for argv[3] minutes
               otherwise it will train for a given amount of iterations
     """
     
@@ -47,7 +47,7 @@ def main(argv):
 
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
-    if not os.path.exists(data_path + "generator_data_gabor.pk1"):
+    if not os.path.exists(data_path + "generator_data.pk1"):
         with open(data_path + "generator_data.pk1", "wb") as output:
             # Load fingerprint labels and data from file with names
             finger_id = np.load(data_path + "finger_id_mt_vt_112.npy")
@@ -73,7 +73,7 @@ def main(argv):
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
         # Load generator
-        with open(data_path + "generator_data_gabor.pk1", "rb") as input:
+        with open(data_path + "generator_data.pk1", "rb") as input:
             generator = pickle.load(input)
 #        util.get_no_matching_subset(generator, data_path, "generator_data.pk1")
         
@@ -158,7 +158,6 @@ def main(argv):
             tf.add_to_collection("right_val_output",right_val_output)
             tf.add_to_collection("left_test_output",left_test_output)
             tf.add_to_collection("right_test_output",right_test_output)
-            
             
 #            tf.add_to_collection("test_predictions", test_predictions)
 #            tf.add_to_collection("val_predictions", val_predictions)

@@ -15,7 +15,7 @@ import pickle
 # imports from self-implemented modules
 import utilities as util
 
-def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_id=None):
+def get_test_diagnostics(left_pairs_o, right_pairs_o, sim_labels, threshold, class_id=None):
     """ Computes and returns evaluation metrics.
     
     Input:
@@ -33,6 +33,7 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_i
     fnr - false negative rate (false negative/total number of positive examples)
     fpr - false positive rate (false positive/total number of negative examples)
     inter_class_errors - number of false positive from the same finger+person (class)
+    tnr - true negative rate (nbr of true negative/total number of negative examples)
     """
     matching = np.zeros(len(sim_labels))
     l2_normalized_diff = left_pairs_o-right_pairs_o
@@ -73,15 +74,12 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_i
     
     return precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr
  
-def get_test_diagnostics_2(predictions,sim_labels,class_id=None):
+def get_test_diagnostics_2(predictions, sim_labels, class_id=None):
     """ Computes and returns evaluation metrics.
     
     Input:
-    left_pairs_o - numpy array with rows corresponding to arrays obtained from inference step in the siamese network
-    right_pairs_o - numpy array with rows corresponding to arrays obtained from inference step in the siamese network
-    sim_labels - ground truth for pairs of arrays (1 if the arrays correspond to matching images, 0 otherwise)
-    threshold - distance threshold, if the 2-norm distanc between two arrays are less than or equal to this value 
-    they are considered to correspond to a matching pair of images.
+    predictions - numpy array with predictions (0 for non-matching and 1 for matching pairs)
+    sim_labels - ground truth for pairs of images
     class_id - Is optional. Contains information about which finger and person each fingerprint comes from.
     Returns:
     precision - precision
@@ -228,21 +226,19 @@ def evaluate_siamese_network(generator, batch_size, threshold, eval_itr, output_
                         class_id_batch = generator.same_class(test_batch,test=True)
                         class_id = np.vstack((class_id, class_id_batch))
 
-                
                 precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr = get_test_diagnostics(left_full,right_full,sim_full,threshold,class_id)
-    
 #                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = get_test_diagnostics_2(preds_full,sim_full,class_id)
                 
-                print("Precision: %f " % precision)
-                print("# False positive: %d " % false_pos)
-                print("# False negative: %d " % false_neg)
-                print("# Number of false positive from the same class: %d " % inter_class_errors)
-                print("# Recall: %f " % recall)
-                print("# Miss rate/false negative rate: %f " % fnr)
-                print("# fall-out/false positive rate: %f " % fpr)
-                      
-                nbr_same_class = np.sum(class_id[eval_itr*batch_size:])
-                print("Number of fingerprints in the same class in the non matching set: %d " % nbr_same_class)
+#                print("Precision: %f " % precision)
+#                print("# False positive: %d " % false_pos)
+#                print("# False negative: %d " % false_neg)
+#                print("# Number of false positive from the same class: %d " % inter_class_errors)
+#                print("# Recall: %f " % recall)
+#                print("# Miss rate/false negative rate: %f " % fnr)
+#                print("# fall-out/false positive rate: %f " % fpr)
+#                      
+#                nbr_same_class = np.sum(class_id[eval_itr*batch_size:])
+#                print("Number of fingerprints in the same class in the non matching set: %d " % nbr_same_class)
                 
                 metrics = (fpr, fnr, recall, tnr)
                 # save evaluation metrics to a file 
@@ -256,7 +252,7 @@ def main(argv):
     batch_size = 50
     eval_itr = 11
     
-    output_dir = argv[0]# directories where the models are saved
+    output_dir = argv[0] # directories where the models are saved
     data_path =  argv[1]
     metrics_path = argv[2]
     gpu_device_name = argv[-1] 

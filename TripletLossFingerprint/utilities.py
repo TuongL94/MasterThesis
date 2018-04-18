@@ -8,6 +8,28 @@ Created on Thu Feb  1 15:12:05 2018
 import numpy as np
 import scipy.linalg as sl
 import random
+import matplotlib.pyplot as plt
+import tensorflow as tf
+
+def print_all_global_variables():
+    global_vars = tf.global_variables()
+    for i in range(len(global_vars)):
+        print(global_vars[i])
+    
+def get_nbr_of_parameters():
+    total_parameters = 0
+    for variable in tf.trainable_variables():
+        # shape is an array of tf.Dimension
+        shape = variable.get_shape()
+        print(shape)
+        print(len(shape))
+        variable_parameters = 1
+        for dim in shape:
+            print(dim)
+            variable_parameters *= dim.value
+        print(variable_parameters)
+        total_parameters += variable_parameters
+    return total_parameters
 
 def l2_normalize(input_array):
     """ L2-normalizes a 1D or 2D array along first dimension
@@ -18,11 +40,6 @@ def l2_normalize(input_array):
     """
     dims = np.shape(input_array)
     if len(dims) == 1:
-        # Rescaled the data to (0,1) interval
-#        max_in = input_array.max(1)
-#        min_in = input_array.min(1)
-#        return (input_array - min_in)/(max_in - min_in)
-        # Scale max to 1
         return input_array/sl.norm(input_array)
     else:
         max_length = -1
@@ -50,6 +67,14 @@ def reshape_grayscale_data(input_data, *dims):
         dim = int(np.sqrt(dim_squarred))
         input_data_moded = input_data.reshape((nbr_of_images,dim,dim,1))
     return input_data_moded
+
+def image_standardization(images):
+    dims = np.shape(images)
+    means = np.mean(images, axis=(1,2,3), keepdims=True)
+    stds = np.std(images, axis=(1,2,3), keepdims=True)
+    adjusted_stds = np.maximum(stds,1.0/np.sqrt(dims[1]*dims[2])) # avoid division by zero
+    images = (images - means)/stds 
+    return images
     
 def rand_assign_pair(left,right,image_1,image_2):
     """ Appends images of an image pair randomly to two lists.
@@ -66,4 +91,45 @@ def rand_assign_pair(left,right,image_1,image_2):
     else:
         left.append(image_2)
         right.append(image_1)
+
+def save_evaluation_metrics(metrics, file_path):
+    nbr_of_metrics = len(metrics)
+    with open(file_path, "a") as file:
+        for i in range(nbr_of_metrics):
+            file.write(repr(metrics[i]) + " ")
+        file.write("\n")
+        
+def get_evaluation_metrics_vals(file_path):
+    fpr_vals = []
+    fnr_vals = []
+    recall_vals = []
+    tnr_vals = []
     
+    with open(file_path, "rb") as file:
+        lines = file.readlines()
+        for i in range(len(lines)):
+            line  = lines[i]
+            line = line.split()
+            fpr_vals.append(float(line[0]))
+            fnr_vals.append(float(line[1]))
+            recall_vals.append(float(line[2]))
+            tnr_vals.append((float(line[3])))
+    
+    return fpr_vals, fnr_vals, recall_vals, tnr_vals
+
+def plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, tnr_vals):
+    plt.figure()
+    plt.plot(thresholds, fpr_vals, "b", label="FPR")
+    plt.plot(thresholds, fnr_vals, "r", label="FNR")
+    plt.xlabel("threshold")
+    plt.ylabel("FPR/FNR")
+    plt.legend(bbox_to_anchor=(0., 1.02, 1., 0.102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
+    plt.show()
+    
+    plt.figure()
+    plt.plot(thresholds, recall_vals, "b", label="recall")
+    plt.plot(thresholds, tnr_vals, "r", label="TNR")
+    plt.xlabel("threshold")
+    plt.ylabel("recall/TNR")
+    plt.legend(bbox_to_anchor=(0., 1.02, 1., 0.102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
+    plt.show()

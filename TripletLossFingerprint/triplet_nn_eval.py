@@ -11,7 +11,6 @@ import os
 import sys
 import utilities as util
 import pickle
-import re
 
 def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_id=None):
     """ Computes and returns evaluation metrics.
@@ -31,6 +30,7 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_i
     fnr - false negative rate (false negative/total number of positive examples)
     fpr - false positive rate (false positive/total number of negative examples)
     inter_class_errors - number of false positive from the same finger+person (class)
+    tnr - true negative rate (nbr of true negative/total number of negative examples)
     """
     matching = np.zeros(len(sim_labels))
     l2_normalized_diff = util.l2_normalize(left_pairs_o-right_pairs_o)
@@ -58,28 +58,34 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_i
     
     precision = np.sum((matching == sim_labels.T))/len(sim_labels)
     tp = 0
+    tn = 0
     for i in range(len(sim_labels)):
         if matching[i] == 1 and sim_labels[i] == 1:
             tp += 1
+        elif matching[i] == 0 and sim_labels[i] == 0:
+            tn += 1
     recall = tp/p
+    tnr = tn/n
     fnr = 1 - recall
     fpr = false_pos/n
     
-    return precision, false_pos, false_neg, recall, fnr, fpr#, inter_class_errors
+    return precision, false_pos, false_neg, recall, fnr, fpr, tnr#, inter_class_errors
  
-def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_itr,gpu_device_name):
+def evaluate_siamese_network(generator, batch_size, threshold, eval_itr, output_dir, metrics_path, gpu_device_name):
     """ This method is used to evaluate a siamese network for fingerprint datasets.
     
-    The model is defined in the file siamese_nn_model.py and trained in 
-    the file siamese_nn_train.py. Evaluation will only be performed if
+    The model is defined in the file triplet_nn_model.py and trained in 
+    the file triplet_nn_train.py. Evaluation will only be performed if
     a model exists. The method will print evaluation metrics.
     
     Input:
     generator - an instance of a data_generator object used in training
-    nbr_of_eval_pairs - batch size for the evaluation placeholder
-    eval_itr - number of evaluation iterations
+    batch_size - batch size for the evaluation placeholder
     threshold - distance threshold (2-norm) for the decision stage
-    output_dir - the directory of the siamese model
+    eval_itr - number of evaluation iterations
+    output_dir - the directory of the trained model
+    metrics_path - path to the file where the evaluation results will be saved (excluding extension)
+    gpu_device_name - name of the GPU device to run the evaluation with
     """
     
     tf.reset_default_graph()
@@ -161,40 +167,50 @@ def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_
 #                        
 #                        class_id_batch = generator.same_class(test_batch,test=True)
 #                        class_id = np.vstack((class_id, class_id_batch))
-                            
-                            
-
-                
-                precision, false_pos, false_neg, recall, fnr, fpr = get_test_diagnostics(left_full,right_full,labels_full,threshold)
+                             
+                precision, false_pos, false_neg, recall, fnr, fpr, tnr = get_test_diagnostics(left_full,right_full,labels_full,threshold)
     
-                print("Precision: %f " % precision)
-                print("# False positive: %d " % false_pos)
-                print("# False negative: %d " % false_neg)
+#                print("Precision: %f " % precision)
+#                print("# False positive: %d " % false_pos)
+#                print("# False negative: %d " % false_neg)
 #                print("# Number of false positive from the same class: %d " % inter_class_errors)
-                print("# Recall: %f " % recall)
-                print("# Miss rate/false negative rate: %f " % fnr)
-                print("# fall-out/false positive rate: %f " % fpr)
+#                print("# Recall: %f " % recall)
+#                print("# Miss rate/false negative rate: %f " % fnr)
+#                print("# fall-out/false positive rate: %f " % fpr)
                       
 #                nbr_same_class = np.sum(class_id[eval_itr*batch_size:])
 #                print("Number of fingerprints in the same class in the non matching set: %d " % nbr_same_class)
+                
+                metrics = (fpr, fnr, recall, tnr)
+                # save evaluation metrics to a file 
+                util.save_evaluation_metrics(metrics, metrics_path + ".txt")
          
 def main(argv):
-   """ Runs evaluation on mnist siamese network"""
+    """ Runs evaluation on trained network 
+    """
     
     # Set parameters for evaluation
-   threshold = 0.045
-   batch_size = 200
-   eval_itr = 5
+    thresholds = np.linspace(0, 1.5, num=20)
+    batch_size = 200
+    eval_itr = 5
     
-   dir_path = os.path.dirname(os.path.realpath(__file__))
-   output_dir = argv[1] + argv[0] + "/" # directory where the model is saved
-   gpu_device_name = argv[-1] 
+    output_dir = argv[0] # directories where the models are saved
+    data_path =  argv[1]
+    metrics_path = argv[2]
+    gpu_device_name = argv[-1] 
    
     # Load generator
-   with open('generator_data.pk1', 'rb') as input:
-       generator = pickle.load(input)
+    with open(data_path + "generator_data.pk1", "rb") as input:
+        generator = pickle.load(input)
     
-   evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_itr, gpu_device_name)
+    for i in range(len(thresholds)):
+        evaluate_siamese_network(generator, batch_size, thresholds[i], eval_itr, output_dir, metrics_path, gpu_device_name)
+        
+    # get evaluation metrics for varying thresholds
+    fpr_vals, fnr_vals, recall_vals, tnr_vals = util.get_evaluation_metrics_vals(metrics_path + ".txt")
+    
+    # Plots of evaluation metrics
+    util.plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, tnr_vals)
     
 if __name__ == "__main__":
     main(sys.argv[1:])
