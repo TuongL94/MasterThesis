@@ -33,7 +33,7 @@ def main(argv):
     argv[0] - path of the directory which the model will be saved in
     argv[1] - path of the directory where the data is located
     argv[2] - name of the GPU to use for training
-    argv[3] - optional argument, if this argument is given the model will train for argv[2] minutes
+    argv[3] - optional argument, if this argument is given the model will train for argv[4] minutes
               otherwise it will train for a given amount of iterations
     """
     
@@ -77,7 +77,7 @@ def main(argv):
             generator = pickle.load(input)
 #        util.get_no_matching_subset(generator, data_path, "generator_data.pk1")
         
-    util.image_standardization(generator.train_data[0])     
+#    util.image_standardization(generator.train_data[0])     
     
     # parameters for training
     batch_size_train = 1000
@@ -86,7 +86,7 @@ def main(argv):
     # margin setup for contrastive loss
     margin = 0.5
     margin_factor = 1.25
-    max_margin = 1.5 # maximum allowed margin value
+    max_margin = 1.3 # maximum allowed margin value
     margin_itr = 500 # frequency in which to increase the margin in loss function 
     
     learning_rate = 0.0001
@@ -99,7 +99,6 @@ def main(argv):
     thresh_step = 0.01
         
     dims = np.shape(generator.train_data[0])
-#    batch_sizes = [batch_size_train,batch_size_val,batch_size_test]
     image_dims = [dims[1],dims[2],dims[3]]
     
     save_itr = 2000 # frequency in which the model is saved
@@ -115,7 +114,6 @@ def main(argv):
         
         with tf.device(gpu_device_name):
              # create placeholders
-#            left_train,right_train,label_train,left_val,right_val,label_val,left_test,right_test = su.placeholder_inputs(image_dims,batch_sizes)
             left_train,right_train,label_train,left_val,right_val,label_val,left_test,right_test = su.create_placeholders(image_dims)
             handle = tf.placeholder(tf.string, shape=[],name="handle")
             margin_holder = tf.placeholder(tf.float32, shape=[], name="margin_holder")
@@ -355,7 +353,7 @@ def main(argv):
 #                        preds_full = np.vstack((preds_full,preds))
                         
                 val_loss_over_time.append(current_val_loss*batch_size_val/np.shape(b_sim_full)[0])
-                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = sme.get_test_diagnostics(left_full,right_full, b_sim_full,threshold, class_id)
+                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, _ = sme.get_test_diagnostics(left_full,right_full, b_sim_full,threshold, class_id)
 #                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = sme.get_test_diagnostics_2(preds_full, b_sim_full, class_id)
                 if false_pos > false_neg:   # Can use inter_class_errors to tune the threshold further
                     threshold -= thresh_step
@@ -403,6 +401,6 @@ def main(argv):
         plt.xlabel("iteration")
         plt.ylabel("validation loss")
         plt.show()
-        
+                
 if __name__ == "__main__":
      main(sys.argv[1:])

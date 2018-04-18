@@ -60,14 +60,18 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_i
     
     precision = np.sum((matching == sim_labels.T))/len(sim_labels)
     tp = 0
+    tn = 0
     for i in range(len(sim_labels)):
         if matching[i] == 1 and sim_labels[i] == 1:
             tp += 1
+        elif matching[i] == 0 and sim_labels[i] == 0:
+            tn += 1
     recall = tp/p
+    tnr = tn/n
     fnr = 1 - recall
     fpr = false_pos/n
     
-    return precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors
+    return precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr
  
 def get_test_diagnostics_2(predictions,sim_labels,class_id=None):
     """ Computes and returns evaluation metrics.
@@ -113,7 +117,7 @@ def get_test_diagnostics_2(predictions,sim_labels,class_id=None):
     
     return precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors
 
-def evaluate_siamese_network(generator, batch_size, threshold, eval_itr, output_dir, gpu_device_name):
+def evaluate_siamese_network(generator, batch_size, threshold, eval_itr, output_dir, metrics_path, gpu_device_name):
     """ This method is used to evaluate a siamese network for fingerprint datasets.
     
     The model is defined in the file siamese_nn_model.py and trained in 
@@ -126,6 +130,7 @@ def evaluate_siamese_network(generator, batch_size, threshold, eval_itr, output_
     threshold - distance threshold (2-norm) for the decision stage
     eval_itr - number of evaluation iterations
     output_dir - the directory of the trained model
+    metrics_path - path to the file where the evaluation results will be saved (excluding extension)
     gpu_device_name - name of the GPU device to run the evaluation with
     """
     
@@ -224,7 +229,7 @@ def evaluate_siamese_network(generator, batch_size, threshold, eval_itr, output_
                         class_id = np.vstack((class_id, class_id_batch))
 
                 
-                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = get_test_diagnostics(left_full,right_full,sim_full,threshold,class_id)
+                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr = get_test_diagnostics(left_full,right_full,sim_full,threshold,class_id)
     
 #                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = get_test_diagnostics_2(preds_full,sim_full,class_id)
                 
@@ -238,24 +243,36 @@ def evaluate_siamese_network(generator, batch_size, threshold, eval_itr, output_
                       
                 nbr_same_class = np.sum(class_id[eval_itr*batch_size:])
                 print("Number of fingerprints in the same class in the non matching set: %d " % nbr_same_class)
+                
+                metrics = (fpr, fnr, recall, tnr)
+                # save evaluation metrics to a file 
+                util.save_evaluation_metrics(metrics, metrics_path + ".txt")
          
 def main(argv):
     """ Runs evaluation on trained network 
     """
     # Set parameters for evaluation
-    threshold = 0.4
+    thresholds = np.linspace(0, 1.5, num=20)
     batch_size = 50
     eval_itr = 11
     
-    output_dir = argv[0]# directory where the model is saved
+    output_dir = argv[0]# directories where the models are saved
     data_path =  argv[1]
+    metrics_path = argv[2]
     gpu_device_name = argv[-1] 
    
     # Load generator
-    with open(data_path + "generator_data_gabor.pk1", "rb") as input:
+    with open(data_path + "generator_data.pk1", "rb") as input:
         generator = pickle.load(input)
    
-    evaluate_siamese_network(generator, batch_size, threshold, eval_itr, output_dir, gpu_device_name)
+    for i in range(len(thresholds)):
+        evaluate_siamese_network(generator, batch_size, thresholds[i], eval_itr, output_dir, metrics_path, gpu_device_name)
+        
+    # get evaluation metrics for varying thresholds
+    fpr_vals, fnr_vals, recall_vals, tnr_vals = util.get_evaluation_metrics_vals(metrics_path + ".txt")
+    
+    # Plots of evaluation metrics
+    util.plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, tnr_vals)
     
 if __name__ == "__main__":
     main(sys.argv[1:])

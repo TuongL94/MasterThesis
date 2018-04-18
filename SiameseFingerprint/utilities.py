@@ -11,6 +11,7 @@ import random
 import tensorflow as tf
 import os
 import pickle
+import matplotlib.pyplot as plt
 
 def print_all_global_variables():
     global_vars = tf.global_variables()
@@ -111,4 +112,45 @@ def get_no_matching_subset(data_generator, data_path, new_generator_name):
             data_generator.no_match_test = data_generator.no_match_test[0:10*size_match_test]
             
             pickle.dump(data_generator, output, pickle.HIGHEST_PROTOCOL)
-            
+
+def save_evaluation_metrics(metrics, file_path):
+    nbr_of_metrics = len(metrics)
+    with open(file_path, "a") as file:
+        for i in range(nbr_of_metrics):
+            file.write(repr(metrics[i]) + " ")
+        file.write("\n")
+        
+def get_evaluation_metrics_vals(file_path):
+    fpr_vals = []
+    fnr_vals = []
+    recall_vals = []
+    tnr_vals = []
+    
+    with open(file_path, "rb") as file:
+        lines = file.readlines()
+        for i in range(len(lines)):
+            line  = lines[i]
+            line = line.split()
+            fpr_vals.append(float(line[0]))
+            fnr_vals.append(float(line[1]))
+            recall_vals.append(float(line[2]))
+            tnr_vals.append((float(line[3])))
+    
+    return fpr_vals, fnr_vals, recall_vals, tnr_vals
+
+def plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, tnr_vals):
+    plt.figure()
+    plt.plot(thresholds, fpr_vals, "b", label="FPR")
+    plt.plot(thresholds, fnr_vals, "r", label="FNR")
+    plt.xlabel("threshold")
+    plt.ylabel("FPR/FNR")
+    plt.legend(bbox_to_anchor=(0., 1.02, 1., 0.102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
+    plt.show()
+    
+    plt.figure()
+    plt.plot(thresholds, recall_vals, "b", label="recall")
+    plt.plot(thresholds, tnr_vals, "r", label="TNR")
+    plt.xlabel("threshold")
+    plt.ylabel("recall/TNR")
+    plt.legend(bbox_to_anchor=(0., 1.02, 1., 0.102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
+    plt.show()

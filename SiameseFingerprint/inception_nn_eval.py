@@ -70,7 +70,7 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_i
     
     return precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors
  
-def evaluate_inception_network(generator, batch_size, threshold, eval_itr, output_dir,gpu_device_name):
+def evaluate_inception_network(generator, batch_size, threshold, eval_itr, output_dir, metrics_path, gpu_device_name):
     """ This method is used to evaluate an inception network for fingerprint datasets.
     
     The model is defined in the file ínception_nn_model.py and trained in 
@@ -83,6 +83,7 @@ def evaluate_inception_network(generator, batch_size, threshold, eval_itr, outpu
     threshold - distance threshold (2-norm) for the decision stage
     eval_itr - number of evaluation iterations
     output_dir - the directory of the trained model
+    metrics_path - path to the file where the evaluation results will be saved (excluding extension)
     gpu_device_name - name of the GPU device to run the evaluation with
     """
     
@@ -164,7 +165,7 @@ def evaluate_inception_network(generator, batch_size, threshold, eval_itr, outpu
                         class_id = np.vstack((class_id, class_id_batch))
 
                 
-                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = get_test_diagnostics(left_full,right_full,sim_full,threshold,class_id)
+                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr = get_test_diagnostics(left_full,right_full,sim_full,threshold,class_id)
     
                 print("Precision: %f " % precision)
                 print("# False positive: %d " % false_pos)
@@ -176,25 +177,37 @@ def evaluate_inception_network(generator, batch_size, threshold, eval_itr, outpu
                       
                 nbr_same_class = np.sum(class_id[eval_itr*batch_size:])
                 print("Number of fingerprints in the same class in the non matching set: %d " % nbr_same_class)
+                
+                metrics = (fpr, fnr, recall, tnr)
+                # save evaluation metrics to a file 
+                util.save_evaluation_metrics(metrics, metrics_path + ".txt")
          
 def main(argv):
-   """ Runs evaluation on trained network
-   """
+    """ Runs evaluation on trained network
+    """
     
     # Set parameters for evaluation
-   threshold = 1.2
-   batch_size = 100
-   eval_itr = 35
+    thresholds = [0.4]
+    batch_size = 100
+    eval_itr = 35
     
-   output_dir = argv[0]# directory where the model is saved
-   data_path =  argv[1]
-   gpu_device_name = argv[-1] 
+    output_dir = argv[0]# directories where the models are saved
+    data_path =  argv[1]
+    metrics_path = argv[2]
+    gpu_device_name = argv[-1]  
    
-   # Load generator
-   with open(data_path + "generator_data_old.pk1", "rb") as input:
-       generator = pickle.load(input)
+    # Load generator
+    with open(data_path + "generator_data_old.pk1", "rb") as input:
+        generator = pickle.load(input)
+        
+    for i in range(len(thresholds)):
+        evaluate_inception_network(generator, batch_size, thresholds[i], eval_itr, output_dir, metrics_path, gpu_device_name)
+     
+    # get evaluation metrics for varying thresholds
+    fpr_vals, fnr_vals, recall_vals, tnr_vals = util.get_evaluation_metrics_vals(metrics_path + ".txt")
     
-   evaluate_inception_network(generator, batch_size, threshold, eval_itr, output_dir, gpu_device_name)
+    # Plots of evaluation metrics
+    util.plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, tnr_vals)
     
 if __name__ == "__main__":
     main(sys.argv[1:])

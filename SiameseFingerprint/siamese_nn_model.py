@@ -12,11 +12,11 @@ import tensorflow as tf
 
 def inference(input, training = True):
     
-#    output = tf.layers.batch_normalization(
-#            input,
-#            training = training,
-#            name = "batch_norm_1",
-#            reuse = tf.AUTO_REUSE)
+    output = tf.layers.batch_normalization(
+            input,
+            training = training,
+            name = "batch_norm_1",
+            reuse = tf.AUTO_REUSE)
     
     # Convolutional layer 1
     output = tf.layers.conv2d(
@@ -36,11 +36,11 @@ def inference(input, training = True):
                                      pool_size = [2,2], 
                                      strides = 2)
     
-#    output = tf.layers.batch_normalization(
-#        output,
-#        training = training,
-#        name = "batch_norm_2",
-#        reuse = tf.AUTO_REUSE)
+    output = tf.layers.batch_normalization(
+        output,
+        training = training,
+        name = "batch_norm_2",
+        reuse = tf.AUTO_REUSE)
     
     # Convolutional Layer 2
     output = tf.layers.conv2d(
@@ -66,11 +66,11 @@ def inference(input, training = True):
             pool_size = [2,2],
             strides = 2)
     
-#    output = tf.layers.batch_normalization(
-#        output,
-#        training = training,
-#        name = "batch_norm_3",
-#        reuse = tf.AUTO_REUSE)
+    output = tf.layers.batch_normalization(
+        output,
+        training = training,
+        name = "batch_norm_3",
+        reuse = tf.AUTO_REUSE)
     
     # Convolutional Layer 3
     output = tf.layers.conv2d(
@@ -87,12 +87,12 @@ def inference(input, training = True):
 ##            output,
 ##            rate = 0.5,
 ##            training = training)
-#        
-#    output = tf.layers.batch_normalization(
-#        output,
-#        training = training,
-#        name = "batch_norm_4",
-#        reuse = tf.AUTO_REUSE)
+        
+    output = tf.layers.batch_normalization(
+        output,
+        training = training,
+        name = "batch_norm_4",
+        reuse = tf.AUTO_REUSE)
     
     # Convolutional Layer 4
     output = tf.layers.conv2d(
@@ -108,11 +108,11 @@ def inference(input, training = True):
     output = tf.layers.flatten(
             output)
     
-#    output = tf.layers.batch_normalization(
-#        output,
-#        training = training,
-#        name = "batch_norm_5",
-#        reuse = tf.AUTO_REUSE)
+    output = tf.layers.batch_normalization(
+        output,
+        training = training,
+        name = "batch_norm_5",
+        reuse = tf.AUTO_REUSE)
     
     output = tf.layers.dense(
         output,
@@ -127,11 +127,11 @@ def inference(input, training = True):
 #        rate = 0.5,
 #        training = training)
     
-#    output = tf.layers.batch_normalization(
-#        output,
-#        training = training,
-#        name = "batch_norm_6",
-#        reuse = tf.AUTO_REUSE)
+    output = tf.layers.batch_normalization(
+        output,
+        training = training,
+        name = "batch_norm_6",
+        reuse = tf.AUTO_REUSE)
     
     output = tf.nn.l2_normalize(
             output,

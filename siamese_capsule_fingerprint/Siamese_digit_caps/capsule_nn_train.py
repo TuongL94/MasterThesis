@@ -97,6 +97,7 @@ def main(argv):
     
     save_itr = 3000 # frequency in which the model is saved
 
+
     tf.reset_default_graph()
     
     if not os.path.exists(output_dir + "checkpoint"):
@@ -414,7 +415,7 @@ def main(argv):
         
         # Plot validation loss over time
         plt.figure()
-        plt.plot(list(range(val_itr,val_itr*len(val_loss_over_time)+1,val_itr)),val_loss_over_time)
+        plt.plot(list(range(nbr_val_itr,nbr_val_itr*len(val_loss_over_time)+1,nbr_val_itr)),val_loss_over_time)
         plt.title("Validation loss (contrastive loss) over time")
         plt.xlabel("iteration")
         plt.ylabel("validation loss")
