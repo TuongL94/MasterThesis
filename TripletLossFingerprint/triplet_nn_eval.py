@@ -118,10 +118,7 @@ def evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output
                 saver.restore(sess, tf.train.latest_checkpoint(output_dir))
                 
                 test_anchors_dataset = tf.data.Dataset.from_tensor_slices(generator.anchors_test)
-#                test_anchors_dataset = train_anchors_dataset.shuffle(buffer_size=np.shape(generator.anchors_test)[0])
-#                test_anchors_dataset = train_anchors_dataset.repeat()
                 test_anchors_dataset = test_anchors_dataset.batch(batch_size)
-#                test_anchors_dataset_length = np.shape(generator.anchors_test)[0]
             
                 test_anchors_iterator = test_anchors_dataset.make_one_shot_iterator()
                 test_anchors_handle = sess.run(test_anchors_iterator.string_handle())
@@ -129,51 +126,29 @@ def evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output
                 iterator = tf.data.Iterator.from_string_handle(handle, test_anchors_dataset.output_types)
                 next_element = iterator.get_next()
                 
-    #            sim_full = np.vstack((np.ones((batch_size_test*int(test_match_dataset_length/batch_size_test),1)),np.zeros((batch_size_test*int(test_non_match_dataset_length/batch_size_test),1))))
                 labels = np.vstack((np.ones((batch_size,1)), np.zeros((batch_size,1))))
-    #            sim_full = np.vstack((np.ones((batch_size_test*int(test_match_dataset_length/batch_size_test),1)),np.zeros((batch_size_test*int((int(test_non_match_dataset_length/10))/batch_size_test),1))))
-    #            sim_full = np.vstack((np.ones((batch_size_test*int(test_match_dataset_length/batch_size_test),1)),np.zeros((batch_size_test*int(int(test_non_match_dataset_length/10)/batch_size_test),1))))
                 
                 for i in range(eval_itr):
-                    #            for i in range(int(test_match_dataset_length/batch_size_test)):
                     test_batch_anchors = sess.run(next_element,feed_dict={handle:test_anchors_handle})
     
                     for j in range(generator.rotation_res):
-#                        difficulty_lvl = np.random.randint(1,4)
-#                        b_anch_test,b_pos_test,b_neg_test = generator.get_triplet(generator.test_data[j], generator.triplets_test, test_batch_anchors, difficulty_lvl)
                         b_anch_test,b_pos_test,b_neg_test = generator.get_triplet(generator.test_data[j], generator.triplets_test, test_batch_anchors)
-#                        class_id_batch = generator.same_class(test_batch,test=True)
                         left_o_match,right_o_match = sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_anch_test, right_test:b_pos_test})
                         left_o_no_match,right_o_no_match = sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_anch_test, right_test:b_neg_test})
                         if i == 0 and j == 0:
                             left_full = np.vstack((left_o_match,left_o_no_match))
                             right_full = np.vstack((right_o_match,right_o_no_match))
                             labels_full = labels
-#                            class_id = class_id_batch
                         else:
                             left_full = np.vstack((left_full,left_o_match,left_o_no_match))
                             right_full = np.vstack((right_full,right_o_match,right_o_no_match))
                             labels_full = np.vstack((labels_full,labels))
-#                            class_id = np.vstack((class_id, class_id_batch))
     
-#                for i in range(eval_itr):
-#    #            for i in range(int(int(test_non_match_dataset_length/10)/batch_size_test)):
-#                    test_batch = sess.run(next_element,feed_dict={handle:test_non_match_handle})
-#                    for j in range(generator.rotation_res):
-#                        b_l_test,b_r_test = generator.get_pairs(generator.test_data[j],test_batch) 
-#                        left_o,right_o = sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_l_test, right_test:b_r_test})
-#                        left_full = np.vstack((left_full,left_o))
-#                        right_full = np.vstack((right_full,right_o))   
-#                        
-#                        class_id_batch = generator.same_class(test_batch,test=True)
-#                        class_id = np.vstack((class_id, class_id_batch))
                 for i in range(len(thresholds)):             
                     precision, false_pos, false_neg, recall, fnr, fpr, tnr = get_test_diagnostics(left_full,right_full,labels_full,thresholds[i])
                     metrics = (fpr, fnr, recall, tnr)
                     # save evaluation metrics to a file 
                     util.save_evaluation_metrics(metrics, metrics_path + ".txt")
-    
-    
     
 #                print("Precision: %f " % precision)
 #                print("# False positive: %d " % false_pos)
@@ -206,6 +181,15 @@ def main(argv):
     metrics_path = argv[2]
     gpu_device_name = argv[-1] 
    
+    # if file containing evaluation metrics already exists use this data directly
+    if os.path.exists(metrics_path + ".txt"):
+        # get evaluation metrics for varying thresholds
+        fpr_vals, fnr_vals, recall_vals, tnr_vals = util.get_evaluation_metrics_vals(metrics_path + ".txt")
+
+        # plots of evaluation metrics
+        util.plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, tnr_vals)
+        return
+    
     # Load generator
     with open(data_path + "generator_triplet_data.pk1", "rb") as input:
         generator = pickle.load(input)

@@ -16,10 +16,10 @@ import sys
 import time
 import scipy.linalg as sl
 
+# imports from self-implemented modules
 import utilities as util
 import triplet_nn_eval as tre
-import triplet_nn_model as sm
-
+import triplet_nn_model as tr
 
 def main(argv):
     """ This method is used to train a triplet network for fingerprint datasets.
@@ -83,9 +83,13 @@ def main(argv):
     learning_rate = 0.00001
     momentum = 0.99
     
+    # margin setup for triplet loss
+    margin =  4.0 
+    margin_factor = 1.1
+    max_margin = 1.25 # maximum allowed margin value
+    margin_itr = 5000 # frequency in which to increase the margin in loss function
+    
     # Paramerters for increasing difficulty
-#    lvl_2 = 100     # Set number of iterations at when to increase difficulty to level 2
-#    lvl_3 = 200     # Set number of iterations at when to increase difficulty to level 3
     harder_itr = 300
     batch_size_increase_diff = 900
    
@@ -114,27 +118,29 @@ def main(argv):
         
         with tf.device(gpu_device_name):
              # create placeholders
-            anchor_train,pos_train,neg_train,anchor_val,pos_val,neg_val,left_test,right_test = sm.placeholder_inputs(image_dims)
+            anchor_train,pos_train,neg_train,anchor_val,pos_val,neg_val,left_test,right_test = tr.placeholder_inputs(image_dims)
             handle = tf.placeholder(tf.string, shape=[],name="handle")
-                
-            anchor_train_output = sm.inference(anchor_train)            
-            pos_train_output = sm.inference(pos_train)
-            neg_train_output = sm.inference(neg_train)
-            anchor_val_output = sm.inference(anchor_val)
-            pos_val_output = sm.inference(pos_val)
-            neg_val_output = sm.inference(neg_val)
+            margin_holder = tf.placeholder(tf.float32, shape=[], name="margin_holder")
+
+            anchor_train_output = tr.inference(anchor_train)            
+            pos_train_output = tr.inference(pos_train)
+            neg_train_output = tr.inference(neg_train)
+            anchor_val_output = tr.inference(anchor_val)
+            pos_val_output = tr.inference(pos_val)
+            neg_val_output = tr.inference(neg_val)
             
-            left_test_output = sm.inference(left_test)
-            right_test_output = sm.inference(right_test)
+            left_test_output = tr.inference(left_test)
+            right_test_output = tr.inference(right_test)
             
             reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-            margin = tf.constant(4.0) # margin for contrastive loss
-            train_loss = sm.triplet_loss(anchor_train_output,pos_train_output,neg_train_output,margin)
-            # add regularization terms to triplet loss function
+
+            train_loss = tr.triplet_loss(anchor_train_output,pos_train_output,neg_train_output,margin_holder)
+            
+            # add regularization terms to loss function
             for i in range(len(reg_losses)):
                 train_loss += reg_losses[i]
             
-            val_loss = sm.triplet_loss(anchor_val_output,pos_val_output,neg_val_output,margin)
+            val_loss = tr.triplet_loss(anchor_val_output,pos_val_output,neg_val_output,margin_holder)
             
             tf.add_to_collection("train_loss",train_loss)
             tf.add_to_collection("val_loss",val_loss)
@@ -182,14 +188,16 @@ def main(argv):
             right_test_output = tf.get_collection("right_test_output")[0]
             
             handle = g.get_tensor_by_name("handle:0")
+            margin_holder = g.get_tensor_by_name("margin_holder:0")
     
     config = tf.ConfigProto(allow_soft_placement=True)
     config.gpu_options.allow_growth = True
 #    config.gpu_options.per_process_gpu_memory_fraction = 0.8
+    
     with tf.Session(config=config) as sess:
         if is_model_new:
             with tf.device(gpu_device_name):
-                train_op = sm.training(train_loss, learning_rate, momentum)
+                train_op = tr.training(train_loss, learning_rate, momentum)
                 sess.run(tf.global_variables_initializer()) # initialize all trainable parameters
                 tf.add_to_collection("train_op",train_op)
         else:
@@ -221,8 +229,7 @@ def main(argv):
 #            x_image = tf.summary.image('anchor_input', anchor_train)
             summary_op = tf.summary.merge([summary_train_loss, filter1, hist_conv1, hist_conv2, hist_bias1, hist_bias2])
             train_writer = tf.summary.FileWriter(output_dir + "/train_summary", graph=tf.get_default_graph())
-            
-            
+              
         precision_over_time = []
         val_loss_over_time = []
         
@@ -231,36 +238,19 @@ def main(argv):
             train_anchors_dataset = tf.data.Dataset.from_tensor_slices(generator.anchors_train)
             train_anchors_dataset = train_anchors_dataset.shuffle(buffer_size=np.shape(generator.anchors_train)[0])
             train_anchors_dataset = train_anchors_dataset.repeat()
-            train_anchors_dataset = train_anchors_dataset.batch(int(batch_size_train))
-            
-#            train_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_train)
-#            train_non_match_dataset = train_non_match_dataset.shuffle(buffer_size=np.shape(generator.no_match_train)[0])
-#            train_non_match_dataset = train_non_match_dataset.repeat()
-#            train_non_match_dataset = train_non_match_dataset.batch(int((batch_size_train+1)/2))
+            train_anchors_dataset = train_anchors_dataset.batch(batch_size_train)
             
             val_anchors_dataset_length = np.shape(generator.anchors_val)[0]
             val_anchors_dataset = tf.data.Dataset.from_tensor_slices(generator.anchors_val)
             val_anchors_dataset = val_anchors_dataset.shuffle(buffer_size = val_anchors_dataset_length)
             val_anchors_dataset = val_anchors_dataset.repeat()
             val_anchors_dataset = val_anchors_dataset.batch(batch_size_val)
-            
-#            val_non_match_dataset_length = np.shape(generator.no_match_val)[0]
-#            val_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_val[0:int(val_non_match_dataset_length/10)])
-#            val_non_match_dataset = val_non_match_dataset.shuffle(buffer_size = val_non_match_dataset_length)
-#            val_non_match_dataset = val_non_match_dataset.repeat()
-#            val_non_match_dataset = val_non_match_dataset.batch(batch_size_val)
-            
+                   
             train_anchors_iterator = train_anchors_dataset.make_one_shot_iterator()
             train_anchors_handle = sess.run(train_anchors_iterator.string_handle())
             
             val_anchors_iterator = val_anchors_dataset.make_one_shot_iterator()
             val_anchors_handle = sess.run(val_anchors_iterator.string_handle())
-            
-#            train_non_match_iterator = train_non_match_dataset.make_one_shot_iterator()
-#            train_non_match_handle = sess.run(train_non_match_iterator.string_handle())
-            
-#            val_non_match_iterator = val_non_match_dataset.make_one_shot_iterator()
-#            val_non_match_handle = sess.run(val_non_match_iterator.string_handle())
             
             iterator = tf.data.Iterator.from_string_handle(handle, train_anchors_dataset.output_types)
             next_element = iterator.get_next()
@@ -269,30 +259,15 @@ def main(argv):
         start_time_train = time.time()
         # Training loop
         for i in range(1,train_itr + 1):
-            train_batch_anchors = sess.run(next_element,feed_dict={handle:train_anchors_handle})
-#            b_sim_train_matching = np.ones((np.shape(train_batch_matching)[0],1),dtype=np.int32)
-#            train_batch_non_matching = sess.run(next_element,feed_dict={handle:train_non_match_handle})
-#            b_sim_train_non_matching = np.zeros((np.shape(train_batch_non_matching)[0],1),dtype=np.int32)
             
-#            train_batch = np.append(train_batch_matching,train_batch_non_matching,axis=0)
-#            b_sim_train = np.append(b_sim_train_matching,b_sim_train_non_matching,axis=0)
-#            permutation = np.random.permutation(batch_size_train)
-#            train_batch = np.take(train_batch,permutation,axis=0)
-#            b_sim_train = np.take(b_sim_train,permutation,axis=0)
+            if i % margin_itr == 0 and margin < max_margin:
+                margin *= margin_factor
+                
+            train_batch_anchors = sess.run(next_element,feed_dict={handle:train_anchors_handle})
             
             ####### Increase difficulty every harder_itr iteration by offline evaluation on a subset of all triplets #######
             if i % harder_itr == 0:                   
                 # Take a random subset of each anchors non matching set
-#                nbr_non_matching = 30
-#                for j in range(len(generator.triplets_train_original)):
-#                    no_match_samples = np.random.choice(generator.triplets_train_original[j][1], nbr_non_matching)
-##                    no_match_samples = no_match_samples.reshape((nbr_non_matching,1))
-#                    if j == 0:
-#                        negative_pairs = np.array([j*np.ones((nbr_non_matching)), no_match_samples], dtype = 'int32')
-#                    else:
-#                        negative_pairs = np.hstack((negative_pairs, np.array([j*np.ones((nbr_non_matching)), no_match_samples], dtype = 'int32')))
-#                negative_pairs = negative_pairs.T
-                
                 breakpoint_match = []
                 nbr_non_matching = 20
                 for j in range(len(generator.anchors_train)):
@@ -307,8 +282,6 @@ def main(argv):
                         negative = np.hstack((negative, np.array(no_match_samples, dtype = 'int32')))
                         positive = np.hstack((positive, np.array(match, dtype = 'int32')))
                         breakpoint_match.append(len(match) + breakpoint_match[-1])
-#                negative = negative.T
-#                positive = positive.T
                     
                 for j in range(int(negative.shape[0] / batch_size_test) + 1):
                     batch_start = j*batch_size_increase_diff
@@ -373,11 +346,7 @@ def main(argv):
                         if distance_neg[j][k] < hardest_current[0][1]:
                             hardest_current[0] = [negative[j*nbr_non_matching+k],distance_neg[j][k]]
                             hardest_current = hardest_current[hardest_current[:,1].argsort()][::-1]  # Sort in decending order based on distance
-                            
-#                    for k in range(j*nbr_non_matching, (j+1)*nbr_non_matching):
-#                        if distance_neg[k] < hardest_current[0][1]:
-#                            hardest_current[0] = [negative[k],distance_neg[k]]
-#                            hardest_current = hardest_current[hardest_current[:,1].argsort()][::-1]  # Sort in decending order based on distance
+                              
                     hardest_neg.append(hardest_current[:,0].astype('int32'))
                 
                 hardest_pos = []
@@ -398,86 +367,31 @@ def main(argv):
                     
                 generator.update_triplets(hardest_neg, hardest_pos)
                 
-#                # Run network on the subset and save the output
-#                for j in range(int(len(negative_pairs) / batch_size_test)):
-#                    b_anch, b_neg = generator.get_pairs(generator.train_data[0], negative_pairs[j*batch_size_test:(j+1)*batch_size_test])
-#                
-#                    anchor_o,neg_o = sess.run([left_test_output, right_test_output],feed_dict = {left_test:b_anch, right_test:b_neg})
-#                    if j == 0:
-#                        anchor_full = anchor_o
-#                        neg_full = neg_o
-#                    else:
-#                        anchor_full = np.vstack((anchor_full,anchor_o))
-#                        neg_full = np.vstack((neg_full,neg_o))
-                
-                # Calculate distance between all non matching pairs
-#                distance = sl.norm(anchor_full - neg_full,axis=1)
-                
-                # Create the new non matching set and replace in the generator
-#                hardest_all = []
-#                nbr_hardest = 5
-#                for j in range(int(len(distance) / nbr_non_matching)):
-#                    hardest_current = np.full((nbr_hardest,2), np.inf)        # Keeps track on index in first column and distance in second
-#                    for k in range(j*nbr_non_matching, (j+1)*nbr_non_matching):
-#                        if distance[k] < hardest_current[0][1]:
-#                            hardest_current[0] = [negative_pairs[k][1],distance[k]]
-#                            hardest_current = hardest_current[hardest_current[:,1].argsort()][::-1]  # Sort in decending order based on distance
-#                    hardest_all.append(hardest_current[:,0].astype('int32'))
-#                generator.update_no_match(hardest_all)        
-                
-                
-#            if i < lvl_2:
-#                difficulty_lvl = 1
-#            elif i < lvl_3:
-#                difficulty_lvl = 2
-#            else:
-#                difficulty_lvl = 3   
             # Randomize rotation of batch              
             rnd_rotation = np.random.randint(0,generator.rotation_res)
-#            b_anch_train,b_pos_train,b_neg_train = generator.get_triplet(generator.train_data[rnd_rotation], generator.triplets_train, train_batch_anchors, difficulty_lvl)
             b_anch_train,b_pos_train,b_neg_train = generator.get_triplet(generator.train_data[rnd_rotation], generator.triplets_train, train_batch_anchors)
             
-            _,train_loss_value, summary = sess.run([train_op, train_loss, summary_op],feed_dict={anchor_train:b_anch_train, pos_train:b_pos_train, neg_train:b_neg_train})
+            _,train_loss_value, summary = sess.run([train_op, train_loss, summary_op],feed_dict={anchor_train:b_anch_train, pos_train:b_pos_train, neg_train:b_neg_train, margin_holder:margin})
 
-             # Use validation data set to tune hyperparameters (Classification threshold)
+             # Use validation data set to tune hyperparameters (threshold)
             if i % val_itr == 0:
                 current_val_loss = 0
-#                b_sim_val_anchors = np.repeat(np.ones((batch_size_val*int(val_anchors_dataset_length/batch_size_val),1)),generator.rotation_res,axis=0)
-#                b_sim_val_non_matching = np.repeat(np.zeros((batch_size_val*int(val_match_dataset_length/batch_size_val),1)),generator.rotation_res,axis=0)
-#                b_sim_full = np.append(b_sim_val_matching,b_sim_val_non_matching,axis=0)
                 labels = np.vstack((np.ones((batch_size_val,1)), np.zeros((batch_size_val,1))))
                 for j in range(int(val_anchors_dataset_length/batch_size_val)):
                     val_batch_anchors = sess.run(next_element,feed_dict={handle:val_anchors_handle})
-#                    class_id_batch = generator.same_class(val_batch_anchors)
                     for k in range(generator.rotation_res):
-#                        b_l_val,b_r_val = generator.get_pairs(generator.val_data[k],val_batch_anchors) 
-#                        difficulty_lvl = np.random.randint(1,4)
-#                        b_anch_val,b_pos_val,b_neg_val= generator.get_triplet(generator.val_data[k], generator.triplets_val, val_batch_anchors, difficulty_lvl)
                         b_anch_val,b_pos_val,b_neg_val= generator.get_triplet(generator.val_data[k], generator.triplets_val, val_batch_anchors)
-                        anchor_o,pos_o,neg_o,val_loss_value = sess.run([anchor_val_output,pos_val_output, neg_val_output,val_loss],feed_dict = {anchor_val:b_anch_val, pos_val:b_pos_val, neg_val:b_neg_val})
+                        anchor_o,pos_o,neg_o,val_loss_value = sess.run([anchor_val_output,pos_val_output, neg_val_output,val_loss],feed_dict = {anchor_val:b_anch_val, pos_val:b_pos_val, neg_val:b_neg_val, margin_holder:margin})
                         current_val_loss += val_loss_value
                         if j == 0 and k == 0:
                             anchor_full = np.vstack((anchor_o,anchor_o))
                             candidates_full = np.vstack((pos_o,neg_o))
                             labels_full = labels
-#                            class_id = class_id_batch
                         else:
                             anchor_full = np.vstack((anchor_full,anchor_o,anchor_o))
                             candidates_full = np.vstack((candidates_full,pos_o,neg_o))
                             labels_full = np.vstack((labels_full,labels))
-#                            class_id = np.vstack((class_id, class_id_batch))
-                    
-#                for j in range(int(val_match_dataset_length/batch_size_val)):
-#                    val_batch_non_matching = sess.run(next_element,feed_dict={handle:val_non_match_handle})
-#                    for k in range(generator.rotation_res):
-#                        b_l_val,b_r_val = generator.get_pairs(generator.val_data[0],val_batch_non_matching) 
-#                        anchor_o,pos_o,val_loss_value  = sess.run([anchor_val_output,pos_val_output,val_loss],feed_dict = {anchor_val:b_l_val, pos_val:b_r_val, label_val:np.zeros((batch_size_val,1))})
-#                        anchor_full = np.vstack((anchor_full,anchor_o))
-#                        pos_full = np.vstack((pos_full,pos_o)) 
-#                        class_id_batch = generator.same_class(val_batch_non_matching)
-#                        class_id = np.vstack((class_id,class_id_batch))
-#                        current_val_loss += val_loss_value
-                        
+                                            
                 val_loss_over_time.append(current_val_loss*batch_size_val/np.shape(labels_full)[0])
                 precision, false_pos, false_neg, recall, fnr, fpr, _ = tre.get_test_diagnostics(anchor_full,candidates_full, labels_full,threshold)
             
@@ -522,7 +436,7 @@ def main(argv):
         # Plot validation loss over time
         plt.figure()
         plt.plot(list(range(val_itr,val_itr*len(val_loss_over_time)+1,val_itr)),val_loss_over_time)
-        plt.title("Validation loss (contrastive loss) over time")
+        plt.title("Validation loss over time")
         plt.xlabel("iteration")
         plt.ylabel("validation loss")
         plt.show()

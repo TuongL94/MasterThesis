@@ -138,7 +138,7 @@ def evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output
         print("No model exists in " + output_dir)
         return    
     else:
-        print("Using existing model in the directory " + output_dir + " for evaluation")  
+        print("Using existing model in the directory " + output_dir + " for evaluation")
         for file in os.listdir(output_dir):
             if file.endswith(".meta"):
                 meta_file_name = os.path.join(output_dir,file)
@@ -169,7 +169,7 @@ def evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output
             
                 test_non_match_dataset_length = np.shape(generator.no_match_test)[0]
                 test_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_test)
-                test_non_match_dataset = test_non_match_dataset.shuffle(buffer_size = test_non_match_dataset_length)
+#                test_non_match_dataset = test_non_match_dataset.shuffle(buffer_size = test_non_match_dataset_length)
                 test_non_match_dataset = test_non_match_dataset.batch(batch_size)
                 
                 test_match_iterator = test_match_dataset.make_one_shot_iterator()
@@ -233,15 +233,16 @@ def evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output
                     util.save_evaluation_metrics(metrics, metrics_path + ".txt")
                     
 #                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = get_test_diagnostics_2(preds_full,sim_full,class_id)
-                
-#                print("Precision: %f " % precision)
-#                print("# False positive: %d " % false_pos)
-#                print("# False negative: %d " % false_neg)
-#                print("# Number of false positive from the same class: %d " % inter_class_errors)
-#                print("# Recall: %f " % recall)
-#                print("# Miss rate/false negative rate: %f " % fnr)
-#                print("# fall-out/false positive rate: %f " % fpr)
-#                      
+#                
+                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr = get_test_diagnostics(left_full,right_full,sim_full,0.89,class_id)
+                print("Precision: %f " % precision)
+                print("# False positive: %d " % false_pos)
+                print("# False negative: %d " % false_neg)
+                print("# Number of false positive from the same class: %d " % inter_class_errors)
+                print("# Recall: %f " % recall)
+                print("# Miss rate/false negative rate: %f " % fnr)
+                print("# fall-out/false positive rate: %f " % fpr)
+                      
 #                nbr_same_class = np.sum(class_id[eval_itr*batch_size:])
 #                print("Number of fingerprints in the same class in the non matching set: %d " % nbr_same_class)
                                     
@@ -264,6 +265,15 @@ def main(argv):
     metrics_path = argv[2]
     gpu_device_name = argv[-1] 
    
+    # if file containing evaluation metrics already exists use this data directly
+    if os.path.exists(metrics_path + ".txt"):
+        # get evaluation metrics for varying thresholds
+        fpr_vals, fnr_vals, recall_vals, tnr_vals = util.get_evaluation_metrics_vals(metrics_path + ".txt")
+
+        # plots of evaluation metrics
+        util.plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, tnr_vals)
+        return
+    
     # load generator
     with open(data_path + "generator_data.pk1", "rb") as input:
         generator = pickle.load(input)

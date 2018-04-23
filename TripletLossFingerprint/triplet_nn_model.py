@@ -96,6 +96,10 @@ def inference(input):
     net = tf.layers.dropout(
             inputs = net,
             rate = 0.4)
+    
+    net = tf.nn.l2_normalize(
+        net,
+        axis=1)
      
     return net
     
