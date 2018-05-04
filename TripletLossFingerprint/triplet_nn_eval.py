@@ -12,8 +12,8 @@ import sys
 import utilities as util
 import pickle
 
-def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_id=None):
-    """ Computes and returns evaluation metrics.
+def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_id=None, plot_hist=False, breakpoint=None):
+    """ Computes and returns evaluation metrics. Also plots histograms over distances between pairs.
     
     Input:
     left_pairs_o - numpy array with rows corresponding to arrays obtained from inference step in the siamese network
@@ -22,6 +22,8 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_i
     threshold - distance threshold, if the 2-norm distanc between two arrays are less than or equal to this value 
     they are considered to correspond to a matching pair of images.
     class_id - Is optional. Contains information about which finger and person each fingerprint comes from.
+    plot_hist - boolean specifying whether to plot histograms over distances between pairs
+    breakpoint - index where sim_labels changes from similar pairs to dissimilar pairs, should be provided to plot histograms
     Returns:
     precision - precision
     false_pos - number of false positives
@@ -33,19 +35,25 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_i
     tnr - true negative rate (nbr of true negative/total number of negative examples)
     """
     matching = np.zeros(len(sim_labels))
-    l2_normalized_diff = util.l2_normalize(left_pairs_o-right_pairs_o)
+#    l2_normalized_diff = util.l2_normalize(left_pairs_o-right_pairs_o)
+    
+    l2_normalized_diff = left_pairs_o-right_pairs_o
+    l2_distances = sl.norm(l2_normalized_diff,axis=1)
+    
+    if plot_hist:
+        util.get_separation_distance_hist(l2_distances[0:breakpoint],l2_distances[breakpoint:])
+        
     false_pos = 0
     false_neg = 0
     inter_class_errors = 0
     p = np.sum(sim_labels)
     n = len(sim_labels) - p
     for i in range(len(sim_labels)):
-#        print(sl.norm(l2_normalized_diff[i,:]))
         if np.isinf(l2_normalized_diff[i,:]).any() or np.isnan(l2_normalized_diff[i,:]).any():
-            print('Got inf or Nan in L2 norm; Change hyperparameters to avoid')
+#            print('Got inf or Nan in L2 norm; Change hyperparameters to avoid')
             if sim_labels[i] == 1:
                 false_neg = false_neg + 1
-        elif sl.norm(l2_normalized_diff[i,:]) < threshold:
+        elif l2_distances[i] < threshold:
             matching[i] = 1
             if sim_labels[i] == 0:
                 false_pos = false_pos + 1
@@ -71,7 +79,7 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_i
     
     return precision, false_pos, false_neg, recall, fnr, fpr, tnr#, inter_class_errors
  
-def evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output_dir, metrics_path, gpu_device_name):
+def evaluate_triplet_network(generator, batch_size, thresholds, eval_itr, output_dir, metrics_path, gpu_device_name):
     """ This method is used to evaluate a triplet network for fingerprint datasets.
     
     The model is defined in the file triplet_nn_model.py and trained in 
@@ -150,13 +158,14 @@ def evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output
                     # save evaluation metrics to a file 
                     util.save_evaluation_metrics(metrics, metrics_path + ".txt")
     
-#                print("Precision: %f " % precision)
-#                print("# False positive: %d " % false_pos)
-#                print("# False negative: %d " % false_neg)
+                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr = get_test_diagnostics(left_full,right_full,labels_full,0.1, plot_hist=True, breakpoint=batch_size*eval_itr)
+                print("Precision: %f " % precision)
+                print("# False positive: %d " % false_pos)
+                print("# False negative: %d " % false_neg)
 #                print("# Number of false positive from the same class: %d " % inter_class_errors)
-#                print("# Recall: %f " % recall)
-#                print("# Miss rate/false negative rate: %f " % fnr)
-#                print("# fall-out/false positive rate: %f " % fpr)
+                print("# Recall: %f " % recall)
+                print("# Miss rate/false negative rate: %f " % fnr)
+                print("# fall-out/false positive rate: %f " % fpr)
                       
 #                nbr_same_class = np.sum(class_id[eval_itr*batch_size:])
 #                print("Number of fingerprints in the same class in the non matching set: %d " % nbr_same_class)
@@ -194,7 +203,7 @@ def main(argv):
     with open(data_path + "generator_triplet_data.pk1", "rb") as input:
         generator = pickle.load(input)
     
-        evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output_dir, metrics_path, gpu_device_name)
+        evaluate_triplet_network(generator, batch_size, thresholds, eval_itr, output_dir, metrics_path, gpu_device_name)
 
 if __name__ == "__main__":
     main(sys.argv[1:])

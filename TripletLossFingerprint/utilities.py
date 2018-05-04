@@ -133,3 +133,9 @@ def plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, tnr_val
     plt.ylabel("recall/TNR")
     plt.legend(bbox_to_anchor=(0., 1.02, 1., 0.102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
     plt.show()
+    
+def get_separation_distance_hist(l2_distances_sim, l2_distances_no_sim):
+    plt.hist(l2_distances_sim, bins="auto", alpha=0.5, label="similar", color="g")
+    plt.hist(l2_distances_no_sim, bins="auto", alpha=0.5, label="dissimilar", color="r")
+    plt.legend(bbox_to_anchor=(0., 1.02, 1., 0.102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
+    plt.show()

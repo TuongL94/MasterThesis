@@ -47,7 +47,7 @@ def main(argv):
 
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
-    if not os.path.exists(data_path + "generator_data.pk1"):
+    if not os.path.exists(data_path + "generator_data_small_rotdiff5_transdiff10.pk1"):
         with open(data_path + "generator_data.pk1", "wb") as output:
             # Load fingerprint labels and data from file with names
             finger_id = np.load(data_path + "finger_id_mt_vt_112.npy")
@@ -58,8 +58,24 @@ def main(argv):
             finger_data = util.reshape_grayscale_data(finger_data)
             nbr_of_images = np.shape(finger_data)[0] # number of images to use from the original data set
             
+#            l_finger_id = np.load(data_path + "casia_l_finger_id.npy")
+#            l_person_id = np.load(data_path + "casia_l_person_id.npy")
+#            l_fingerprints = np.load(data_path + "casia_l_fingerprints.npy")
+#            r_finger_id = np.load(data_path + "casia_r_finger_id.npy")
+#            r_person_id = np.load(data_path + "casia_r_person_id.npy")
+#            r_fingerprints = np.load(data_path + "casia_r_fingerprints.npy")
+            
+#            finger_id = np.hstack((l_finger_id,r_finger_id))
+#            person_id = np.hstack((l_person_id,r_person_id))
+#            
+#            dims = (356,328)
+#            l_finger_data = util.reshape_grayscale_data(l_fingerprints,dims)
+#            r_finger_data = util.reshape_grayscale_data(r_fingerprints,dims)
+#            
+#            fingerprints = np.vstack((l_finger_data,r_finger_data))
             rotation_res = 1
             generator = data_generator(finger_data, finger_id, person_id, translation, rotation, nbr_of_images, rotation_res) # initialize data generator
+#            generator = data_generator(finger_id, person_id, fingerprints, rotation_res) # initialize data generator
             
             finger_id_gt_vt = np.load(data_path + "finger_id_gt_vt.npy")
             person_id_gt_vt = np.load(data_path + "person_id_gt_vt.npy")
@@ -70,30 +86,32 @@ def main(argv):
             nbr_of_images_gt_vt = np.shape(finger_data_gt_vt)[0]
             
             generator.add_new_data(finger_data_gt_vt, finger_id_gt_vt, person_id_gt_vt, translation_gt_vt, rotation_gt_vt, nbr_of_images_gt_vt)
+
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
         # Load generator
-        with open(data_path + "generator_data.pk1", "rb") as input:
+        with open(data_path + "generator_data_small_rotdiff5_transdiff10.pk1", "rb") as input:
             generator = pickle.load(input)
+
 #        util.get_no_matching_subset(generator, data_path, "generator_data.pk1")
         
 #    util.image_standardization(generator.train_data[0])     
     
     # parameters for training
-    batch_size_train = 1000
+    batch_size_train = 250
     train_itr = 500000000000000000
     
     # margin setup for contrastive loss
     margin = 0.5
-    margin_factor = 1.25
+    margin_factor = 1.1
     max_margin = 1.3 # maximum allowed margin value
-    margin_itr = 500 # frequency in which to increase the margin in loss function 
+    margin_itr = 400 # frequency in which to increase the margin in loss function 
     
     learning_rate = 0.0001
     momentum = 0.99
    
     # parameters for validation
-    batch_size_val = 471
+    batch_size_val = 250
     val_itr = 200 # frequency in which to use validation data for computations
     threshold = 0.5    
     thresh_step = 0.01
@@ -101,7 +119,7 @@ def main(argv):
     dims = np.shape(generator.train_data[0])
     image_dims = [dims[1],dims[2],dims[3]]
     
-    save_itr = 2000 # frequency in which the model is saved
+    save_itr = 20000 # frequency in which the model is saved
     
     tf.reset_default_graph()
     
@@ -118,7 +136,10 @@ def main(argv):
             handle = tf.placeholder(tf.string, shape=[],name="handle")
             margin_holder = tf.placeholder(tf.float32, shape=[], name="margin_holder")
                 
-            left_train_output = sm.inference(left_train)            
+            left_train_output = sm.inference(left_train)
+
+#            print(util.get_nbr_of_parameters())
+            
             right_train_output = sm.inference(right_train)
             
 #            decision_train_output = sm.decision_layer(left_train_output - right_train_output)
@@ -154,6 +175,10 @@ def main(argv):
             
             tf.add_to_collection("train_loss",train_loss)
             tf.add_to_collection("val_loss",val_loss)
+            
+#            tf.add_to_collection("left_train_output",left_train_output)
+#            tf.add_to_collection("right_train_output",right_train_output)
+            
             tf.add_to_collection("left_val_output",left_val_output)
             tf.add_to_collection("right_val_output",right_val_output)
             tf.add_to_collection("left_test_output",left_test_output)
@@ -224,18 +249,48 @@ def main(argv):
             nbr_of_filters_conv1 = sess.run(tf.shape(conv1_filters)[-1])
     
             conv2_filters = graph.get_tensor_by_name("conv2/kernel:0")
+            conv3_filters = graph.get_tensor_by_name("conv3/kernel:0")
+            conv4_filters = graph.get_tensor_by_name("conv4/kernel:0")
+#            conv5_filters = graph.get_tensor_by_name("conv5/kernel:0")
+#            conv6_filters = graph.get_tensor_by_name("conv6/kernel:0")
+#            conv7_filters = graph.get_tensor_by_name("conv7/kernel:0")
+#            conv8_filters = graph.get_tensor_by_name("conv8/kernel:0")
+            
+            
             hist_conv1 = tf.summary.histogram("hist_conv1", conv1_filters)
             hist_conv2 = tf.summary.histogram("hist_conv2", conv2_filters)
+            hist_conv3 = tf.summary.histogram("hist_conv3", conv3_filters)
+            hist_conv4 = tf.summary.histogram("hist_conv4", conv4_filters)
+#            hist_conv5 = tf.summary.histogram("hist_conv5", conv5_filters)
+#            hist_conv6 = tf.summary.histogram("hist_conv6", conv6_filters)
+#            hist_conv7 = tf.summary.histogram("hist_conv7", conv7_filters)
+#            hist_conv8= tf.summary.histogram("hist_conv8", conv8_filters)
+            
             conv1_filters = tf.transpose(conv1_filters, perm = [3,0,1,2])
             filter1 = tf.summary.image('Filter_1', conv1_filters, max_outputs=nbr_of_filters_conv1)
+            
             conv1_bias = graph.get_tensor_by_name("conv1/bias:0")
             hist_bias1 = tf.summary.histogram("hist_bias1", conv1_bias)
             conv2_bias = graph.get_tensor_by_name("conv2/bias:0")
             hist_bias2 = tf.summary.histogram("hist_bias2", conv2_bias)
+            conv3_bias = graph.get_tensor_by_name("conv3/bias:0")
+            hist_bias3 = tf.summary.histogram("hist_bias3", conv3_bias)
+            conv4_bias = graph.get_tensor_by_name("conv4/bias:0")
+            hist_bias4 = tf.summary.histogram("hist_bias4", conv4_bias)
+            
+#            conv5_bias = graph.get_tensor_by_name("conv5/bias:0")
+#            hist_bias5 = tf.summary.histogram("hist_bias5", conv5_bias)
+#            conv6_bias = graph.get_tensor_by_name("conv6/bias:0")
+#            hist_bias6 = tf.summary.histogram("hist_bias6", conv6_bias)
+#            conv7_bias = graph.get_tensor_by_name("conv7/bias:0")
+#            hist_bias7 = tf.summary.histogram("hist_bias7", conv7_bias)
+#            conv8_bias = graph.get_tensor_by_name("conv8/bias:0")
+#            hist_bias8 = tf.summary.histogram("hist_bias8", conv8_bias)
                 
             summary_train_loss = tf.summary.scalar('training_loss', train_loss)
 #            x_image = tf.summary.image('left_input', left_train)
-            summary_op = tf.summary.merge([summary_train_loss, filter1, hist_conv1, hist_bias1, hist_conv2, hist_bias2])
+            summary_op = tf.summary.merge([summary_train_loss, filter1, hist_conv1, hist_bias1, hist_conv2, hist_bias2, hist_conv3, hist_bias3, hist_conv4, hist_bias4])
+#            summary_op = tf.summary.merge([summary_train_loss, filter1, hist_conv1, hist_bias1, hist_conv2, hist_bias2, hist_conv3, hist_bias3, hist_conv4, hist_bias4, hist_conv5, hist_bias5, hist_conv6, hist_bias6, hist_conv7, hist_bias7, hist_conv8, hist_bias8])
             train_writer = tf.summary.FileWriter(output_dir + "/train_summary", graph=tf.get_default_graph())
              
         precision_over_time = []
@@ -247,12 +302,12 @@ def main(argv):
             train_match_dataset = tf.data.Dataset.from_tensor_slices(generator.match_train)
             train_match_dataset = train_match_dataset.shuffle(buffer_size=np.shape(generator.match_train)[0])
             train_match_dataset = train_match_dataset.repeat()
-            train_match_dataset = train_match_dataset.batch(int(batch_size_train/2))
+            train_match_dataset = train_match_dataset.batch(int(batch_size_train/5))
 
             train_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_train)
             train_non_match_dataset = train_non_match_dataset.shuffle(buffer_size=np.shape(generator.no_match_train)[0])
             train_non_match_dataset = train_non_match_dataset.repeat()
-            train_non_match_dataset = train_non_match_dataset.batch(int((batch_size_train+1)/2))
+            train_non_match_dataset = train_non_match_dataset.batch(batch_size_train)
             
             val_match_dataset_length = np.shape(generator.match_val)[0]
             val_match_dataset = tf.data.Dataset.from_tensor_slices(generator.match_val)
@@ -261,7 +316,7 @@ def main(argv):
             val_match_dataset = val_match_dataset.batch(batch_size_val)
             
             val_non_match_dataset_length = np.shape(generator.no_match_val)[0]
-            val_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_val[0:int(val_non_match_dataset_length/10)])
+            val_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_val)
             val_non_match_dataset = val_non_match_dataset.shuffle(buffer_size = val_non_match_dataset_length)
             val_non_match_dataset = val_non_match_dataset.repeat()
             val_non_match_dataset = val_non_match_dataset.batch(batch_size_val)
@@ -288,6 +343,7 @@ def main(argv):
             
             if i % margin_itr == 0 and margin < max_margin:
                 margin *= margin_factor
+                
             train_batch_matching = sess.run(next_element,feed_dict={handle:train_match_handle})
             b_sim_train_matching = np.ones((np.shape(train_batch_matching)[0],1),dtype=np.int32)
             train_batch_non_matching = sess.run(next_element,feed_dict={handle:train_non_match_handle})
@@ -304,7 +360,7 @@ def main(argv):
             b_l_train,b_r_train = generator.get_pairs(generator.train_data[rnd_rotation],train_batch)
             
             _,train_loss_value, summary = sess.run([train_op, train_loss, summary_op],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train, margin_holder:margin})
-
+#            left_to, right_to,train_loss_value, summary = sess.run([left_train_output, right_train_output, train_loss, summary_op],feed_dict={left_train:b_l_train, right_train:b_l_train, label_train:b_sim_train, margin_holder:margin})
              # Use validation data set to tune hyperparameters (threshold)
             if i % val_itr == 0:
                 current_val_loss = 0

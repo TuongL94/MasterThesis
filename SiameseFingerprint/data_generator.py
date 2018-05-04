@@ -69,6 +69,46 @@ class data_generator:
         
         self.rotation_res = rotation_res
         self.gen_rotations(self.train_data,self.val_data,self.test_data,self.rotation_res)
+        
+        
+#    def __init__(self, finger_id, person_id, images, rotation_res):
+#        """ Initializes an instance of a data_generator class for CASIA fingerprint database
+#        
+#        The data_generator contain attributes referring to the input data.
+#        Input:
+#            finger_id - numpy array containing finger ids specified as integers (1,2,3,6,7,8)
+#            person_id - numpy array containing person ids specified as integers [0,inf)
+#            images - 4D numpy array of the format [nbr_of_images,height,width,1]
+#            rotation_res - number of rotated versions of input data
+#        """
+#
+#        # Split fingerprint data into training, validation and testing sets
+#        percentages = [0.8,0.1]
+#        self.train_data, self.val_data, self.test_data = self.three_split_array(images, percentages)
+#        self.train_finger_id, self.val_finger_id, self.test_finger_id = self.three_split_array(finger_id, percentages)
+#        self.train_person_id, self.val_person_id, self.test_person_id= self.three_split_array(person_id, percentages)
+#        
+#        # Breakpoints for training data 
+#        self.breakpoints_train = self.get_breakpoints_casia(self.train_person_id)
+#        
+#        # Breakpoints for validation data 
+#        self.breakpoints_val= self.get_breakpoints_casia(self.val_person_id)
+#        
+#        # Breakpoints for test data 
+#        self.breakpoints_test= self.get_breakpoints_casia(self.test_person_id)
+#        
+#        # All combinations of training data
+#        self.match_train, self.no_match_train = self.all_combinations_casia(self.breakpoints_train, self.train_person_id, self.train_finger_id,2)
+#        
+#        # All combinations of validation data
+#        self.match_val, self.no_match_val= self.all_combinations_casia(self.breakpoints_val, self.val_person_id, self.val_finger_id,2)
+#        
+#        # All combinations of test data
+#        self.match_test, self.no_match_test= self.all_combinations_casia(self.breakpoints_test, self.test_person_id, self.test_finger_id,2)
+#                
+#        self.rotation_res = rotation_res
+#        self.gen_rotations(self.train_data,self.val_data,self.test_data,self.rotation_res)
+    
     
     def add_new_data(self, images, finger_id, person_id, translation, rotation, data_size):
         percentages = [0.8,0.1]
@@ -199,6 +239,26 @@ class data_generator:
         
         return breakpoints
     
+    def get_breakpoints_casia(self, person_id):
+        """ Returns a list containing breakpoint indices
+        
+        Breakpoints indices are indices where the person id
+        changes from one person to another.
+        Input:
+            person_id - numpy array containing person ids
+        Return:
+            breakpoints - list of breakpoint indices
+        """
+        breakpoints = [0]
+        length = len(person_id)
+        for i in range(length - 1):
+            if person_id[i] != person_id[i+1]:
+                breakpoints.append(i+1)
+        
+        breakpoints.append(length)
+        
+        return breakpoints
+    
     def get_pairs(self,data,pair_list):
         left_pairs = np.take(data,pair_list[:,0],axis=0)
         right_pairs = np.take(data,pair_list[:,1],axis=0)
@@ -297,6 +357,35 @@ class data_generator:
                 # is added to non-matching pairs
                 for n in range(breakpoints[i+1], rotation.shape[0]):
                     no_match.append([breakpoints[i]+k, n])
+            
+        return np.array(match,dtype="int32"),np.array(no_match,dtype="int32")
+    
+    def all_combinations_casia(self, breakpoints, finger_id, nbr_of_non_matching):
+        """ Returns two arrays containing indices for all combinations of matching image pairs and a subset of non-matching image pairs
+        
+        Two images are considered to match if the come from the same person and depicts same finger. This method
+        generates indices for the CASIA fingerprint database
+        Input:
+            breakpoints - a list of breakpoint indices
+            finger_id - numpy array with finger ids
+            person_id - numpy array with person ids
+            nbr_of_non_matching - number of non-matching pairs per finger
+        """
+        match = [] # matching pair indices
+        no_match = [] # non-matching pair indices 
+        
+        for i in range(len(breakpoints)-1):
+            for k in range(breakpoints[i+1]-breakpoints[i]):
+                for j in range(breakpoints[i]+k+1, breakpoints[i+1]):
+                    if finger_id[breakpoints[i]+k] == finger_id[j]:
+                        match.append([breakpoints[i]+k, j])
+                
+                # current image combined with an image from another person or fingers from other hand of same person
+                for n in range(nbr_of_non_matching):
+                    rnd_ind = np.random.randint(breakpoints[-1])
+                    while breakpoints[i] <= rnd_ind and rnd_ind <= breakpoints[i+1]-1:
+                        rnd_ind = np.random.randint(breakpoints[-1])
+                    no_match.append([breakpoints[i]+k,rnd_ind])
             
         return np.array(match,dtype="int32"),np.array(no_match,dtype="int32")
     

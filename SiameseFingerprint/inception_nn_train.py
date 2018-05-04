@@ -47,7 +47,7 @@ def main(argv):
 
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
-    if not os.path.exists(data_path + "generator_data.pk1"):
+    if not os.path.exists(data_path + "generator_data_small_rotdiff5_transdiff10.pk1"):
         with open(data_path + "generator_data.pk1", "wb") as output:
             # Load fingerprint labels and data from file with names
             finger_id = np.load(data_path + "finger_id.npy")
@@ -73,24 +73,24 @@ def main(argv):
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
         # Load generator
-        with open(data_path + "generator_data.pk1", "rb") as input:
+        with open(data_path + "generator_data_small_rotdiff5_transdiff10.pk1", "rb") as input:
             generator = pickle.load(input)
              
     # parameters for training
-    batch_size_train = 100
-    train_itr = 300000000
-    learning_rate = 0.00001
+    batch_size_train = 200
+    train_itr = 30000000000
+    learning_rate = 0.0001
     momentum = 0.99
     
     # margin setup for contrastive loss
-    margin = 0.5
-    margin_factor = 1.25
-    max_margin = 1.3 # maximum allowed margin value
-    margin_itr = 500 # frequency in which to increase the margin in loss function 
+    margin = 0.1
+    margin_factor = 1.1
+    max_margin = 0.9 # maximum allowed margin value
+    margin_itr = 450 # frequency in which to increase the margin in loss function 
 
     # parameters for validation
-    batch_size_val = 100
-    val_itr = 500 # frequency in which to use validation data for computations
+    batch_size_val = 200
+    val_itr = 300 # frequency in which to use validation data for computations
     threshold = 0.5    
     thresh_step = 0.1
         
@@ -114,7 +114,8 @@ def main(argv):
             handle = tf.placeholder(tf.string, shape=[],name="handle")
             margin_holder = tf.placeholder(tf.float32, shape=[], name="margin_holder")
                 
-            left_train_output = im.inference(left_train)            
+            left_train_output = im.inference(left_train)  
+#            print(util.get_nbr_of_parameters())
             right_train_output = im.inference(right_train)
             left_val_output = im.inference(left_val, training=False)
             right_val_output = im.inference(right_val, training=False)
@@ -122,7 +123,6 @@ def main(argv):
             right_test_output = im.inference(right_test, training=False)
             
             reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-            margin = tf.constant(4.0) # margin for contrastive loss
             train_loss = su.contrastive_loss(left_train_output,right_train_output,label_train,margin)
             
             # add regularization terms to loss function
@@ -197,7 +197,7 @@ def main(argv):
         val_match_dataset = val_match_dataset.batch(batch_size_val)
         
         val_non_match_dataset_length = np.shape(generator.no_match_val)[0]
-        val_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_val[0:int(val_non_match_dataset_length/10)])
+        val_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_val)
         val_non_match_dataset = val_non_match_dataset.shuffle(buffer_size = val_non_match_dataset_length)
         val_non_match_dataset = val_non_match_dataset.repeat()
         val_non_match_dataset = val_non_match_dataset.batch(batch_size_val)
@@ -217,7 +217,6 @@ def main(argv):
         if is_model_new:
             with tf.device(gpu_device_name):
                 train_op = su.momentum_training(train_loss, learning_rate, momentum)
-#                train_op = su.adadelta_training(train_loss, learning_rate, 0.95,1e-08)
                 sess.run(tf.global_variables_initializer()) # initialize all trainable parameters
                 tf.add_to_collection("train_op",train_op)
         else:
@@ -241,12 +240,12 @@ def main(argv):
             hist_bias0 = tf.summary.histogram("hist_bias0", conv0_bias)
             
             # get filters in first inception layer and their dimensions
-            conv1_filters = graph.get_tensor_by_name("inception_1/conv1/kernel:0")
-            nbr_of_filters_conv1 = sess.run(tf.shape(conv1_filters)[-1])
-            conv2_filters = graph.get_tensor_by_name("inception_1/conv2/kernel:0")
-            nbr_of_filters_conv2 = sess.run(tf.shape(conv2_filters)[-1])
-            conv3_filters = graph.get_tensor_by_name("inception_1/conv3/kernel:0")
-            nbr_of_filters_conv3 = sess.run(tf.shape(conv3_filters)[-1])
+            conv1_filters = graph.get_tensor_by_name("inception_1/conv1_1/kernel:0")
+#            nbr_of_filters_conv1 = sess.run(tf.shape(conv1_filters)[-1])
+            conv2_filters = graph.get_tensor_by_name("inception_1/conv2_1/kernel:0")
+#            nbr_of_filters_conv2 = sess.run(tf.shape(conv2_filters)[-1])
+            conv3_filters = graph.get_tensor_by_name("inception_1/conv3_1/kernel:0")
+#            nbr_of_filters_conv3 = sess.run(tf.shape(conv3_filters)[-1])
             
             # histograms of filter weights
             hist_conv1 = tf.summary.histogram("hist_conv1", conv1_filters)
@@ -255,17 +254,17 @@ def main(argv):
             
             # transpose filters to coincide with the dimensions requested by tensorflow's summary. 
             # Add filters to summary
-            conv1_filters = tf.transpose(conv1_filters, perm = [3,0,1,2])
-            filter1 = tf.summary.image('Filter_1', conv1_filters, max_outputs=nbr_of_filters_conv1)
-            conv2_filters = tf.transpose(conv2_filters, perm = [3,0,1,2])
-            filter2 = tf.summary.image('Filter_2', conv2_filters, max_outputs=nbr_of_filters_conv2)
-            conv3_filters = tf.transpose(conv3_filters, perm = [3,0,1,2])
-            filter3 = tf.summary.image('Filter_3', conv3_filters, max_outputs=nbr_of_filters_conv3)
+#            conv1_filters = tf.transpose(conv1_filters, perm = [3,0,1,2])
+#            filter1 = tf.summary.image('Filter_1', conv1_filters, max_outputs=nbr_of_filters_conv1)
+#            conv2_filters = tf.transpose(conv2_filters, perm = [3,0,1,2])
+#            filter2 = tf.summary.image('Filter_2', conv2_filters, max_outputs=nbr_of_filters_conv2)
+#            conv3_filters = tf.transpose(conv3_filters, perm = [3,0,1,2])
+#            filter3 = tf.summary.image('Filter_3', conv3_filters, max_outputs=nbr_of_filters_conv3)
             
             # get biases of filters in the first inception layer
-            conv1_bias = graph.get_tensor_by_name("inception_1/conv1/bias:0")
-            conv2_bias = graph.get_tensor_by_name("inception_1/conv2/bias:0")
-            conv3_bias = graph.get_tensor_by_name("inception_1/conv3/bias:0")
+            conv1_bias = graph.get_tensor_by_name("inception_1/conv1_1/bias:0")
+            conv2_bias = graph.get_tensor_by_name("inception_1/conv2_1/bias:0")
+            conv3_bias = graph.get_tensor_by_name("inception_1/conv3_1/bias:0")
             
             # histograms of filter biases
             hist_bias1 = tf.summary.histogram("hist_bias1", conv1_bias)
@@ -273,10 +272,8 @@ def main(argv):
             hist_bias3 = tf.summary.histogram("hist_bias3", conv3_bias)
                 
             summary_train_loss = tf.summary.scalar('training_loss', train_loss)
-#            x_image = tf.summary.image('left_input', left_train)
             
-#            summary_op = tf.summary.merge([summary_train_loss, x_image, filter1,filter2,filter3, hist_conv1, hist_conv2,hist_conv3, hist_bias1, hist_bias2, hist_bias3])
-            summary_op = tf.summary.merge([summary_train_loss, filter0, hist_conv0, hist_bias0, filter1, hist_conv1, hist_bias1, filter2, hist_conv2, hist_bias2, filter3, hist_conv3, hist_bias3])
+            summary_op = tf.summary.merge([summary_train_loss, filter0, hist_conv0, hist_bias0, hist_conv1, hist_bias1, hist_conv2, hist_bias2, hist_conv3, hist_bias3])
             train_writer = tf.summary.FileWriter(output_dir + "train_summary", graph=tf.get_default_graph())
              
             train_match_handle = sess.run(train_match_iterator.string_handle())
@@ -286,8 +283,6 @@ def main(argv):
             
         precision_over_time = []
         val_loss_over_time = []
-#        for i in sess.graph.get_operations():
-#            print(i.values())
         
         start_time_train = time.time()
         print("Starting training")
@@ -312,7 +307,6 @@ def main(argv):
             b_l_train,b_r_train = generator.get_pairs(generator.train_data[rnd_rotation],train_batch)
             
             _,train_loss_value, summary = sess.run([train_op, train_loss, summary_op],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train, margin_holder:margin})
-#            _,train_loss_value = sess.run([train_op, train_loss],feed_dict={left_train:b_l_train, right_train:b_r_train, label_train:b_sim_train})
 
              # Use validation data set to tune hyperparameters (Classification threshold)
             if i % val_itr == 0:

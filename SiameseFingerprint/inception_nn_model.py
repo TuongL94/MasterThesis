@@ -12,80 +12,203 @@ from __future__ import print_function
 import tensorflow as tf
 
 def inception_a_block(input, training):
-    conv1 = tf.layers.conv2d(
+    
+    conv1_1 = tf.layers.conv2d(
         inputs = input,
-        filters = 16,
+        filters = 96,
         kernel_size = [1,1], 
         padding = "same",
-        activation = tf.nn.leaky_relu,
         reuse = tf.AUTO_REUSE,
-        kernel_initializer = tf.initializers.truncated_normal(mean=0, stddev=0.2),
         kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
-        name="conv1")
+        name="conv1_1")
     
-    conv2 = tf.layers.conv2d(
+    conv1_1 = tf.layers.batch_normalization(
+            conv1_1,
+            training = training,
+            name = "batch_norm_1_1",
+            reuse = tf.AUTO_REUSE)
+    
+    conv1_1 = tf.nn.leaky_relu(
+            conv1_1)
+    
+    conv2_1 = tf.layers.conv2d(
         inputs = input,
-        filters = 16,
+        filters = 64,
+        kernel_size = [1,1], 
+        padding = "same",
+        reuse = tf.AUTO_REUSE,
+        kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
+        name="conv2_1")
+    
+    conv2_1 = tf.layers.batch_normalization(
+            conv2_1,
+            training = training,
+            name = "batch_norm_2_1",
+            reuse = tf.AUTO_REUSE)
+    
+    conv2_1 = tf.nn.leaky_relu(
+            conv2_1)
+    
+    conv3_1 = tf.layers.conv2d(
+        inputs = input,
+        filters = 64,
+        kernel_size = [1,1], 
+        padding = "same",
+        reuse = tf.AUTO_REUSE,
+        kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
+        name="conv3_1")
+    
+    conv3_1 = tf.layers.batch_normalization(
+            conv3_1,
+            training = training,
+            name = "batch_norm_3_1",
+            reuse = tf.AUTO_REUSE)
+    
+    conv3_1 = tf.nn.leaky_relu(
+            conv3_1)
+    
+    conv4_1 = tf.layers.conv2d(
+        inputs = input,
+        filters = 96,
+        kernel_size = [1,1], 
+        padding = "same",
+        reuse = tf.AUTO_REUSE,
+        kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
+        name="conv4_1")
+    
+    conv4_1 = tf.layers.batch_normalization(
+            conv4_1,
+            training = training,
+            name = "batch_norm_4_1",
+            reuse = tf.AUTO_REUSE)
+    
+    conv4_1 = tf.nn.leaky_relu(
+            conv4_1)
+#    max1 = tf.layers.max_pooling2d(inputs = input, 
+#                                   pool_size = [3,3], 
+#                                   strides = 1,
+#                                   padding = "same")     
+    conv2_2 = tf.layers.conv2d(
+        inputs = conv2_1,
+        filters = 96,
         kernel_size = [3,3], 
         padding = "same",
-        activation = tf.nn.leaky_relu,
         reuse = tf.AUTO_REUSE,
-        kernel_initializer = tf.initializers.truncated_normal(mean=0, stddev=0.2),
         kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
-        name="conv2")
+        name="conv2_2")
     
-    conv3 = tf.layers.conv2d(
-        inputs = input,
-        filters = 16,
-        kernel_size = [5,5], 
+    conv2_2 = tf.layers.batch_normalization(
+            conv2_2,
+            training = training,
+            name = "batch_norm_2_2",
+            reuse = tf.AUTO_REUSE)
+        
+    conv2_2 = tf.nn.leaky_relu(
+            conv2_2)
+    
+    conv3_2 = tf.layers.conv2d(
+        inputs = conv3_1,
+        filters = 96,
+        kernel_size = [3,3], 
         padding = "same",
-        activation = tf.nn.leaky_relu,
         reuse = tf.AUTO_REUSE,
-        kernel_initializer = tf.initializers.truncated_normal(mean=0, stddev=0.2),
         kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
-        name="conv3")
+        name="conv3_2")
     
-    output = tf.concat([conv1,conv2,conv3],axis=3)
+    conv3_2 = tf.layers.batch_normalization(
+            conv3_2,
+            training = training,
+            name = "batch_norm_3_2",
+            reuse = tf.AUTO_REUSE)
+        
+    conv3_2 = tf.nn.leaky_relu(
+            conv3_2)
+    
+    conv3_3 = tf.layers.conv2d(
+        inputs = conv3_2,
+        filters = 96,
+        kernel_size = [3,3], 
+        padding = "same",
+        reuse = tf.AUTO_REUSE,
+        kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
+        name="conv3_3")
+    
+    conv3_3 = tf.layers.batch_normalization(
+            conv3_3,
+            training = training,
+            name = "batch_norm_3_3",
+            reuse = tf.AUTO_REUSE)
+        
+    conv3_3 = tf.nn.leaky_relu(
+            conv3_3)
+    
+    output = tf.concat([conv1_1,conv4_1,conv2_2,conv3_3],axis=3)
     return output
 
 def stem(input, training):
     
-     # Convolutional layer 1
+    output = tf.layers.batch_normalization(
+            input,
+            training = training,
+            name = "batch_norm_1",
+            reuse = tf.AUTO_REUSE)
+    
+    # Convolutional layer 1
     output = tf.layers.conv2d(
-            inputs = input,
+            inputs = output,
             filters = 16,
             kernel_size = [7,7],
             strides = [2,2],
             padding = "valid",
-            activation = tf.nn.leaky_relu,
             reuse = tf.AUTO_REUSE,
-#            kernel_initializer = tf.random_uniform_initializer(minval=-1, maxval=1),
-            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
+            kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
             name="conv1") 
-        
+     
+    output = tf.layers.batch_normalization(
+        output,
+        training = training,
+        name = "batch_norm_2",
+        reuse = tf.AUTO_REUSE)
+    
+    output = tf.nn.leaky_relu(
+            output)
+    
+    output = tf.layers.dropout(
+        output,
+        rate = 0.5,
+        training = training,
+        seed = 1)
+    
     # Pooling layer 1
     output = tf.layers.max_pooling2d(inputs = output, 
                                      pool_size = [2,2], 
-                                     strides = 2)
-    
+                                     strides = 2)    
     # Convolutional Layer 2
     output = tf.layers.conv2d(
             inputs = output,
             filters = 16,
             kernel_size = [5,5],
-            strides = [2,2],
-            padding = "valid",
-            activation = tf.nn.leaky_relu,
+            strides = [1,1],
+            padding = "same",
             reuse = tf.AUTO_REUSE,
-#            kernel_initializer = tf.random_uniform_initializer(minval=-1, maxval=1),
-            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
+            kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
             name="conv2")
+        
+    output = tf.layers.batch_normalization(
+        output,
+        training = training,
+        name = "batch_norm_3",
+        reuse = tf.AUTO_REUSE)
+    
+    output = tf.nn.leaky_relu(
+            output)
     
     output = tf.layers.dropout(
-            output,
-            rate = 0.5,
-            training = training)
-        
+        output,
+        rate = 0.5,
+        training = training,
+        seed = 2)
+    
     # Pooling layer 2
     output = tf.layers.max_pooling2d(
             inputs = output, 
@@ -97,60 +220,51 @@ def stem(input, training):
             inputs = output,
             filters = 32,
             kernel_size = [3,3],
+            strides = [1,1],
             padding = "same",
-            activation = tf.nn.leaky_relu,
             reuse = tf.AUTO_REUSE,
-            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
+            kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
             name="conv3")
+            
+    output = tf.layers.batch_normalization(
+        output,
+        training = training,
+        name = "batch_norm_4",
+        reuse = tf.AUTO_REUSE)
+    
+    output = tf.nn.leaky_relu(
+            output)
     
     output = tf.layers.dropout(
-            output,
-            rate = 0.5,
-            training = training)
-        
-    # Convolutional Layer 4
-    output = tf.layers.conv2d(
-            inputs = output,
-            filters = 64,
-            kernel_size = [3,3],
-            padding = "same",
-            activation = tf.nn.leaky_relu,
-            reuse = tf.AUTO_REUSE,
-            kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
-            name="conv4")
-    
-    output = tf.layers.dropout(
-            output,
-            rate = 0.5,
-            training = training)
-              
+        output,
+        rate = 0.5,
+        training = training,
+        seed = 3)
+                      
     return output
 
 def inference(input, training = True):
     output = stem(input, training)
+    
     with tf.variable_scope("inception_1"):
-        output = inception_a_block(input, training)
+        output = inception_a_block(output, training)
         
     output = tf.layers.max_pooling2d(inputs = output, 
                                      pool_size = [2,2], 
                                      strides = 2)
-    
-    with tf.variable_scope("inception_2"):
-        output = inception_a_block(output, training)
-                
+                    
     output = tf.layers.flatten(output)
+    
     output = tf.layers.dense(
             output,
-            10,
+            1024,
             activation = tf.nn.leaky_relu,
             reuse = tf.AUTO_REUSE,
             kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
             name="dense")
-    output = tf.layers.dropout(
-            output,
-            rate = 0.2,
-            training = training)
+
     output = tf.nn.l2_normalize(
             output,
             axis=1)
+    
     return output

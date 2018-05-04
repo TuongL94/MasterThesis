@@ -15,8 +15,8 @@ import pickle
 # imports from self-implemented modules
 import utilities as util
 
-def get_test_diagnostics(left_pairs_o, right_pairs_o, sim_labels, threshold, class_id=None):
-    """ Computes and returns evaluation metrics.
+def get_test_diagnostics(left_pairs_o, right_pairs_o, sim_labels, threshold, class_id=None, plot_hist=False, breakpoint=None):
+    """ Computes and returns evaluation metrics. Also plots histograms over distances between pairs.
     
     Input:
     left_pairs_o - numpy array with rows corresponding to arrays obtained from inference step in the siamese network
@@ -25,6 +25,8 @@ def get_test_diagnostics(left_pairs_o, right_pairs_o, sim_labels, threshold, cla
     threshold - distance threshold, if the 2-norm distanc between two arrays are less than or equal to this value 
     they are considered to correspond to a matching pair of images.
     class_id - Is optional. Contains information about which finger and person each fingerprint comes from.
+    plot_hist - boolean specifying whether to plot histograms over distances between pairs
+    breakpoint - index where sim_labels changes from similar pairs to dissimilar pairs, should be provided to plot histograms
     Returns:
     precision - precision
     false_pos - number of false positives
@@ -38,6 +40,10 @@ def get_test_diagnostics(left_pairs_o, right_pairs_o, sim_labels, threshold, cla
     matching = np.zeros(len(sim_labels))
     l2_normalized_diff = left_pairs_o-right_pairs_o
     l2_distances = sl.norm(l2_normalized_diff,axis=1)
+    
+    if plot_hist:
+        util.get_separation_distance_hist(l2_distances[0:breakpoint],l2_distances[breakpoint:])
+    
     false_pos = 0
     false_neg = 0
     inter_class_errors = 0
@@ -165,12 +171,11 @@ def evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output
                 
                 test_match_dataset = tf.data.Dataset.from_tensor_slices(generator.match_test)
                 test_match_dataset = test_match_dataset.batch(batch_size)
-#                test_match_dataset_length = np.shape(generator.match_test)[0]
             
-                test_non_match_dataset_length = np.shape(generator.no_match_test)[0]
+#                test_non_match_dataset_length = np.shape(generator.no_match_test)[0]
                 test_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_test)
 #                test_non_match_dataset = test_non_match_dataset.shuffle(buffer_size = test_non_match_dataset_length)
-                test_non_match_dataset = test_non_match_dataset.batch(batch_size)
+                test_non_match_dataset = test_non_match_dataset.batch(10*batch_size)
                 
                 test_match_iterator = test_match_dataset.make_one_shot_iterator()
                 test_match_handle = sess.run(test_match_iterator.string_handle())
@@ -181,13 +186,14 @@ def evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output
                 iterator = tf.data.Iterator.from_string_handle(handle, test_match_dataset.output_types)
                 next_element = iterator.get_next()
                 
-                sim_full = np.vstack((np.ones((batch_size*eval_itr,1)), np.zeros((batch_size*eval_itr,1))))
+                breakpoint = batch_size*eval_itr
+                sim_full = np.vstack((np.ones((breakpoint,1)), np.zeros((10*breakpoint,1))))
                 
                 for i in range(eval_itr):
                     test_batch = sess.run(next_element,feed_dict={handle:test_match_handle})
                     for j in range(generator.rotation_res):
                         b_l_test,b_r_test = generator.get_pairs(generator.test_data[j],test_batch)
-                        class_id_batch = generator.same_class(test_batch,test=True)
+#                        class_id_batch = generator.same_class(test_batch,test=True)
                         left_o,right_o = sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_l_test, right_test:b_r_test})
                         
 #                        preds, decision_o = sess.run([predictions, decision_test_output],feed_dict = {left_test:b_l_test, right_test:b_r_test})
@@ -195,11 +201,11 @@ def evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output
                         if i == 0 and j == 0:
                             left_full = left_o
                             right_full = right_o
-                            class_id = class_id_batch
+#                            class_id = class_id_batch
                         else:
                             left_full = np.vstack((left_full,left_o))
                             right_full = np.vstack((right_full,right_o))
-                            class_id = np.vstack((class_id, class_id_batch))
+#                            class_id = np.vstack((class_id, class_id_batch))
                         
 #                        if i == 0 and j == 0:
 #                            preds_full = preds
@@ -222,23 +228,23 @@ def evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output
 #                        preds_full = np.vstack((preds_full,preds))
 #                        decision_o_full = np.append(decision_o_full, decision_o, axis=0)
                         
-                        class_id_batch = generator.same_class(test_batch,test=True)
-                        class_id = np.vstack((class_id, class_id_batch))
+#                        class_id_batch = generator.same_class(test_batch,test=True)
+#                        class_id = np.vstack((class_id, class_id_batch))
 
                 for i in range(len(thresholds)):
                     
-                    precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr = get_test_diagnostics(left_full,right_full,sim_full,thresholds[i],class_id)
+                    precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr = get_test_diagnostics(left_full,right_full,sim_full,thresholds[i])
                     metrics = (fpr, fnr, recall, tnr)
                     # save evaluation metrics to a file 
                     util.save_evaluation_metrics(metrics, metrics_path + ".txt")
                     
 #                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = get_test_diagnostics_2(preds_full,sim_full,class_id)
-#                
-                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr = get_test_diagnostics(left_full,right_full,sim_full,0.89,class_id)
+#               
+                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr = get_test_diagnostics(left_full,right_full,sim_full,0.7,plot_hist=True,breakpoint=breakpoint)
                 print("Precision: %f " % precision)
                 print("# False positive: %d " % false_pos)
                 print("# False negative: %d " % false_neg)
-                print("# Number of false positive from the same class: %d " % inter_class_errors)
+#                print("# Number of false positive from the same class: %d " % inter_class_errors)
                 print("# Recall: %f " % recall)
                 print("# Miss rate/false negative rate: %f " % fnr)
                 print("# fall-out/false positive rate: %f " % fpr)
@@ -257,8 +263,8 @@ def main(argv):
     """
     # set parameters for evaluation
     thresholds = np.linspace(0, 1.5, num=20)
-    batch_size = 50
-    eval_itr = 11
+    batch_size = 250
+    eval_itr = 2
     
     output_dir = argv[0] # directory where the model is saved
     data_path =  argv[1]
@@ -275,7 +281,7 @@ def main(argv):
         return
     
     # load generator
-    with open(data_path + "generator_data.pk1", "rb") as input:
+    with open(data_path + "generator_data_small_rotdiff5_transdiff10.pk1", "rb") as input:
         generator = pickle.load(input)
         
         evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output_dir, metrics_path, gpu_device_name)

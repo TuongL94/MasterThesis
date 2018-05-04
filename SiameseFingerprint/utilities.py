@@ -23,13 +23,13 @@ def get_nbr_of_parameters():
     for variable in tf.trainable_variables():
         # shape is an array of tf.Dimension
         shape = variable.get_shape()
-        print(shape)
-        print(len(shape))
+#        print(shape)
+#        print(len(shape))
         variable_parameters = 1
         for dim in shape:
-            print(dim)
+#            print(dim)
             variable_parameters *= dim.value
-        print(variable_parameters)
+#        print(variable_parameters)
         total_parameters += variable_parameters
     return total_parameters
 
@@ -142,6 +142,8 @@ def plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, tnr_val
     plt.figure()
     plt.plot(thresholds, fpr_vals, "b", label="FPR")
     plt.plot(thresholds, fnr_vals, "r", label="FNR")
+#    plt.semilogy(thresholds, fpr_vals, "b", label="FPR")
+#    plt.semilogy(thresholds, fnr_vals, "r", label="FNR")
     plt.xlabel("threshold")
     plt.ylabel("FPR/FNR")
     plt.legend(bbox_to_anchor=(0., 1.02, 1., 0.102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
@@ -154,3 +156,10 @@ def plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, tnr_val
     plt.ylabel("recall/TNR")
     plt.legend(bbox_to_anchor=(0., 1.02, 1., 0.102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
     plt.show()
+    
+def get_separation_distance_hist(l2_distances_sim, l2_distances_no_sim):
+    plt.hist(l2_distances_sim, bins="auto", alpha=0.5, label="similar", color="g")
+    plt.hist(l2_distances_no_sim, bins="auto", alpha=0.5, label="dissimilar", color="r")
+    plt.legend(bbox_to_anchor=(0., 1.02, 1., 0.102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
+    plt.show()
+    
