@@ -3,7 +3,7 @@
 Created on Wed Jan 31 14:34:36 2018
 
 @author: Tuong Lam
-"""
+   """
 
 import numpy as np
 import scipy.linalg as sl
@@ -28,7 +28,7 @@ def get_test_diagnostics(left_pairs_o, right_pairs_o, sim_labels, threshold, cla
     plot_hist - boolean specifying whether to plot histograms over distances between pairs
     breakpoint - index where sim_labels changes from similar pairs to dissimilar pairs, should be provided to plot histograms
     Returns:
-    precision - precision
+    accuracy - accuracy
     false_pos - number of false positives
     false_neg - number of false negatives
     recall - recall (nbr of true positives/total number of positive examples)
@@ -65,7 +65,7 @@ def get_test_diagnostics(left_pairs_o, right_pairs_o, sim_labels, threshold, cla
             if sim_labels[i] == 1:
                 false_neg = false_neg + 1
     
-    precision = np.sum((matching == sim_labels.T))/len(sim_labels)
+    accuracy = np.sum((matching == sim_labels.T))/len(sim_labels)
     tp = 0
     tn = 0
     for i in range(len(sim_labels)):
@@ -78,7 +78,7 @@ def get_test_diagnostics(left_pairs_o, right_pairs_o, sim_labels, threshold, cla
     fnr = 1 - recall
     fpr = false_pos/n
     
-    return precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr
+    return accuracy, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr
  
 def get_test_diagnostics_2(predictions, sim_labels, class_id=None):
     """ Computes and returns evaluation metrics.
@@ -88,7 +88,7 @@ def get_test_diagnostics_2(predictions, sim_labels, class_id=None):
     sim_labels - ground truth for pairs of images
     class_id - Is optional. Contains information about which finger and person each fingerprint comes from.
     Returns:
-    precision - precision
+    accuracy - accuracy
     false_pos - number of false positives
     false_neg - number of false negatives
     recall - recall (nbr of true positives/total number of positive examples)
@@ -113,13 +113,13 @@ def get_test_diagnostics_2(predictions, sim_labels, class_id=None):
         elif predictions[i][0] == 0 and sim_labels[i][0] == 1:
             false_neg = false_neg + 1
     
-    precision = np.sum((predictions == sim_labels))/len(sim_labels)
+    accuracy = np.sum((predictions == sim_labels))/len(sim_labels)
 
     recall = tp/p
     fnr = 1 - recall
     fpr = false_pos/n
     
-    return precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors
+    return accuracy, false_pos, false_neg, recall, fnr, fpr, inter_class_errors
 
 def evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output_dir, metrics_path, gpu_device_name):
     """ This method is used to evaluate a siamese network for fingerprint datasets.
@@ -175,7 +175,7 @@ def evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output
 #                test_non_match_dataset_length = np.shape(generator.no_match_test)[0]
                 test_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_test)
 #                test_non_match_dataset = test_non_match_dataset.shuffle(buffer_size = test_non_match_dataset_length)
-                test_non_match_dataset = test_non_match_dataset.batch(10*batch_size)
+                test_non_match_dataset = test_non_match_dataset.batch(batch_size)
                 
                 test_match_iterator = test_match_dataset.make_one_shot_iterator()
                 test_match_handle = sess.run(test_match_iterator.string_handle())
@@ -187,7 +187,7 @@ def evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output
                 next_element = iterator.get_next()
                 
                 breakpoint = batch_size*eval_itr
-                sim_full = np.vstack((np.ones((breakpoint,1)), np.zeros((10*breakpoint,1))))
+                sim_full = np.vstack((np.ones((breakpoint,1)), np.zeros((breakpoint,1))))
                 
                 for i in range(eval_itr):
                     test_batch = sess.run(next_element,feed_dict={handle:test_match_handle})
@@ -233,15 +233,15 @@ def evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output
 
                 for i in range(len(thresholds)):
                     
-                    precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr = get_test_diagnostics(left_full,right_full,sim_full,thresholds[i])
-                    metrics = (fpr, fnr, recall, tnr)
+                    accuracy, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr = get_test_diagnostics(left_full,right_full,sim_full,thresholds[i])
+                    metrics = (fpr, fnr, recall, accuracy)
                     # save evaluation metrics to a file 
                     util.save_evaluation_metrics(metrics, metrics_path + ".txt")
                     
-#                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = get_test_diagnostics_2(preds_full,sim_full,class_id)
+#                accuracy, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = get_test_diagnostics_2(preds_full,sim_full,class_id)
 #               
-                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr = get_test_diagnostics(left_full,right_full,sim_full,0.7,plot_hist=True,breakpoint=breakpoint)
-                print("Precision: %f " % precision)
+                accuracy, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr = get_test_diagnostics(left_full,right_full,sim_full,0.56,plot_hist=True,breakpoint=breakpoint)
+                print("accuracy: %f " % accuracy)
                 print("# False positive: %d " % false_pos)
                 print("# False negative: %d " % false_neg)
 #                print("# Number of false positive from the same class: %d " % inter_class_errors)
@@ -253,18 +253,18 @@ def evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output
 #                print("Number of fingerprints in the same class in the non matching set: %d " % nbr_same_class)
                                     
                 # get evaluation metrics for varying thresholds
-                fpr_vals, fnr_vals, recall_vals, tnr_vals = util.get_evaluation_metrics_vals(metrics_path + ".txt")
+                fpr_vals, fnr_vals, recall_vals, acc_vals = util.get_evaluation_metrics_vals(metrics_path + ".txt")
     
                 # plots of evaluation metrics
-                util.plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, tnr_vals)
+                util.plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, acc_vals)
          
 def main(argv):
     """ Runs evaluation on trained network 
     """
     # set parameters for evaluation
-    thresholds = np.linspace(0, 1.5, num=20)
-    batch_size = 250
-    eval_itr = 2
+    thresholds = np.linspace(0, 2.0, num=100)
+    batch_size = 58
+    eval_itr = 10
     
     output_dir = argv[0] # directory where the model is saved
     data_path =  argv[1]
@@ -274,10 +274,10 @@ def main(argv):
     # if file containing evaluation metrics already exists use this data directly
     if os.path.exists(metrics_path + ".txt"):
         # get evaluation metrics for varying thresholds
-        fpr_vals, fnr_vals, recall_vals, tnr_vals = util.get_evaluation_metrics_vals(metrics_path + ".txt")
+        fpr_vals, fnr_vals, recall_vals, acc_vals = util.get_evaluation_metrics_vals(metrics_path + ".txt")
 
         # plots of evaluation metrics
-        util.plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, tnr_vals)
+        util.plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, acc_vals)
         return
     
     # load generator
