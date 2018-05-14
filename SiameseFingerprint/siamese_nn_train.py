@@ -47,10 +47,10 @@ def main(argv):
 
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
-    if not os.path.exists(data_path + "generator_data_small_rotdiff5_transdiff10.pk1"):
+    if not os.path.exists(data_path + "generator_data_all_rotdiff5_transdiff10_new.pk1"):
         with open(data_path + "generator_data.pk1", "wb") as output:
             # Load fingerprint labels and data from file with names
-            finger_id = np.load(data_path + "finger_id_mt_vt_112.npy")
+            finger_id = np.load(data_path + "finger_id_mt_vt_112_new.npy")
             person_id = np.load(data_path + "person_id_mt_vt_112.npy")
             finger_data = np.load(data_path + "fingerprints_mt_vt_112.npy")
             translation = np.load(data_path + "translation_mt_vt_112.npy")
@@ -74,6 +74,7 @@ def main(argv):
 #            
 #            fingerprints = np.vstack((l_finger_data,r_finger_data))
             rotation_res = 1
+            np.random.seed(0)
             generator = data_generator(finger_data, finger_id, person_id, translation, rotation, nbr_of_images, rotation_res) # initialize data generator
 #            generator = data_generator(finger_id, person_id, fingerprints, rotation_res) # initialize data generator
             
@@ -90,7 +91,7 @@ def main(argv):
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
         # Load generator
-        with open(data_path + "generator_data_small_rotdiff5_transdiff10.pk1", "rb") as input:
+        with open(data_path + "generator_data_all_rotdiff5_transdiff10_new.pk1", "rb") as input:
             generator = pickle.load(input)
 
 #        util.get_no_matching_subset(generator, data_path, "generator_data.pk1")
@@ -111,8 +112,8 @@ def main(argv):
     momentum = 0.99
    
     # parameters for validation
-    batch_size_val = 250
-    val_itr = 200 # frequency in which to use validation data for computations
+    batch_size_val = 100
+    val_itr = 20000000000 # frequency in which to use validation data for computations
     threshold = 0.5    
     thresh_step = 0.01
         
@@ -138,7 +139,7 @@ def main(argv):
                 
             left_train_output = sm.inference(left_train)
 
-#            print(util.get_nbr_of_parameters())
+            print(util.get_nbr_of_parameters())
             
             right_train_output = sm.inference(right_train)
             
@@ -302,12 +303,12 @@ def main(argv):
             train_match_dataset = tf.data.Dataset.from_tensor_slices(generator.match_train)
             train_match_dataset = train_match_dataset.shuffle(buffer_size=np.shape(generator.match_train)[0])
             train_match_dataset = train_match_dataset.repeat()
-            train_match_dataset = train_match_dataset.batch(int(batch_size_train/5))
+            train_match_dataset = train_match_dataset.batch(int(batch_size_train/2))
 
             train_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_train)
             train_non_match_dataset = train_non_match_dataset.shuffle(buffer_size=np.shape(generator.no_match_train)[0])
             train_non_match_dataset = train_non_match_dataset.repeat()
-            train_non_match_dataset = train_non_match_dataset.batch(batch_size_train)
+            train_non_match_dataset = train_non_match_dataset.batch(int((batch_size_train+1)/2))
             
             val_match_dataset_length = np.shape(generator.match_val)[0]
             val_match_dataset = tf.data.Dataset.from_tensor_slices(generator.match_val)

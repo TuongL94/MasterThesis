@@ -155,9 +155,9 @@ def plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, acc_val
     plt.show()
     
     plt.figure()
-    plt.loglog(fpr_vals,fnr_vals)
+    plt.semilogx(fpr_vals,recall_vals)
     plt.xlabel("FPR")
-    plt.ylabel("FNR")
+    plt.ylabel("Recall")
     plt.show()
     
 def get_separation_distance_hist(l2_distances_sim, l2_distances_no_sim):

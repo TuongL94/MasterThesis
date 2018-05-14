@@ -73,31 +73,31 @@ def main(argv):
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
         # Load generator
-        with open(data_path + "generator_data_small_rotdiff5_transdiff10.pk1", "rb") as input:
+        with open(data_path + "generator_data_rotdiff5_transdiff30_small.pk1", "rb") as input:
             generator = pickle.load(input)
              
     # parameters for training
-    batch_size_train = 200
+    batch_size_train = 75
     train_itr = 30000000000
-    learning_rate = 0.0001
+    learning_rate = 0.00005
     momentum = 0.99
     
     # margin setup for contrastive loss
-    margin = 0.1
+    margin = 0.5
     margin_factor = 1.1
-    max_margin = 0.9 # maximum allowed margin value
-    margin_itr = 450 # frequency in which to increase the margin in loss function 
+    max_margin = 1.3 # maximum allowed margin value
+    margin_itr = 400 # frequency in which to increase the margin in loss function 
 
     # parameters for validation
     batch_size_val = 200
-    val_itr = 300 # frequency in which to use validation data for computations
+    val_itr = 30000000000000 # frequency in which to use validation data for computations
     threshold = 0.5    
     thresh_step = 0.1
         
     dims = np.shape(generator.train_data[0])
     image_dims = [dims[1],dims[2],dims[3]]
     
-    save_itr = 30000 # frequency in which the model is saved
+    save_itr = 2000 # frequency in which the model is saved
     
     tf.reset_default_graph()
     
@@ -115,7 +115,7 @@ def main(argv):
             margin_holder = tf.placeholder(tf.float32, shape=[], name="margin_holder")
                 
             left_train_output = im.inference(left_train)  
-#            print(util.get_nbr_of_parameters())
+            print(util.get_nbr_of_parameters())
             right_train_output = im.inference(right_train)
             left_val_output = im.inference(left_val, training=False)
             right_val_output = im.inference(right_val, training=False)

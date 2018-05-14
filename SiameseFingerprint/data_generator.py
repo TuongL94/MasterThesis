@@ -35,7 +35,7 @@ class data_generator:
         self.train_translation, self.val_translation, self.test_translation= self.three_split_array(translation[0:data_size], percentages)
         self.train_rotation, self.val_rotation, self.test_rotation= self.three_split_array(rotation[0:data_size], percentages)
         
-        # Breakpoints for training data 
+        # Breakpoints for training data
         self.breakpoints_train = self.get_breakpoints(self.train_person_id, self.train_finger_id)
         
         # Breakpoints for validation data 
@@ -411,7 +411,8 @@ class data_generator:
                             margin_trans the corresponding image pair is discarded (not added to non-matching pairs)
         """
         match = [] # matching pair indices
-        no_match = [] # non-matching pair indices 
+#        no_match = [] # non-matching pair indices 
+        no_match = np.array([]).reshape((0,2)) # non-matching pair indices
         
         for i in range(len(breakpoints)-1):
             for k in range(breakpoints[i+1]-breakpoints[i]):
@@ -440,15 +441,40 @@ class data_generator:
 #                        continue
                     elif translation_margin:
                         continue
-                    else:
-                        no_match.append([breakpoints[i]+k, j])
+#                    else:
+#                        no_match.append([breakpoints[i]+k, j])
+#                
+#                # current image combined with an image from another person and/or another finger
+#                # is added to non-matching pairs
+#                for n in range(breakpoints[i+1], rotation.shape[0]):
+#                    no_match.append([breakpoints[i]+k, n])
+                        
+                nbr_non_matching = 30
+                ratio_behind = i / len(breakpoints)
+                nbr_behind = int(nbr_non_matching * ratio_behind)
+                nbr_ahead = nbr_non_matching - nbr_behind
+               
+                no_match_behind = np.array([]).reshape((0,1))
+                no_match_ahead = np.array([]).reshape((0,1))
+               
+                if nbr_behind > 0:
+                    no_match_behind = np.random.randint(breakpoints[i], size = (nbr_behind,1))
+                if nbr_ahead > 0 and breakpoints[i+1] < breakpoints[-1]:
+                    no_match_ahead = np.random.randint(breakpoints[i+1], breakpoints[-1], size = (nbr_ahead,1))
+               
+                # Stack non matching indices
+                no_match_to_template = np.vstack((no_match_behind, no_match_ahead))                
+                repeat_template = np.repeat(breakpoints[i]+k, no_match_to_template.shape[0]).reshape((no_match_to_template.shape[0],1))
+                no_match_to_template = np.hstack((repeat_template, no_match_to_template))
+               
+                # Append to the full non matching list
+                no_match = np.vstack((no_match, no_match_to_template))
                 
-                # current image combined with an image from another person and/or another finger
-                # is added to non-matching pairs
-                for n in range(breakpoints[i+1], rotation.shape[0]):
-                    no_match.append([breakpoints[i]+k, n])
+        # Shuffle non matching set
+        no_match = no_match.astype(np.int32)
+        np.random.shuffle(no_match)
             
-        return np.array(match,dtype="int32"),np.array(no_match,dtype="int32")
+        return np.array(match,dtype="int32"),no_match
     
     def three_split_array(self,input_array,percentage):
         """Partitions an array into three subsets, where the sizes of the last two sets are equal
@@ -495,4 +521,3 @@ class data_generator:
                 class_id[i] = 1    
             
         return class_id
-        

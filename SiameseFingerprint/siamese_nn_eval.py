@@ -263,8 +263,8 @@ def main(argv):
     """
     # set parameters for evaluation
     thresholds = np.linspace(0, 2.0, num=100)
-    batch_size = 58
-    eval_itr = 10
+    batch_size = 100
+    eval_itr = 35
     
     output_dir = argv[0] # directory where the model is saved
     data_path =  argv[1]
@@ -281,7 +281,7 @@ def main(argv):
         return
     
     # load generator
-    with open(data_path + "generator_data_small_rotdiff5_transdiff10.pk1", "rb") as input:
+    with open(data_path + "generator_data_all_rotdiff5_transdiff10_new.pk1", "rb") as input:
         generator = pickle.load(input)
         
         evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output_dir, metrics_path, gpu_device_name)
