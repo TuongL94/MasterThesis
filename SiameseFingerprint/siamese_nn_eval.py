@@ -179,7 +179,7 @@ def main(argv):
     """ Runs evaluation on trained network 
     """
     # Set parameters for evaluation
-    threshold = 0.5
+    threshold = 1.3
     batch_size = 200
     eval_itr = 8
     
@@ -188,7 +188,7 @@ def main(argv):
     gpu_device_name = argv[-1] 
    
     # Load generator
-    with open(data_path + "generator_data_gabor.pk1", "rb") as input:
+    with open(data_path + "generator_data_siamese.pk1", "rb") as input:
         generator = pickle.load(input)
    
     evaluate_siamese_network(generator, batch_size, threshold, eval_itr, output_dir, gpu_device_name)

@@ -59,11 +59,11 @@ def main(argv):
     rotation = np.array(rotation,dtype='float32')/65536*360 
 
     # save paths
-    filename_1 = dir_path + "/person_id_gabor"
-    filename_2 = dir_path + "/finger_id_gabor"
-    filename_3 = dir_path + "/fingerprints_gabor" 
-    filename_4 = dir_path + "/translation_gabor" 
-    filename_5 = dir_path + "/rotation_gabor" 
+    filename_1 = dir_path + "/person_id_mt_vt_112"
+    filename_2 = dir_path + "/finger_id_mt_vt_112"
+    filename_3 = dir_path + "/fingerprints_mt_vt_112" 
+    filename_4 = dir_path + "/translation_mt_vt_112" 
+    filename_5 = dir_path + "/rotation_mt_vt_112" 
     
     # saves numpy arrays
     np.save(filename_1,person_id)

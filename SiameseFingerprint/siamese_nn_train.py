@@ -19,7 +19,7 @@ import siamese_nn_model as sm
 import siamese_nn_eval as sme
 import siamese_nn_utilities as su
 import utilities as util
-from data_generator import data_generator
+from data_generator_matrix import data_generator_matrix
 
 def main(argv):
     """ This method is used to train a siamese network for fingerprint datasets.
@@ -47,40 +47,46 @@ def main(argv):
 
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
-    if not os.path.exists(data_path + "generator_data_gabor.pk1"):
-        with open(data_path + "generator_data.pk1", "wb") as output:
+    if not os.path.exists(data_path + "generator_data_siamese.pk1"):
+        with open(data_path + "generator_data_siamese.pk1", "wb") as output:
             # Load fingerprint labels and data from file with names
             finger_id = np.load(data_path + "finger_id_mt_vt_112.npy")
             person_id = np.load(data_path + "person_id_mt_vt_112.npy")
             finger_data = np.load(data_path + "fingerprints_mt_vt_112.npy")
-            translation = np.load(data_path + "translation_mt_vt_112.npy")
-            rotation = np.load(data_path + "rotation_mt_vt_112.npy")
+#            translation = np.load(data_path + "translation_mt_vt_112.npy")
+#            rotation = np.load(data_path + "rotation_mt_vt_112.npy")
             finger_data = util.reshape_grayscale_data(finger_data)
             nbr_of_images = np.shape(finger_data)[0] # number of images to use from the original data set
             
+            
+            matching_matrix = np.load(data_path + "matrix_mt_vt_112.npy")
+            class_breakpoints = np.load(data_path + "class_breakpoint_mt_vt_112.npy")
+            
+            
             rotation_res = 1
-            generator = data_generator(finger_data, finger_id, person_id, translation, rotation, nbr_of_images, rotation_res) # initialize data generator
+#            generator = data_generator(finger_data, finger_id, person_id, translation, rotation, nbr_of_images, rotation_res) # initialize data generator
+            generator = data_generator_matrix(finger_data, finger_id, person_id, matching_matrix, class_breakpoints, nbr_of_images, rotation_res) # initialize data generator
             
-            finger_id_gt_vt = np.load(data_path + "finger_id_gt_vt.npy")
-            person_id_gt_vt = np.load(data_path + "person_id_gt_vt.npy")
-            finger_data_gt_vt = np.load(data_path + "fingerprints_gt_vt.npy")
-            translation_gt_vt = np.load(data_path + "translation_gt_vt.npy")
-            rotation_gt_vt = np.load(data_path + "rotation_gt_vt.npy")
-            finger_data_gt_vt = util.reshape_grayscale_data(finger_data_gt_vt)
-            nbr_of_images_gt_vt = np.shape(finger_data_gt_vt)[0]
-            
-            generator.add_new_data(finger_data_gt_vt, finger_id_gt_vt, person_id_gt_vt, translation_gt_vt, rotation_gt_vt, nbr_of_images_gt_vt)
+#            finger_id_gt_vt = np.load(data_path + "finger_id_gt_vt.npy")
+#            person_id_gt_vt = np.load(data_path + "person_id_gt_vt.npy")
+#            finger_data_gt_vt = np.load(data_path + "fingerprints_gt_vt.npy")
+#            translation_gt_vt = np.load(data_path + "translation_gt_vt.npy")
+#            rotation_gt_vt = np.load(data_path + "rotation_gt_vt.npy")
+#            finger_data_gt_vt = util.reshape_grayscale_data(finger_data_gt_vt)
+#            nbr_of_images_gt_vt = np.shape(finger_data_gt_vt)[0]
+#            
+#            generator.add_new_data(finger_data_gt_vt, finger_id_gt_vt, person_id_gt_vt, translation_gt_vt, rotation_gt_vt, nbr_of_images_gt_vt)
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
         # Load generator
-        with open(data_path + "generator_data_gabor.pk1", "rb") as input:
+        with open(data_path + "generator_data_siamese.pk1", "rb") as input:
             generator = pickle.load(input)
              
     # parameters for training
     batch_size_train = 200
-    train_itr = 500000000000000000
+    train_itr = 5000000000
 
-    learning_rate = 0.00001
+    learning_rate = 0.0001
     momentum = 0.99
    
     # parameters for validation

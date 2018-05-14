@@ -60,10 +60,10 @@ class data_generator:
         self.triplets_train, self.anchors_train = self.all_triplets_easy(self.breakpoints_train, self.train_rotation, self.train_translation, rot_diff, trans_diff, margin_rot, margin_trans)
         
         # All combinations of training data
-        self.triplets_val, self.anchors_val= self.all_triplets_easy(self.breakpoints_val, self.val_rotation, self.val_translation, rot_diff, trans_diff, margin_rot, margin_trans)
+        self.triplets_val, self.anchors_val = self.all_triplets_easy(self.breakpoints_val, self.val_rotation, self.val_translation, rot_diff, trans_diff, margin_rot, margin_trans)
         
         # All combinations of training data
-        self.triplets_test, self.anchors_test= self.all_triplets_easy(self.breakpoints_test, self.test_rotation, self.test_translation, rot_diff, trans_diff, margin_rot, margin_trans)
+        self.triplets_test, self.anchors_test = self.all_triplets_easy(self.breakpoints_test, self.test_rotation, self.test_translation, rot_diff, trans_diff, margin_rot, margin_trans)
         
         self.rotation_res = rotation_res
         self.gen_rotations(self.train_data,self.val_data,self.test_data,self.rotation_res)
@@ -243,6 +243,45 @@ class data_generator:
         
         return anchor_images, positive_images, negative_images
     
+    
+    def get_triplet_test(self, data, triplets, anchors, batch_size, unused_anchors, negative_multiplier):
+        anchors = np.hstack((unused_anchors, anchors))
+        anchor_counter = 0
+        nbr_in_batch = 0
+        # Randomly draw a poisitve and a negative sample to the anchors
+        positive_index = np.zeros(batch_size,dtype='int32')
+        negative_index = np.zeros(batch_size * negative_multiplier,dtype='int32')
+        anchor_index = np.zeros(batch_size,dtype='int32')
+#        anchor_index_neg = np.zeros(batch_size * negative_multiplier, dtype='int32')
+        for i in range(batch_size):
+            anchor_triplet = triplets[int(anchors[i])]
+            nbr_non_matching = len(anchor_triplet[1])
+            nbr_matching = len(anchor_triplet[0])
+            
+            for k in range(nbr_matching):
+                positive_index[nbr_in_batch] = int(anchor_triplet[0][k])
+                negative_index[nbr_in_batch*negative_multiplier:(nbr_in_batch+1)*negative_multiplier] = anchor_triplet[1][np.random.randint(0,nbr_non_matching, size = negative_multiplier)].astype(int)  # Pick random non matching fingerprint
+                anchor_index[nbr_in_batch] = int(anchors[i])
+                
+                nbr_in_batch += 1
+                
+                if nbr_in_batch >= batch_size:
+                    positive_images = np.take(data, positive_index, axis=0)
+                    negative_images = np.take(data, negative_index, axis=0)
+                    anchor_images = np.take(data,anchor_index,axis=0)
+                    anchor_neg_images = np.take(data, np.repeat(anchor_index,negative_multiplier), axis = 0)
+                    
+                    unused_anchors = anchors[anchor_counter+1:]
+        
+                    return anchor_images, positive_images, negative_images, anchor_neg_images, unused_anchors
+                    
+            anchor_counter += 1
+            
+#            positive_index[i] = anchor_triplet[0][np.random.randint(0,nbr_matching)]  # Pick random matching fingerprint
+#            negative_index[i] = anchor_triplet[1][np.random.randint(0,nbr_non_matching)]  # Pick random non matching fingerprint
+        
+    
+    
     def get_pairs(self,data,pair_list):
         left_pairs = np.take(data,pair_list[:,0],axis=0)
         right_pairs = np.take(data,pair_list[:,1],axis=0)
@@ -400,21 +439,47 @@ class data_generator:
 #                        continue
                     elif translation_margin:
                         continue
-                    else:
-                        no_match_to_anchor.append(j)
+                ## ---------------   Use all non matching ---------#    
+#                    else:
+#                        no_match_to_anchor.append(j)
                     
-                for n in range(breakpoints[0], breakpoints[i]):
-                        no_match_to_anchor.append(n)
-                for n in range(breakpoints[i+1], rotation.shape[0]):
-                        no_match_to_anchor.append(n)
+#                for n in range(breakpoints[0], breakpoints[i]):
+#                        no_match_to_anchor.append(n)
+#                for n in range(breakpoints[i+1], rotation.shape[0]):
+#                        no_match_to_anchor.append(n)
+                # -----------------------------------------------------
+                
+                # -------- Use subset ----------------#
+                nbr_non_matching = 30
+                ratio_behind = i / len(breakpoints)
+                nbr_behind = int(nbr_non_matching * ratio_behind)
+                nbr_ahead = nbr_non_matching - nbr_behind
+                
+#                no_match_to_anchor = list(np.random.randint(breakpoints[i], size = nbr_behind))
+#                no_match_ahead = list(np.random.randint(breakpoints[i], size = nbr_ahead))
+#                
+#                no_match_to_anchor.extend(no_match_ahead)
+#                no_match_to_anchor = np.array(no_match_to_anchor)
+                
+                no_match_behind = np.array([])
+                no_match_ahead = np.array([])
+                
+                if nbr_behind > 0:
+                    no_match_behind = np.random.randint(breakpoints[i], size = nbr_behind)
+                if nbr_ahead > 0 and breakpoints[i+1] < rotation.shape[0]:
+                    no_match_ahead = np.random.randint(breakpoints[i+1], rotation.shape[0], size = nbr_ahead)
+                
+                no_match_to_anchor = np.hstack((no_match_behind, no_match_ahead))
+                
+                # ------------------------------------#
+                
                 
                 match_to_anchor = np.array(match_to_anchor)
-                no_match_to_anchor = np.array(no_match_to_anchor)
                 
                 triplets.append([match_to_anchor, no_match_to_anchor])    # Append the list of matches to the anchor
                 
                 if len(match_to_anchor) > 0:
-                    anchors.append(breakpoints[i] + k)  # Add index of anchor
+                    anchors.append(int(breakpoints[i] + k))  # Add index of anchor
                             
         return triplets, np.array(anchors)
         

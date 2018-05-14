@@ -45,7 +45,7 @@ class data_generator:
         self.breakpoints_test= self.get_breakpoints(self.test_person_id, self.test_finger_id)
         
         rot_diff = 5
-        trans_diff = 30
+        trans_diff = 10
         
 #        # All combinations of training data
 #        self.match_train, self.no_match_train = self.all_combinations(self.breakpoints_train, self.train_rotation, self.train_translation, rot_diff, trans_diff)
@@ -112,7 +112,7 @@ class data_generator:
         breakpoints_test= [e + nbr_of_test_images for e in self.get_breakpoints(test_person_id, test_finger_id)]
     
         rot_diff = 5
-        trans_diff = 30
+        trans_diff = 10
         margin_trans = 100
         margin_rot = 20
         # All combinations of training data
@@ -276,7 +276,7 @@ class data_generator:
     
     def all_combinations_easy(self, breakpoints, rotation, translation, rotation_diff, translation_diff, margin_rot, margin_trans):
         match = [] # matching pair indices
-        no_match = [] # non-matching pair indices 
+        no_match = np.array([]).reshape((0,2)) # non-matching pair indices 
         
         for i in range(len(breakpoints)-1):
             for k in range(breakpoints[i+1]-breakpoints[i]):
@@ -305,13 +305,44 @@ class data_generator:
 #                        continue
                     elif translation_margin:
                         continue
-                    else:
-                        no_match.append([breakpoints[i]+k, j])
+                    
+                    #-------------- All combinations ---------------
+#                    else:
+#                        no_match.append([breakpoints[i]+k, j])
                     
 #                for n in range(breakpoints[i+1], rotation.shape[0]):
 #                    no_match.append([breakpoints[i]+k, n])
-            
-        return np.array(match,dtype="int32"),np.array(no_match,dtype="int32")
+                    #------------------------------------------------
+                
+                #----------- Subset non matching -------------------
+                nbr_non_matching = 30
+                ratio_behind = i / len(breakpoints)
+                nbr_behind = int(nbr_non_matching * ratio_behind)
+                nbr_ahead = nbr_non_matching - nbr_behind
+                
+                no_match_behind = np.array([]).reshape((0,1))
+                no_match_ahead = np.array([]).reshape((0,1))
+                
+                if nbr_behind > 0:
+                    no_match_behind = np.random.randint(breakpoints[i], size = (nbr_behind,1))
+                if nbr_ahead > 0 and breakpoints[i+1] < breakpoints[-1]:
+                    no_match_ahead = np.random.randint(breakpoints[i+1], breakpoints[-1], size = (nbr_ahead,1))
+                
+                # Stack non matching indices
+                no_match_to_template = np.vstack((no_match_behind, no_match_ahead))                
+                repeat_template = np.repeat(breakpoints[i]+k, no_match_to_template.shape[0]).reshape((no_match_to_template.shape[0],1))
+                no_match_to_template = np.hstack((repeat_template, no_match_to_template))
+                
+                # Append to the full non matching list
+                no_match = np.vstack((no_match, no_match_to_template))
+                #---------------------------------------------------
+
+                
+        # Shuffle non matching set
+        no_match = no_match.astype(np.int32)
+        np.random.shuffle(no_match)
+        
+        return np.array(match,dtype="int32"), no_match           #np.array(no_match,dtype="int32")
     
     def three_split_array(self,input_array,percentage):
         length = len(input_array)

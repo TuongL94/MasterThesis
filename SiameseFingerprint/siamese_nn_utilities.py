@@ -21,7 +21,7 @@ def contrastive_loss(input_1,input_2,label,margin):
     margin - margin for contrastive loss, positive constant
     Returns the contrastive loss between input_1 and input_2 with specified margin.
     """
-    d_sq = tf.reduce_sum(tf.pow(input_1-input_2,2),1,keepdims=True)
+    d_sq = tf.reduce_sum(input_1-input_2,1,keepdims=True)
     max_sq = tf.square(tf.maximum(margin-d_sq,0))
     return tf.reduce_mean(label*d_sq + (1-label)*max_sq)/2
 

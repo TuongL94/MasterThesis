@@ -31,26 +31,28 @@ def main(argv):
     
     """
     
-    model_name = argv[0]
+#    model_name = argv[0]
+    output_dir = argv[0]
+    data_dir = argv[1]
     gpu_device_name = argv[2]
     if len(argv) == 4:
         use_time = True
     else:
         use_time = False
         
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    output_dir =  argv[1] + model_name + "/" # directory where the model will be saved
+#    dir_path = os.path.dirname(os.path.realpath(__file__))
+#    output_dir =  argv[1] + model_name + "/" # directory where the model will be saved
 
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
-    if not os.path.exists(dir_path + "/generator_data.pk1"):
-        with open('generator_data.pk1', 'wb') as output:
+    if not os.path.exists(data_dir + "generator_data_triplet_trans_30.pk1"):
+        with open(data_dir + 'generator_data_triplet_trans_30.pk1', 'wb') as output:
             # Load fingerprint labels and data from file with names
-            finger_id = np.load(dir_path + "/finger_id.npy")
-            person_id = np.load(dir_path + "/person_id.npy")
-            finger_data = np.load(dir_path + "/fingerprints.npy")
-            translation = np.load(dir_path + "/translation.npy")
-            rotation = np.load(dir_path + "/rotation.npy")
+            finger_id = np.load(data_dir + "/finger_id_mt_vt_112.npy")
+            person_id = np.load(data_dir + "/person_id_mt_vt_112.npy")
+            finger_data = np.load(data_dir + "/fingerprints_mt_vt_112.npy")
+            translation = np.load(data_dir + "/translation_mt_vt_112.npy")
+            rotation = np.load(data_dir + "/rotation_mt_vt_112.npy")
             nbr_of_images = np.shape(finger_data)[0] # number of images to use from the original data set
 #            nbr_of_images = 5000
             finger_data = util.reshape_grayscale_data(finger_data)
@@ -58,11 +60,11 @@ def main(argv):
             
             generator = data_generator(finger_data, finger_id, person_id, translation, rotation, nbr_of_images, rotation_res) # initialize data generator
             
-            finger_id_gt_vt = np.load(dir_path + "/finger_id_gt_vt.npy")
-            person_id_gt_vt = np.load(dir_path + "/person_id_gt_vt.npy")
-            finger_data_gt_vt = np.load(dir_path + "/fingerprints_gt_vt.npy")
-            translation_gt_vt = np.load(dir_path + "/translation_gt_vt.npy")
-            rotation_gt_vt = np.load(dir_path + "/rotation_gt_vt.npy")
+            finger_id_gt_vt = np.load(data_dir + "/finger_id_gt_vt.npy")
+            person_id_gt_vt = np.load(data_dir + "/person_id_gt_vt.npy")
+            finger_data_gt_vt = np.load(data_dir + "/fingerprints_gt_vt.npy")
+            translation_gt_vt = np.load(data_dir + "/translation_gt_vt.npy")
+            rotation_gt_vt = np.load(data_dir + "/rotation_gt_vt.npy")
             
             finger_data_gt_vt = util.reshape_grayscale_data(finger_data_gt_vt)
             nbr_of_images_gt_vt = np.shape(finger_data_gt_vt)[0]
@@ -72,7 +74,7 @@ def main(argv):
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
         # Load generator
-        with open('generator_data.pk1', 'rb') as input:
+        with open(data_dir + 'generator_data_triplet_trans_30.pk1', 'rb') as input:
             generator = pickle.load(input)
              
     # parameters for training
@@ -85,12 +87,12 @@ def main(argv):
     # Paramerters for increasing difficulty
 #    lvl_2 = 100     # Set number of iterations at when to increase difficulty to level 2
 #    lvl_3 = 200     # Set number of iterations at when to increase difficulty to level 3
-    harder_itr = 300
+    harder_itr = 500
     batch_size_increase_diff = 900
    
     # parameters for validation
     batch_size_val = 300
-    val_itr = 1000 # frequency in which to use validation data for computations
+    val_itr = 100 # frequency in which to use validation data for computations
     
     # parameters for evaluation
     batch_size_test = 200
@@ -120,12 +122,12 @@ def main(argv):
             anchor_train_output = sm.inference(anchor_train)            
             pos_train_output = sm.inference(pos_train)
             neg_train_output = sm.inference(neg_train)
-            anchor_val_output = sm.inference(anchor_val)
-            pos_val_output = sm.inference(pos_val)
-            neg_val_output = sm.inference(neg_val)
+            anchor_val_output = sm.inference(anchor_val, training = False)
+            pos_val_output = sm.inference(pos_val, training = False)
+            neg_val_output = sm.inference(neg_val, training = False)
             
-            left_test_output = sm.inference(left_test)
-            right_test_output = sm.inference(right_test)
+            left_test_output = sm.inference(left_test, training = False)
+            right_test_output = sm.inference(right_test, training = False)
             
             reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
             margin = tf.constant(4.0) # margin for contrastive loss
@@ -193,7 +195,9 @@ def main(argv):
     with tf.Session(config=config) as sess:
         if is_model_new:
             with tf.device(gpu_device_name):
-                train_op = sm.training(train_loss, learning_rate, momentum)
+#                train_op = sm.training(train_loss, learning_rate, momentum)
+                optimizer = tf.train.AdamOptimizer()
+                train_op = optimizer.minimize(train_loss, name="train_op")
                 sess.run(tf.global_variables_initializer()) # initialize all trainable parameters
                 tf.add_to_collection("train_op",train_op)
         else:
@@ -211,17 +215,17 @@ def main(argv):
             graph = tf.get_default_graph()
             
             # Summary setup
-            conv1_filters = graph.get_tensor_by_name("conv_layer_1/kernel:0")
+            conv1_filters = graph.get_tensor_by_name("conv1/kernel:0")
             nbr_of_filters_conv1 = sess.run(tf.shape(conv1_filters)[-1])
     
-            conv2_filters = graph.get_tensor_by_name("conv_layer_2/kernel:0")
+            conv2_filters = graph.get_tensor_by_name("conv2/kernel:0")
             hist_conv1 = tf.summary.histogram("hist_conv1", conv1_filters)
             hist_conv2 = tf.summary.histogram("hist_conv2", conv2_filters)
             conv1_filters = tf.transpose(conv1_filters, perm = [3,0,1,2])
             filter1 = tf.summary.image('Filter_1', conv1_filters, max_outputs=nbr_of_filters_conv1)
-            conv1_bias = graph.get_tensor_by_name("conv_layer_1/bias:0")
+            conv1_bias = graph.get_tensor_by_name("conv1/bias:0")
             hist_bias1 = tf.summary.histogram("hist_bias1", conv1_bias)
-            conv2_bias = graph.get_tensor_by_name("conv_layer_2/bias:0")
+            conv2_bias = graph.get_tensor_by_name("conv2/bias:0")
             hist_bias2 = tf.summary.histogram("hist_bias2", conv2_bias)
                 
             summary_train_loss = tf.summary.scalar('training_loss', train_loss)
@@ -288,7 +292,8 @@ def main(argv):
 #            b_sim_train = np.take(b_sim_train,permutation,axis=0)
             
             ####### Increase difficulty every harder_itr iteration by offline evaluation on a subset of all triplets #######
-            if i % harder_itr == 0:                   
+            if i % harder_itr == 0:      
+                print("Increasing difficulty")
                 # Take a random subset of each anchors non matching set
 #                nbr_non_matching = 30
 #                for j in range(len(generator.triplets_train_original)):
@@ -373,7 +378,7 @@ def main(argv):
                     distance_pos.append(dist) 
                     
                 hardest_neg = []
-                nbr_hardest_neg = 1
+                nbr_hardest_neg = 3
                 for j in range(len(distance_neg)):
                     hardest_current = np.full((nbr_hardest_neg,2), np.inf)        # Keeps track on index in first column and distance in second
                     for k in range(nbr_non_matching):
@@ -388,7 +393,7 @@ def main(argv):
                     hardest_neg.append(hardest_current[:,0].astype('int32'))
                 
                 hardest_pos = []
-                maximum_nbr_hardest_pos = 1
+                maximum_nbr_hardest_pos = 5
                 for j in range(len(generator.anchors_train)):
                     if j > 0:
                         match_dist = distance_pos[j]
@@ -404,6 +409,8 @@ def main(argv):
                         hardest_pos.append(hardest_current[:,0].astype('int32'))
                     
                 generator.update_triplets(hardest_neg, hardest_pos)
+                
+                print("Done Increasing difficulty")
                 
 #                # Run network on the subset and save the output
 #                for j in range(int(len(negative_pairs) / batch_size_test)):
@@ -445,6 +452,8 @@ def main(argv):
             b_anch_train,b_pos_train,b_neg_train = generator.get_triplet(generator.train_data[rnd_rotation], generator.triplets_train, train_batch_anchors)
             
             _,train_loss_value, summary = sess.run([train_op, train_loss, summary_op],feed_dict={anchor_train:b_anch_train, pos_train:b_pos_train, neg_train:b_neg_train})
+#            _,train_loss_value, summary, anch, pos, neg = sess.run([train_op, train_loss, summary_op, anchor_train_output, pos_train_output, neg_train_output],feed_dict={anchor_train:b_anch_train, pos_train:b_pos_train, neg_train:b_neg_train})
+            
 
              # Use validation data set to tune hyperparameters (Classification threshold)
             if i % val_itr == 0:
@@ -453,7 +462,7 @@ def main(argv):
 #                b_sim_val_non_matching = np.repeat(np.zeros((batch_size_val*int(val_match_dataset_length/batch_size_val),1)),generator.rotation_res,axis=0)
 #                b_sim_full = np.append(b_sim_val_matching,b_sim_val_non_matching,axis=0)
                 labels = np.vstack((np.ones((batch_size_val,1)), np.zeros((batch_size_val,1))))
-                for j in range(int(val_anchors_dataset_length/batch_size_val)):
+                for j in range(np.max([int(val_anchors_dataset_length/batch_size_val),1])):
                     val_batch_anchors = sess.run(next_element,feed_dict={handle:val_anchors_handle})
 #                    class_id_batch = generator.same_class(val_batch_anchors)
                     for k in range(generator.rotation_res):
@@ -486,7 +495,7 @@ def main(argv):
 #                        current_val_loss += val_loss_value
                         
                 val_loss_over_time.append(current_val_loss*batch_size_val/np.shape(labels_full)[0])
-                precision, false_pos, false_neg, recall, fnr, fpr = tre.get_test_diagnostics(anchor_full,candidates_full, labels_full,threshold)
+                precision, false_pos, false_neg, recall, fnr, fpr,_,tnr = tre.get_test_diagnostics(anchor_full,candidates_full, labels_full,threshold)
             
                 if false_pos > false_neg:   # Can use inter_class_errors to tune the threshold further
                     threshold -= thresh_step

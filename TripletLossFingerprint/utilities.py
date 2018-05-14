@@ -8,6 +8,29 @@ Created on Thu Feb  1 15:12:05 2018
 import numpy as np
 import scipy.linalg as sl
 import random
+import matplotlib.pyplot as plt
+import tensorflow as tf
+
+
+def print_all_global_variables():
+    global_vars = tf.global_variables()
+    for i in range(len(global_vars)):
+        print(global_vars[i])
+    
+def get_nbr_of_parameters():
+    total_parameters = 0
+    for variable in tf.trainable_variables():
+        # shape is an array of tf.Dimension
+        shape = variable.get_shape()
+        print(shape)
+        print(len(shape))
+        variable_parameters = 1
+        for dim in shape:
+            print(dim)
+            variable_parameters *= dim.value
+        print(variable_parameters)
+        total_parameters += variable_parameters
+    return total_parameters
 
 def l2_normalize(input_array):
     """ L2-normalizes a 1D or 2D array along first dimension
@@ -66,4 +89,84 @@ def rand_assign_pair(left,right,image_1,image_2):
     else:
         left.append(image_2)
         right.append(image_1)
+        
+        
+def save_evaluation_metrics(metrics, file_path):
+    nbr_of_metrics = len(metrics)
+    with open(file_path, "a") as file:
+        for i in range(nbr_of_metrics):
+            file.write(repr(metrics[i]) + " ")
+        file.write("\n")
+        
+        
+        
+def get_evaluation_metrics_vals(file_path):
+    fpr_vals = []
+    fnr_vals = []
+    recall_vals = []
+    acc_vals = []
+    
+    with open(file_path, "rb") as file:
+        lines = file.readlines()
+        for i in range(len(lines)):
+            line  = lines[i]
+            line = line.split()
+            fpr_vals.append(float(line[0]))
+            fnr_vals.append(float(line[1]))
+            recall_vals.append(float(line[2]))
+            acc_vals.append((float(line[3])))
+    
+    return fpr_vals, fnr_vals, recall_vals, acc_vals
+
+def plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, acc_vals):
+    plt.figure()
+    plt.plot(thresholds, fpr_vals, "b", label="FPR")
+    plt.plot(thresholds, fnr_vals, "r", label="FNR")
+    plt.plot(thresholds, recall_vals, label="recall")
+    plt.xlabel("threshold")
+    plt.legend(bbox_to_anchor=(0., 1.02, 1., 0.102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
+    plt.show()
+    
+    plt.figure()
+    plt.plot(thresholds, acc_vals, label="accuracy")
+    plt.xlabel("threshold")
+    plt.ylabel("accuracy")
+    plt.legend(bbox_to_anchor=(0., 1.02, 1., 0.102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
+    plt.show()
+    
+    plt.figure()
+    plt.loglog(fpr_vals,fnr_vals)
+    plt.xlabel("FPR")
+    plt.ylabel("FNR")
+    plt.show()
+    
+    plt.figure()
+    plt.semilogx(fpr_vals,recall_vals)
+    plt.xlabel("FPR")
+    plt.ylabel("Recall")
+    plt.show()
+    
+    
+def get_separation_distance_hist(l2_distances_sim, l2_distances_no_sim):
+    plt.hist(l2_distances_sim, bins="auto", alpha=0.5, label="similar", color="g")
+    plt.hist(l2_distances_no_sim, bins="auto", alpha=0.5, label="dissimilar", color="r")
+#    plt.hist(l2_distances_sim, bins=len(l2_distances_sim)//40, alpha=0.5, label="similar", color="g")
+#    plt.hist(l2_distances_no_sim, bins=len(l2_distances_no_sim)//40, alpha=0.5, label="dissimilar", color="r")
+    plt.legend(bbox_to_anchor=(0., 1.02, 1., 0.102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
+    plt.show()
+    
+def count_triplets(triplets, anchors):
+    nbr_positives = 0
+    nbr_negatives = 0
+    for i in anchors:
+        nbr_positives += len(triplets[i][0])
+        nbr_negatives += len(triplets[i][1])
+    return nbr_positives, nbr_negatives
+    
+    
+    
+    
+    
+    
+    
     

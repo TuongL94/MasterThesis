@@ -93,12 +93,12 @@ def main(argv):
     fingerprints = np.array(fingerprints,dtype='float32')/255
 
     # save paths
-    filename_1 = dir_path + "person_id_gabor"
-    filename_2 = dir_path + "finger_id_gabor"
-    filename_3 = dir_path + "fingerprints_gabor" 
-    filename_4 = dir_path + "matrix_gabor"
-    filename_5 = dir_path + "nbr_in_class_gabor"
-    filename_6 = dir_path + "class_breakpoint"
+    filename_1 = dir_path + "person_id_mt_vt_112"
+    filename_2 = dir_path + "finger_id_mt_vt_112"
+    filename_3 = dir_path + "fingerprints_mt_vt_112" 
+    filename_4 = dir_path + "matrix_mt_vt_112"
+    filename_5 = dir_path + "nbr_in_class_mt_vt_112"
+    filename_6 = dir_path + "class_breakpoint_mt_vt_112"
     
     # saves numpy arrays
     np.save(filename_1, person_id)

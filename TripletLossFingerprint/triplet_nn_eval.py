@@ -13,7 +13,7 @@ import utilities as util
 import pickle
 import re
 
-def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_id=None):
+def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_id=None, plot_hist=False, breakpoint=None):
     """ Computes and returns evaluation metrics.
     
     Input:
@@ -24,7 +24,7 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_i
     they are considered to correspond to a matching pair of images.
     class_id - Is optional. Contains information about which finger and person each fingerprint comes from.
     Returns:
-    precision - precision
+    accuracy - accuracy
     false_pos - number of false positives
     false_neg - number of false negatives
     recall - recall (nbr of true positives/total number of positive examples)
@@ -33,19 +33,25 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_i
     inter_class_errors - number of false positive from the same finger+person (class)
     """
     matching = np.zeros(len(sim_labels))
-    l2_normalized_diff = util.l2_normalize(left_pairs_o-right_pairs_o)
+#    l2_normalized_diff = util.l2_normalize(left_pairs_o-right_pairs_o)
+    l2_normalized_diff = left_pairs_o-right_pairs_o
+    l2_distances = sl.norm(l2_normalized_diff,axis=1)
     false_pos = 0
     false_neg = 0
     inter_class_errors = 0
+    
+    if plot_hist:
+        util.get_separation_distance_hist(l2_distances[0:breakpoint],l2_distances[breakpoint:])
+        
     p = np.sum(sim_labels)
     n = len(sim_labels) - p
     for i in range(len(sim_labels)):
 #        print(sl.norm(l2_normalized_diff[i,:]))
-        if np.isinf(l2_normalized_diff[i,:]).any() or np.isnan(l2_normalized_diff[i,:]).any():
+        if np.isinf(l2_distances).any() or np.isnan(l2_distances).any():
             print('Got inf or Nan in L2 norm; Change hyperparameters to avoid')
             if sim_labels[i] == 1:
                 false_neg = false_neg + 1
-        elif sl.norm(l2_normalized_diff[i,:]) < threshold:
+        elif l2_distances[i] < threshold:
             matching[i] = 1
             if sim_labels[i] == 0:
                 false_pos = false_pos + 1
@@ -56,18 +62,22 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_i
             if sim_labels[i] == 1:
                 false_neg = false_neg + 1
     
-    precision = np.sum((matching == sim_labels.T))/len(sim_labels)
+    accuracy = np.sum((matching == sim_labels.T))/len(sim_labels)
     tp = 0
+    tn = 0
     for i in range(len(sim_labels)):
         if matching[i] == 1 and sim_labels[i] == 1:
             tp += 1
+        elif matching[i] == 0 and sim_labels[i] == 0:
+            tn += 1
     recall = tp/p
+    tnr = tn/n
     fnr = 1 - recall
     fpr = false_pos/n
     
-    return precision, false_pos, false_neg, recall, fnr, fpr#, inter_class_errors
+    return accuracy, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr
  
-def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_itr,gpu_device_name):
+def evaluate_siamese_network(generator, batch_size, thresholds, output_dir, metrics_path, eval_itr,gpu_device_name, negative_multiplier):
     """ This method is used to evaluate a siamese network for fingerprint datasets.
     
     The model is defined in the file siamese_nn_model.py and trained in 
@@ -85,7 +95,7 @@ def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_
     tf.reset_default_graph()
     
     if not os.path.exists(output_dir + "checkpoint"):
-        print("No siamese model exists in " + output_dir)
+        print("No triplet model exists in " + output_dir)
         return
         
     else:
@@ -112,8 +122,9 @@ def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_
                 saver.restore(sess, tf.train.latest_checkpoint(output_dir))
                 
                 test_anchors_dataset = tf.data.Dataset.from_tensor_slices(generator.anchors_test)
+#                test_anchors_dataset = tf.data.Dataset.from_tensor_slices(generator.anchors_train)
 #                test_anchors_dataset = train_anchors_dataset.shuffle(buffer_size=np.shape(generator.anchors_test)[0])
-#                test_anchors_dataset = train_anchors_dataset.repeat()
+                test_anchors_dataset = test_anchors_dataset.repeat()
                 test_anchors_dataset = test_anchors_dataset.batch(batch_size)
 #                test_anchors_dataset_length = np.shape(generator.anchors_test)[0]
             
@@ -124,10 +135,14 @@ def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_
                 next_element = iterator.get_next()
                 
     #            sim_full = np.vstack((np.ones((batch_size_test*int(test_match_dataset_length/batch_size_test),1)),np.zeros((batch_size_test*int(test_non_match_dataset_length/batch_size_test),1))))
-                labels = np.vstack((np.ones((batch_size,1)), np.zeros((batch_size,1))))
+#                labels = np.vstack((np.ones((batch_size,1)), np.zeros((batch_size,1))))
     #            sim_full = np.vstack((np.ones((batch_size_test*int(test_match_dataset_length/batch_size_test),1)),np.zeros((batch_size_test*int((int(test_non_match_dataset_length/10))/batch_size_test),1))))
     #            sim_full = np.vstack((np.ones((batch_size_test*int(test_match_dataset_length/batch_size_test),1)),np.zeros((batch_size_test*int(int(test_non_match_dataset_length/10)/batch_size_test),1))))
                 
+                breakpoint = batch_size*eval_itr
+                labels_full = np.vstack((np.ones((breakpoint,1)), np.zeros((breakpoint*negative_multiplier,1))))
+
+                unused_anchors = np.array([])
                 for i in range(eval_itr):
                     #            for i in range(int(test_match_dataset_length/batch_size_test)):
                     test_batch_anchors = sess.run(next_element,feed_dict={handle:test_anchors_handle})
@@ -135,21 +150,38 @@ def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_
                     for j in range(generator.rotation_res):
 #                        difficulty_lvl = np.random.randint(1,4)
 #                        b_anch_test,b_pos_test,b_neg_test = generator.get_triplet(generator.test_data[j], generator.triplets_test, test_batch_anchors, difficulty_lvl)
-                        b_anch_test,b_pos_test,b_neg_test = generator.get_triplet(generator.test_data[j], generator.triplets_test, test_batch_anchors)
+#                        b_anch_test,b_pos_test,b_neg_test = generator.get_triplet(generator.test_data[j], generator.triplets_test, test_batch_anchors)
+                        b_anch_test,b_pos_test,b_neg_test, b_anch_neg_test, unused_anchors = generator.get_triplet_test(generator.test_data[j], generator.triplets_test, test_batch_anchors, batch_size, unused_anchors, negative_multiplier)
+#                        b_anch_test,b_pos_test,b_neg_test, b_anch_neg_test, unused_anchors = generator.get_triplet_test(generator.train_data[j], generator.triplets_train, test_batch_anchors, batch_size, unused_anchors, negative_multiplier)
 #                        class_id_batch = generator.same_class(test_batch,test=True)
                         left_o_match,right_o_match = sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_anch_test, right_test:b_pos_test})
-                        left_o_no_match,right_o_no_match = sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_anch_test, right_test:b_neg_test})
+#                        left_o_no_match,right_o_no_match = sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_anch_test, right_test:b_neg_test})
+                        for k in range(negative_multiplier):
+                            left_o_no_match,right_o_no_match = sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_anch_neg_test[k*batch_size:(k+1)*batch_size], right_test:b_neg_test[k*batch_size:(k+1)*batch_size]})
+                            if i == 0 and j == 0 and k == 0:
+                                left_full_no_match = left_o_no_match
+                                right_full_no_match = right_o_no_match
+                            else:
+                                left_full_no_match = np.vstack((left_full_no_match,left_o_no_match))
+                                right_full_no_match = np.vstack((right_full_no_match,right_o_no_match))          
+                        
                         if i == 0 and j == 0:
-                            left_full = np.vstack((left_o_match,left_o_no_match))
-                            right_full = np.vstack((right_o_match,right_o_no_match))
-                            labels_full = labels
+                            left_full_match = left_o_match
+                            right_full_match = right_o_match
+#                            left_full_no_match = left_o_no_match
+#                            right_full_no_match = right_o_no_match
+#                            labels_full = labels
 #                            class_id = class_id_batch
                         else:
-                            left_full = np.vstack((left_full,left_o_match,left_o_no_match))
-                            right_full = np.vstack((right_full,right_o_match,right_o_no_match))
-                            labels_full = np.vstack((labels_full,labels))
+                            left_full_match = np.vstack((left_full_match,left_o_match))
+                            right_full_match = np.vstack((right_full_match,right_o_match))
+#                            left_full_no_match = np.vstack((left_full_no_match,left_o_no_match))
+#                            right_full_no_match = np.vstack((right_full_no_match,right_o_no_match))                            
+#                            labels_full = np.vstack((labels_full,labels))
 #                            class_id = np.vstack((class_id, class_id_batch))
-    
+                    
+                left_full = np.vstack((left_full_match, left_full_no_match))
+                right_full = np.vstack((right_full_match, right_full_no_match))
 #                for i in range(eval_itr):
 #    #            for i in range(int(int(test_non_match_dataset_length/10)/batch_size_test)):
 #                    test_batch = sess.run(next_element,feed_dict={handle:test_non_match_handle})
@@ -162,12 +194,19 @@ def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_
 #                        class_id_batch = generator.same_class(test_batch,test=True)
 #                        class_id = np.vstack((class_id, class_id_batch))
                             
-                            
-
+                plot_hist = True
+                for i in range(len(thresholds)):
+                    
+                    accuracy, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr = get_test_diagnostics(left_full,right_full,labels_full,thresholds[i], plot_hist=plot_hist, breakpoint=breakpoint)
+                    metrics = (fpr, fnr, recall, accuracy)
+                    # save evaluation metrics to a file 
+                    util.save_evaluation_metrics(metrics, metrics_path + "30.txt")
+                    plot_hist = False
+                    
                 
-                precision, false_pos, false_neg, recall, fnr, fpr = get_test_diagnostics(left_full,right_full,labels_full,threshold)
+                accuracy, false_pos, false_neg, recall, fnr, fpr, _, tnr = get_test_diagnostics(left_full,right_full,labels_full,0.005)
     
-                print("Precision: %f " % precision)
+                print("Accuracy: %f " % accuracy)
                 print("# False positive: %d " % false_pos)
                 print("# False negative: %d " % false_neg)
 #                print("# Number of false positive from the same class: %d " % inter_class_errors)
@@ -177,24 +216,52 @@ def evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_
                       
 #                nbr_same_class = np.sum(class_id[eval_itr*batch_size:])
 #                print("Number of fingerprints in the same class in the non matching set: %d " % nbr_same_class)
+                
+                      
+                # get evaluation metrics for varying thresholds
+                fpr_vals, fnr_vals, recall_vals, tnr_vals = util.get_evaluation_metrics_vals(metrics_path + "30.txt")
+    
+                # plots of evaluation metrics
+                util.plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, tnr_vals)
          
 def main(argv):
    """ Runs evaluation on mnist siamese network"""
     
     # Set parameters for evaluation
-   threshold = 0.045
-   batch_size = 200
-   eval_itr = 5
+#   threshold = 0.045
+   thresholds = np.linspace(0, 4, num=100)
+   batch_size = 206
+   eval_itr = 28
+   negative_multiplier = 2
+   
+   # Set random seed to allways use the same test set
+   np.random.seed(2)
+   
     
-   dir_path = os.path.dirname(os.path.realpath(__file__))
-   output_dir = argv[1] + argv[0] + "/" # directory where the model is saved
+#   dir_path = os.path.dirname(os.path.realpath(__file__))
+#   output_dir = argv[1] + argv[0] + "/" # directory where the model is saved
+#   gpu_device_name = argv[-1] 
+   
+#   output_dir = argv[0]# directory where the model is saved
+   output_dir = argv[2]# directory where the model is saved
+   data_path =  argv[1]
+   metrics_path = argv[2]
    gpu_device_name = argv[-1] 
    
+   # if file containing evaluation metrics already exists use this data directly
+#   if os.path.exists(metrics_path + ".txt"):
+#        # get evaluation metrics for varying thresholds
+#        fpr_vals, fnr_vals, recall_vals, acc_vals = util.get_evaluation_metrics_vals(metrics_path + ".txt")
+#
+#        # plots of evaluation metrics
+#        util.plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, acc_vals)
+#        return
+   
     # Load generator
-   with open('generator_data.pk1', 'rb') as input:
+   with open(data_path + 'generator_data_triplet_trans_30.pk1', 'rb') as input:
        generator = pickle.load(input)
     
-   evaluate_siamese_network(generator, batch_size, threshold, output_dir, eval_itr, gpu_device_name)
+   evaluate_siamese_network(generator, batch_size, thresholds, output_dir, metrics_path, eval_itr, gpu_device_name, negative_multiplier)
     
 if __name__ == "__main__":
     main(sys.argv[1:])

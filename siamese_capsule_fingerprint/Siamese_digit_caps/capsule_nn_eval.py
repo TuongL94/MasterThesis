@@ -147,11 +147,11 @@ def evaluate_capsule_network(generator, batch_size, threshold, eval_itr, output_
                         if i == 0 and j == 0:
                             left_full = left_o
                             right_full = right_o
-                            class_id = class_id_batch
+#                            class_id = class_id_batch
                         else:
                             left_full = np.vstack((left_full,left_o))
                             right_full = np.vstack((right_full,right_o))
-                            class_id = np.vstack((class_id, class_id_batch))
+#                            class_id = np.vstack((class_id, class_id_batch))
     
                 for i in range(eval_itr):
                     test_batch = sess.run(next_element,feed_dict={handle:test_non_match_handle})
@@ -161,30 +161,30 @@ def evaluate_capsule_network(generator, batch_size, threshold, eval_itr, output_
                         left_full = np.vstack((left_full,left_o))
                         right_full = np.vstack((right_full,right_o))   
                         
-                        class_id_batch = generator.same_class(test_batch,test=True)
-                        class_id = np.vstack((class_id, class_id_batch))
+#                        class_id_batch = generator.same_class(test_batch,test=True)
+#                        class_id = np.vstack((class_id, class_id_batch))
 
                 
-                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = get_test_diagnostics(left_full,right_full,sim_full,threshold,class_id)
+                precision, false_pos, false_neg, recall, fnr, fpr, _ = get_test_diagnostics(left_full,right_full,sim_full,threshold)
     
                 print("Precision: %f " % precision)
                 print("# False positive: %d " % false_pos)
                 print("# False negative: %d " % false_neg)
-                print("# Number of false positive from the same class: %d " % inter_class_errors)
+#                print("# Number of false positive from the same class: %d " % inter_class_errors)
                 print("# Recall: %f " % recall)
                 print("# Miss rate/false negative rate: %f " % fnr)
                 print("# fall-out/false positive rate: %f " % fpr)
                       
-                nbr_same_class = np.sum(class_id[eval_itr*batch_size:])
-                print("Number of fingerprints in the same class in the non matching set: %d " % nbr_same_class)
+#                nbr_same_class = np.sum(class_id[eval_itr*batch_size:])
+#                print("Number of fingerprints in the same class in the non matching set: %d " % nbr_same_class)
          
 def main(argv):
     """ Runs evaluation on trained network 
     """
     # Set parameters for evaluation
-    threshold = 0.4
-    batch_size = 400
-    eval_itr = 1
+    threshold = 0.05
+    batch_size = 20
+    eval_itr = 10
     
     output_dir = argv[0]# directory where the model is saved
     data_path =  argv[1]

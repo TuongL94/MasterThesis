@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Mar 16 14:50:09 2018
+Created on Mon Apr 16 14:50:09 2018
 
 @author: Tuong Lam & Simon Nilsson
 """
@@ -35,63 +35,108 @@ def primary_caps(input, kernel_size, capsules, cap_dim, strides, padding, name="
     
 #def conv_capsule():
     
+
+
+def conv_relu_fixed(input,kernel,bias,strides = [1,1,1,1], padding = 'VALID',trainable = False, name=None, kernel_name = None, bias_name = None):
+    # Create variable named "weight".
+    weight = tf.get_variable(kernel_name, initializer = kernel,
+        trainable = trainable)
+    # Create variable named "bias".
+    bias = tf.get_variable(bias_name, initializer = bias,
+        trainable = trainable)
+    conv = tf.nn.conv2d(input, 
+                        weight,
+                        strides = strides, 
+                        padding = padding,
+                        name = name)
+    return tf.nn.relu(conv + bias)
+
+def conv_relu(input,kernel_shape,bias_shape, strides = [1,1,1,1], padding = 'VALID', name=None, kernel_name = None, bias_name = None):
+    # Create variable named "weight".
+    weight = tf.get_variable(kernel_name,shape=kernel_shape,
+        trainable = True)
+    # Create variable named "bias".
+    bias = tf.get_variable(bias_name,shape=bias_shape,
+        trainable = True)
+    conv = tf.nn.conv2d(input, 
+                        weight,
+                        strides = strides, 
+                        padding = padding,
+                        name = name)
+    return tf.nn.relu(conv + bias)
     
     
     
     
-def capsule_net(input, routing_iterations, digit_caps_classes, digit_caps_dims, caps1_n_maps, caps1_n_dims, batch_size, name="capsule_net"):
-    net = tf.layers.conv2d(
-        inputs = input,
-        filters = 32,
-        kernel_size = [9,9], 
-        strides = [2,2],
-        padding = "valid",
-        activation = tf.nn.relu,
-        reuse = tf.AUTO_REUSE,
-        kernel_regularizer = tf.contrib.layers.l2_regularizer(0.1),
-        name="conv1")
     
-    net = tf.layers.batch_normalization(
-        net,
-#        training = training,
-        name = "batch_norm_3",
-        reuse = tf.AUTO_REUSE)
+def capsule_net(input, routing_iterations, digit_caps_classes, digit_caps_dims, caps1_n_maps, caps1_n_dims, batch_size, *transfer, name="capsule_net"):
+#    net = tf.layers.conv2d(
+#        inputs = input,
+#        filters = 32,
+#        kernel_size = [9,9], 
+#        strides = [2,2],
+#        padding = "valid",
+#        activation = tf.nn.relu,
+#        reuse = tf.AUTO_REUSE,
+#        kernel_regularizer = tf.contrib.layers.l2_regularizer(0.1),
+#        name="conv1")
+    
+    # Check whether pretrained weights where provided
+    
+    net = conv_relu_fixed(
+            input,
+            transfer[0][0],
+            transfer[0][1],
+            strides = [1,2,2,1],
+            name = 'conv1',
+            kernel_name = 'kernel1',
+            bias_name = 'bias1',
+            trainable = True)
+    
     
 #    net = tf.layers.max_pooling2d(
 #        inputs = net, 
 #        pool_size = [2,2],
 #        strides = 2)
     
-    net = tf.layers.conv2d(
-        inputs = net,
-        filters = 32,
-        kernel_size = [9,9], 
-        strides = [2,2],
-        padding = "valid",
-        activation = tf.nn.relu,
-        reuse = tf.AUTO_REUSE,
-        kernel_regularizer = tf.contrib.layers.l2_regularizer(0.1),
-        name="conv2")
+#    net = tf.layers.conv2d(
+#        inputs = net,
+#        filters = 32,
+#        kernel_size = [9,9], 
+#        strides = [2,2],
+#        padding = "valid",
+#        activation = tf.nn.relu,
+#        reuse = tf.AUTO_REUSE,
+#        kernel_regularizer = tf.contrib.layers.l2_regularizer(0.1),
+#        name="conv2")
     
-    net = tf.layers.batch_normalization(
-        net,
-#        training = training,
-        name = "batch_norm_3",
-        reuse = tf.AUTO_REUSE)
-    
-    net = primary_caps(
+    net = conv_relu_fixed(
             net,
-            kernel_size = [9,9],
-            capsules = caps1_n_maps,
-            cap_dim = caps1_n_dims,
-            strides = [2,2],
-            padding = "valid")
+            transfer[0][2],
+            transfer[0][3],
+            strides = [1,2,2,1],
+            name = 'conv2',
+            kernel_name = 'kernel2',
+            bias_name = 'bias2',
+            trainable = True)
     
-    net = tf.layers.batch_normalization(
-        net,
-#        training = training,
-        name = "batch_norm_3",
-        reuse = tf.AUTO_REUSE)
+    net = conv_relu_fixed(
+            net,
+            transfer[0][4],
+            transfer[0][5],
+            strides = [1,2,2,1],
+            name = 'primary_caps',
+            kernel_name = 'kernel3',
+            bias_name = 'bias3',
+            trainable = True)
+    
+#    net = primary_caps(
+#            net,
+#            kernel_size = [9,9],
+#            capsules = caps1_n_maps,
+#            cap_dim = caps1_n_dims,
+#            strides = [2,2],
+#            padding = "valid")
     
     
     ######### Starting routing procedure ##########################

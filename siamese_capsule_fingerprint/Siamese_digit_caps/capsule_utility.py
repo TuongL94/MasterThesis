@@ -55,10 +55,74 @@ def triplet_caps_loss(anchor, pos, neg, margin):
     return loss
 
 def contrastive_caps_loss(input_1, input_2, label, margin):
-    dist = tf.reduce_sum(tf.reduce_sum(tf.square(input_1 - input_2), axis=-2), axis=-2)
+#    dist = tf.reduce_sum(tf.reduce_sum(tf.square(input_1 - input_2), axis=-2), axis=-2)
+    dist = tf.reduce_sum(safe_norm(input_1 - input_2, axis=-2, epsilon=0), axis=-2)
     margin_max = tf.square(tf.maximum(0., margin - dist))
-    loss = tf.reduce_mean(label*dist + (1-label) * margin_max) / 2
+    loss = tf.reduce_mean(label*tf.square(dist) + (1-label) * margin_max) / 2
     return loss
+
+#####------------------ Agreement Loss -------------------######
+    
+def agreement_loss(input_1, input_2, label, active_threshold, inactive_threshold, margin, epsilon = 1e-7):
+    # Set part minimal part of features vectors to consider as active/inactive
+    
+    
+    # Squeeze input
+    input_1 = tf.squeeze(input_1)
+    input_2 = tf.squeeze(input_2)
+    
+    # Calculate length of feature vectors
+    feature_length_1 = safe_norm(input_1, axis=-1, keepdims=True, name="feature_length_1")    # 2-norm  dims: [batch_size, 100, 1]
+    feature_length_2 = safe_norm(input_2, axis=-1, keepdims=True, name="feature_length_2")    # 2-norm
+    
+    # Create active vectors
+    active_1 = tf.maximum(0., feature_length_1 - active_threshold, name="active_1")
+    active_2 = tf.maximum(0., feature_length_2 - active_threshold, name="active_2")
+    # Calculate elementwise multiplication between images active vectors
+    active = tf.multiply(active_1, active_2, name="active")
+    
+    
+    # Create inactive vectors
+    inactive_1 = tf.maximum(0., inactive_threshold - feature_length_1, name="inactive_1")
+    inactive_2 = tf.maximum(0., inactive_threshold - feature_length_2, name="inactive_2")
+    # Calculate elementwise multiplication between images inactive vectors
+    inactive = tf.multiply(inactive_1, inactive_2, name="inactive")
+    
+    # Calculate agreement measure (elements wise muliplication between active and inactive vector)
+    agreement = tf.multiply(active, inactive, name="agreement")
+    
+    
+    # Calculate angles between feature vectors (calculate dot product between normalized feature vectors)
+    # Normalize feature vectors
+    feature_1 = tf.div(input_1, feature_length_1,name="normalize_1")   #dims: [batch_size, 100, 8]
+    feature_2 = tf.div(input_2, feature_length_2,name="normalize_2")
+    # Calculate dot product
+    # This is using the range [1,-1] symmetricly (i.e. cos()) could pose problem. Has advantage of not having the edge 360 -> 0
+    dot_product = tf.matmul(tf.expand_dims(feature_1,-1), tf.expand_dims(feature_2,-1), transpose_a = True, name="dot_product")     # dims: [batch_size, 100, 1, 1]
+    
+    # Calculate weighted mean
+    weighted_dot_product = tf.reduce_sum(tf.multiply(dot_product, tf.expand_dims(active,-1)), axis=1, name="weighted_dot_product")   # (dims: [batch_size, 1, 1])
+    weighted_mean = tf.div(weighted_dot_product, tf.expand_dims(tf.reduce_sum(active, axis = 1) + epsilon, -1), name = "weighted_mean")   # (dims: [batch_size,])
+    
+    # Calculate weighted variance using weighted mean
+    divergance = tf.squeeze(dot_product, axis = -1) - weighted_mean
+    weighted_variance_numerator = tf.reduce_sum(tf.multiply(active, tf.multiply(divergance, divergance)), axis = 1, name="weighted_variance_numerator")
+    W1 = tf.reduce_sum(active, axis = 1, name="W1")
+    W2 = tf.reduce_sum(tf.multiply(active, active), axis = 1, name="W2")
+    
+    weighted_variance = tf.div(weighted_variance_numerator, W1 - tf.div(W2, W1 + epsilon) + epsilon)
+    
+    # Scale weighted variance with sum of agreement
+    variance_loss = tf.squeeze(tf.div(weighted_variance, tf.reduce_sum(agreement, axis = 1) + epsilon), name = "varaince_loss")
+    
+    # Use ground truth labels to output correct loss (like contrastive loss)
+    loss_match = tf.multiply(label, variance_loss, name="loss_match")
+    loss_non_match = (1-label) * tf.maximum(0., margin - variance_loss, name="loss_non_match")
+    loss = tf.reduce_mean(loss_match + loss_non_match, name="loss")
+    return loss
+
+
+################################################################
 
 #####------------------ Reconstruction loss --------------------######
     
@@ -84,7 +148,7 @@ def squash(s, axis=-1, epsilon=1e-7, name=None):
         unit_vector = s / safe_norm
         return squash_factor * unit_vector
     
-def safe_norm(s, axis=-1, epsilon=1e-7, keepdims=False, name=None):
+def safe_norm(s, axis=-1, epsilon=1e-9, keepdims=False, name=None):
     with tf.name_scope(name, default_name="safe_2_norm"):
         squared_norm = tf.reduce_sum(tf.square(s), axis=axis, keepdims=keepdims)
         return tf.sqrt(squared_norm + epsilon)
