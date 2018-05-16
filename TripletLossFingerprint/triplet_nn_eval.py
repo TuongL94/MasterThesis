@@ -258,7 +258,7 @@ def main(argv):
 #        return
    
     # Load generator
-   with open(data_path + 'generator_data_triplet_trans_30.pk1', 'rb') as input:
+   with open(data_path + 'generator_data_triplet_trans_30_new.pk1', 'rb') as input:
        generator = pickle.load(input)
     
    evaluate_siamese_network(generator, batch_size, thresholds, output_dir, metrics_path, eval_itr, gpu_device_name, negative_multiplier)
