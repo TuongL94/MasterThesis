@@ -47,7 +47,7 @@ def main(argv):
 
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
-    if not os.path.exists(data_path + "generator_data_small_rotdiff5_transdiff10.pk1"):
+    if not os.path.exists(data_path + "generator_data_small_rotdiff5_transdiff10_new.pk1"):
         with open(data_path + "generator_data.pk1", "wb") as output:
             # Load fingerprint labels and data from file with names
             finger_id = np.load(data_path + "finger_id.npy")
@@ -73,11 +73,11 @@ def main(argv):
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
         # Load generator
-        with open(data_path + "generator_data_rotdiff5_transdiff30_small.pk1", "rb") as input:
+        with open(data_path + "generator_data_small_rotdiff5_transdiff30_new.pk1", "rb") as input:
             generator = pickle.load(input)
              
     # parameters for training
-    batch_size_train = 75
+    batch_size_train = 40
     train_itr = 30000000000
     learning_rate = 0.00005
     momentum = 0.99
@@ -115,7 +115,7 @@ def main(argv):
             margin_holder = tf.placeholder(tf.float32, shape=[], name="margin_holder")
                 
             left_train_output = im.inference(left_train)  
-            print(util.get_nbr_of_parameters())
+#            print(util.get_nbr_of_parameters())
             right_train_output = im.inference(right_train)
             left_val_output = im.inference(left_val, training=False)
             right_val_output = im.inference(right_val, training=False)

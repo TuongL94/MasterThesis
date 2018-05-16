@@ -45,7 +45,7 @@ class data_generator:
         self.breakpoints_test= self.get_breakpoints(self.test_person_id, self.test_finger_id)
         
         rot_diff = 5
-        trans_diff = 10
+        trans_diff = 30
         
 #        # All combinations of training data
 #        self.match_train, self.no_match_train = self.all_combinations(self.breakpoints_train, self.train_rotation, self.train_translation, rot_diff, trans_diff)

@@ -47,8 +47,8 @@ def main(argv):
 
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
-    if not os.path.exists(data_path + "generator_data_all_rotdiff5_transdiff10_new.pk1"):
-        with open(data_path + "generator_data.pk1", "wb") as output:
+    if not os.path.exists(data_path + "generator_data_small_rotdiff5_transdiff30_new.pk1"):
+        with open(data_path + "generator_data_small_rotdiff5_transdiff30_new.pk1", "wb") as output:
             # Load fingerprint labels and data from file with names
             finger_id = np.load(data_path + "finger_id_mt_vt_112_new.npy")
             person_id = np.load(data_path + "person_id_mt_vt_112.npy")
@@ -91,7 +91,7 @@ def main(argv):
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
         # Load generator
-        with open(data_path + "generator_data_all_rotdiff5_transdiff10_new.pk1", "rb") as input:
+        with open(data_path + "generator_data_small_rotdiff5_transdiff30_new.pk1", "rb") as input:
             generator = pickle.load(input)
 
 #        util.get_no_matching_subset(generator, data_path, "generator_data.pk1")

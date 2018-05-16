@@ -175,7 +175,7 @@ def evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output
 #                test_non_match_dataset_length = np.shape(generator.no_match_test)[0]
                 test_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_test)
 #                test_non_match_dataset = test_non_match_dataset.shuffle(buffer_size = test_non_match_dataset_length)
-                test_non_match_dataset = test_non_match_dataset.batch(batch_size)
+                test_non_match_dataset = test_non_match_dataset.batch(10*batch_size)
                 
                 test_match_iterator = test_match_dataset.make_one_shot_iterator()
                 test_match_handle = sess.run(test_match_iterator.string_handle())
@@ -187,7 +187,7 @@ def evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output
                 next_element = iterator.get_next()
                 
                 breakpoint = batch_size*eval_itr
-                sim_full = np.vstack((np.ones((breakpoint,1)), np.zeros((breakpoint,1))))
+                sim_full = np.vstack((np.ones((breakpoint,1)), np.zeros((10*breakpoint,1))))
                 
                 for i in range(eval_itr):
                     test_batch = sess.run(next_element,feed_dict={handle:test_match_handle})
@@ -240,7 +240,7 @@ def evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output
                     
 #                accuracy, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = get_test_diagnostics_2(preds_full,sim_full,class_id)
 #               
-                accuracy, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr = get_test_diagnostics(left_full,right_full,sim_full,0.56,plot_hist=True,breakpoint=breakpoint)
+                accuracy, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr = get_test_diagnostics(left_full,right_full,sim_full,0.54,plot_hist=True,breakpoint=breakpoint)
                 print("accuracy: %f " % accuracy)
                 print("# False positive: %d " % false_pos)
                 print("# False negative: %d " % false_neg)
@@ -263,8 +263,8 @@ def main(argv):
     """
     # set parameters for evaluation
     thresholds = np.linspace(0, 2.0, num=100)
-    batch_size = 100
-    eval_itr = 35
+    batch_size = 58
+    eval_itr = 10
     
     output_dir = argv[0] # directory where the model is saved
     data_path =  argv[1]
@@ -281,7 +281,7 @@ def main(argv):
         return
     
     # load generator
-    with open(data_path + "generator_data_all_rotdiff5_transdiff10_new.pk1", "rb") as input:
+    with open(data_path + "generator_data_small_rotdiff5_transdiff30_new.pk1", "rb") as input:
         generator = pickle.load(input)
         
         evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output_dir, metrics_path, gpu_device_name)

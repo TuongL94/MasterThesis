@@ -19,7 +19,7 @@ def inception_a_block(input, training):
         kernel_size = [1,1], 
         padding = "same",
         reuse = tf.AUTO_REUSE,
-        kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
+        kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
         name="conv1_1")
     
     conv1_1 = tf.layers.batch_normalization(
@@ -37,7 +37,7 @@ def inception_a_block(input, training):
         kernel_size = [1,1], 
         padding = "same",
         reuse = tf.AUTO_REUSE,
-        kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
+        kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
         name="conv2_1")
     
     conv2_1 = tf.layers.batch_normalization(
@@ -55,7 +55,7 @@ def inception_a_block(input, training):
         kernel_size = [1,1], 
         padding = "same",
         reuse = tf.AUTO_REUSE,
-        kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
+        kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
         name="conv3_1")
     
     conv3_1 = tf.layers.batch_normalization(
@@ -77,7 +77,7 @@ def inception_a_block(input, training):
         kernel_size = [1,1], 
         padding = "same",
         reuse = tf.AUTO_REUSE,
-        kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
+        kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
         name="conv4_1")
     
     conv4_1 = tf.layers.batch_normalization(
@@ -95,7 +95,7 @@ def inception_a_block(input, training):
         kernel_size = [3,3], 
         padding = "same",
         reuse = tf.AUTO_REUSE,
-        kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
+        kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
         name="conv2_2")
     
     conv2_2 = tf.layers.batch_normalization(
@@ -113,7 +113,7 @@ def inception_a_block(input, training):
         kernel_size = [3,3], 
         padding = "same",
         reuse = tf.AUTO_REUSE,
-        kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
+        kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
         name="conv3_2")
     
     conv3_2 = tf.layers.batch_normalization(
@@ -131,7 +131,7 @@ def inception_a_block(input, training):
         kernel_size = [3,3], 
         padding = "same",
         reuse = tf.AUTO_REUSE,
-        kernel_regularizer = tf.contrib.layers.l2_regularizer(1.0),
+        kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
         name="conv3_3")
     
     conv3_3 = tf.layers.batch_normalization(
@@ -207,7 +207,7 @@ def inception_b_block(input, training):
     
     conv1_2 = tf.layers.conv2d(
             inputs = conv1_1,
-            filters = 48,
+            filters = 64,
             kernel_size = [3,3],
             strides = [1,1],
             padding = "same",
@@ -226,7 +226,7 @@ def inception_b_block(input, training):
     
     conv2_2 = tf.layers.conv2d(
             inputs = conv2_1,
-            filters = 48,
+            filters = 64,
             kernel_size = [3,3],
             strides = [1,1],
             padding = "same",
@@ -245,7 +245,7 @@ def inception_b_block(input, training):
     
     conv3_2 = tf.layers.conv2d(
             inputs = conv3_1,
-            filters = 48,
+            filters = 64,
             kernel_size = [3,3],
             strides = [1,1],
             padding = "same",
@@ -281,6 +281,12 @@ def reduction_1_block(input, training):
             kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
             name="conv1_1")
     
+    conv1_1 = tf.layers.batch_normalization(
+            conv1_1,
+            training = training,
+            name = "batch_norm_1_1",
+            reuse = tf.AUTO_REUSE)
+    
     conv1_1 = tf.nn.leaky_relu(
             conv1_1)
     
@@ -293,6 +299,12 @@ def reduction_1_block(input, training):
             reuse = tf.AUTO_REUSE,
             kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
             name="conv2_1")
+    
+    conv2_1 = tf.layers.batch_normalization(
+            conv2_1,
+            training = training,
+            name = "batch_norm_2_1",
+            reuse = tf.AUTO_REUSE)
     
     conv2_1 = tf.nn.leaky_relu(
             conv2_1)
@@ -307,6 +319,12 @@ def reduction_1_block(input, training):
             kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
             name="conv2_2")
     
+    conv2_2 = tf.layers.batch_normalization(
+            conv2_2,
+            training = training,
+            name = "batch_norm_2_2",
+            reuse = tf.AUTO_REUSE)
+    
     conv2_2 = tf.nn.leaky_relu(
             conv2_2)
     
@@ -319,6 +337,12 @@ def reduction_1_block(input, training):
             reuse = tf.AUTO_REUSE,
             kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
             name="conv3_2")
+    
+    conv3_2 = tf.layers.batch_normalization(
+            conv3_2,
+            training = training,
+            name = "batch_norm_3_2",
+            reuse = tf.AUTO_REUSE)
     
     conv3_2 = tf.nn.leaky_relu(
             conv3_2)
@@ -338,7 +362,7 @@ def stem(input, training):
     # Convolutional layer 1
     output = tf.layers.conv2d(
             inputs = output,
-            filters = 16,
+            filters = 64,
             kernel_size = [7,7],
             strides = [1,1],
             padding = "valid",
@@ -368,7 +392,7 @@ def stem(input, training):
     # Convolutional Layer 2
     output = tf.layers.conv2d(
             inputs = output,
-            filters = 16,
+            filters = 64,
             kernel_size = [5,5],
             strides = [1,1],
             padding = "valid",
@@ -478,10 +502,12 @@ def inference(input, training = True):
     output = tf.layers.dense(
             output,
             512,
-            activation = tf.nn.leaky_relu,
             reuse = tf.AUTO_REUSE,
             kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
             name="dense")
+    
+    output = tf.nn.leaky_relu(
+            output)
 
     output = tf.nn.l2_normalize(
             output,

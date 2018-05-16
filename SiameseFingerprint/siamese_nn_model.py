@@ -21,7 +21,7 @@ def inference(input, training = True):
     # Convolutional layer 1
     output = tf.layers.conv2d(
             inputs = output,
-            filters = 16,
+            filters = 64,
             kernel_size = [7,7],
             strides = [2,2],
             padding = "valid",
@@ -51,7 +51,7 @@ def inference(input, training = True):
     # Convolutional Layer 2
     output = tf.layers.conv2d(
             inputs = output,
-            filters = 16,
+            filters = 64,
             kernel_size = [5,5],
             strides = [2,2],
             padding = "valid",
@@ -83,7 +83,7 @@ def inference(input, training = True):
     # Convolutional Layer 3
     output = tf.layers.conv2d(
             inputs = output,
-            filters = 32,
+            filters = 64,
             kernel_size = [3,3],
             strides = [1,1],
             padding = "same",
@@ -109,7 +109,7 @@ def inference(input, training = True):
     # Convolutional Layer 4
     output = tf.layers.conv2d(
             inputs = output,
-            filters = 64,
+            filters = 128,
             kernel_size = [3,3],
             strides = [1,1],
             padding = "same",
