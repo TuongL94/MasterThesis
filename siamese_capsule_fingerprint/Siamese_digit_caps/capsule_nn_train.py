@@ -51,7 +51,7 @@ def main(argv):
             # Load fingerprint labels and data from file with names
             finger_id = np.load(data_path + "/finger_id_mt_vt_112.npy")
             person_id = np.load(data_path + "/person_id_mt_vt_112.npy")
-            finger_data = np.load(data_path + "/fingerprints_mt_vt_112.npy")
+            finger_data = np.load(data_path + "/fingerprints_mt_vt_112_new.npy")
             translation = np.load(data_path + "/translation_mt_vt_112.npy")
             rotation = np.load(data_path + "/rotation_mt_vt_112.npy")
             finger_data = util.reshape_grayscale_data(finger_data)
@@ -111,39 +111,39 @@ def main(argv):
 
         ##############################################################################################
 #        old_saver = tf.train.import_meta_graph(pretrain_path + ".meta")
-        with open(pretrain_path + "checkpoint","r") as file:
-            line  = file.readline()
-            words = re.split("/",line)
-            model_file_name = words[-1][:-2]
-            current_itr = int(re.split("-",model_file_name)[-1]) # current training iteration
-            for file in os.listdir(pretrain_path):
-                if file.endswith(".meta"):
-                    meta_file_name = os.path.join(pretrain_path,file)
-            old_saver = tf.train.import_meta_graph(meta_file_name)
-        g = tf.get_default_graph()
-        start_kernel_layer_1 = None
-        start_bias_layer_1 = None
-        with tf.device(gpu_device_name):
-            with tf.Session(config = config) as sess:
-                old_saver.restore(sess, tf.train.latest_checkpoint(pretrain_path))
-                old_kernel_1= g.get_tensor_by_name("conv1/kernel:0")
-                start_kernel_layer_1 = sess.run(old_kernel_1)
-                old_bias_1 = g.get_tensor_by_name("conv1/bias:0")
-                start_bias_layer_1 = sess.run(old_bias_1)
-                
-                old_kernel_2= g.get_tensor_by_name("conv2/kernel:0")
-                start_kernel_layer_2 = sess.run(old_kernel_2)
-                old_bias_2 = g.get_tensor_by_name("conv2/bias:0")
-                start_bias_layer_2 = sess.run(old_bias_2)
-                
-                old_kernel_3 = g.get_tensor_by_name("conv3/kernel:0")
-                start_kernel_layer_3 = sess.run(old_kernel_3)
-                old_bias_3 = g.get_tensor_by_name("conv3/bias:0")
-                start_bias_layer_3 = sess.run(old_bias_3)
-                
-                
-        transfer = (start_kernel_layer_1, start_bias_layer_1, start_kernel_layer_2, start_bias_layer_2, start_kernel_layer_3, start_bias_layer_3)
-        tf.reset_default_graph()
+#        with open(pretrain_path + "checkpoint","r") as file:
+#            line  = file.readline()
+#            words = re.split("/",line)
+#            model_file_name = words[-1][:-2]
+#            current_itr = int(re.split("-",model_file_name)[-1]) # current training iteration
+#            for file in os.listdir(pretrain_path):
+#                if file.endswith(".meta"):
+#                    meta_file_name = os.path.join(pretrain_path,file)
+#            old_saver = tf.train.import_meta_graph(meta_file_name)
+#        g = tf.get_default_graph()
+#        start_kernel_layer_1 = None
+#        start_bias_layer_1 = None
+#        with tf.device(gpu_device_name):
+#            with tf.Session(config = config) as sess:
+#                old_saver.restore(sess, tf.train.latest_checkpoint(pretrain_path))
+#                old_kernel_1= g.get_tensor_by_name("conv1/kernel:0")
+#                start_kernel_layer_1 = sess.run(old_kernel_1)
+#                old_bias_1 = g.get_tensor_by_name("conv1/bias:0")
+#                start_bias_layer_1 = sess.run(old_bias_1)
+#                
+#                old_kernel_2= g.get_tensor_by_name("conv2/kernel:0")
+#                start_kernel_layer_2 = sess.run(old_kernel_2)
+#                old_bias_2 = g.get_tensor_by_name("conv2/bias:0")
+#                start_bias_layer_2 = sess.run(old_bias_2)
+#                
+#                old_kernel_3 = g.get_tensor_by_name("conv3/kernel:0")
+#                start_kernel_layer_3 = sess.run(old_kernel_3)
+#                old_bias_3 = g.get_tensor_by_name("conv3/bias:0")
+#                start_bias_layer_3 = sess.run(old_bias_3)
+#                
+#                
+#        transfer = (start_kernel_layer_1, start_bias_layer_1, start_kernel_layer_2, start_bias_layer_2, start_kernel_layer_3, start_bias_layer_3)
+#        tf.reset_default_graph()
         ##############################################################################################
         
         
@@ -152,11 +152,17 @@ def main(argv):
             left_image_holder, right_image_holder, label_holder, handle = cu.placeholder_inputs(image_dims)
               
             # Create CapsNet graph
+#            with tf.variable_scope("Caps_net", reuse=tf.AUTO_REUSE):
+#                left_train_output = cmr.capsule_net(left_image_holder, routing_iterations, digit_caps_classes, digit_caps_dims, 
+#                                                   caps1_n_maps, caps1_n_dims, batch_size_train, transfer, name="left_train_output")
+#                right_train_output = cmr.capsule_net(right_image_holder, routing_iterations, digit_caps_classes, digit_caps_dims,
+#                                                    caps1_n_maps, caps1_n_dims, batch_size_train, transfer, name="right_train_output")
+            
             with tf.variable_scope("Caps_net", reuse=tf.AUTO_REUSE):
-                left_train_output = cmr.capsule_net(left_image_holder, routing_iterations, digit_caps_classes, digit_caps_dims, 
-                                                   caps1_n_maps, caps1_n_dims, batch_size_train, transfer, name="left_train_output")
-                right_train_output = cmr.capsule_net(right_image_holder, routing_iterations, digit_caps_classes, digit_caps_dims,
-                                                    caps1_n_maps, caps1_n_dims, batch_size_train, transfer, name="right_train_output")
+                left_train_output = cm.capsule_net(left_image_holder, routing_iterations, digit_caps_classes, digit_caps_dims, 
+                                                   caps1_n_maps, caps1_n_dims, batch_size_train, name="left_train_output")
+                right_train_output = cm.capsule_net(right_image_holder, routing_iterations, digit_caps_classes, digit_caps_dims,
+                                                    caps1_n_maps, caps1_n_dims, batch_size_train, name="right_train_output")
             
             
 #            # Create Reconstruction graph
@@ -175,15 +181,15 @@ def main(argv):
             
             # Create loss function
             '''Contrastive loss'''
-#            margin = tf.constant(3.0)
-#            train_loss = cu.contrastive_caps_loss(left_train_output, right_train_output, label_holder, margin)
+            margin = tf.constant(2.0)
+            train_loss = cu.contrastive_caps_loss(left_train_output, right_train_output, label_holder, margin)
             '''Scaled pair loss'''
 #            train_loss = cu.scaled_pair_loss(left_train_output, right_train_output, label_holder)
             '''Agreement loss'''
-            margin = tf.constant(1.0)
-            active_threshold = tf.constant(1e-7)
-            inactive_threshold = tf.constant(1e-7)
-            train_loss = cu.agreement_loss(left_train_output, right_train_output, label_holder, active_threshold, inactive_threshold, margin)
+#            margin = tf.constant(1.0)
+#            active_threshold = tf.constant(1e-7)
+#            inactive_threshold = tf.constant(1e-7)
+#            train_loss = cu.agreement_loss(left_train_output, right_train_output, label_holder, active_threshold, inactive_threshold, margin)
             
             # Add reconstruction loss
 #            alpha = tf.constant(0.2)      # Scaling parameter of reconstructions contribution to the total loss

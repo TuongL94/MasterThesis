@@ -45,8 +45,8 @@ def main(argv):
 
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
-    if not os.path.exists(data_dir + "generator_data_triplet_trans_30_new.pk1"):
-        with open(data_dir + 'generator_data_triplet_trans_30_new.pk1', 'wb') as output:
+    if not os.path.exists(data_dir + "generator_data_triplet_trans_10_new.pk1"):
+        with open(data_dir + 'generator_data_triplet_trans_10_new.pk1', 'wb') as output:
             np.random.seed(0)
             # Load fingerprint labels and data from file with names
             finger_id = np.load(data_dir + "/finger_id_mt_vt_112_new.npy")
@@ -75,7 +75,7 @@ def main(argv):
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
         # Load generator
-        with open(data_dir + 'generator_data_triplet_trans_30_new.pk1', 'rb') as input:
+        with open(data_dir + 'generator_data_triplet_trans_10_new.pk1', 'rb') as input:
             generator = pickle.load(input)
              
     # parameters for training

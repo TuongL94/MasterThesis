@@ -67,25 +67,25 @@ def main(argv):
     person_id, finger_id, fingerprints, translation, rotation = fingerprint_parser(argv[0],argv[1])
     
     # convert to numpy arrays and corrects scaling 
-#    person_id = np.array(person_id,dtype='int32')
+    person_id = np.array(person_id,dtype='int32')
     finger_id = np.array(finger_id,dtype='int32')
-#    fingerprints = np.array(fingerprints,dtype='float32')/255
-#    translation = np.array(translation,dtype='float32')/256
-#    rotation = np.array(rotation,dtype='float32')/65536*360
+    fingerprints = np.array(fingerprints,dtype='float32')/255
+    translation = np.array(translation,dtype='float32')/256
+    rotation = np.array(rotation,dtype='float32')/65536*360
 
     # save paths
-#    filename_1 = dir_path + "/person_id_new"
+    filename_1 = dir_path + "/person_id_mt_vt_112_new"
     filename_2 = dir_path + "/finger_id_mt_vt_112_new"
-#    filename_3 = dir_path + "/fingerprints_new" 
-#    filename_4 = dir_path + "/translation_new" 
-#    filename_5 = dir_path + "/rotation_new"
+    filename_3 = dir_path + "/fingerprints_mt_vt_112_new" 
+    filename_4 = dir_path + "/translation_mt_vt_112_new" 
+    filename_5 = dir_path + "/rotation_mt_vt_112_new"
     
     # saves numpy arrays
-#    np.save(filename_1,person_id)
+    np.save(filename_1,person_id)
     np.save(filename_2,finger_id)
-#    np.save(filename_3,fingerprints)
-#    np.save(filename_4, translation)
-#    np.save(filename_5, rotation)
+    np.save(filename_3,fingerprints)
+    np.save(filename_4, translation)
+    np.save(filename_5, rotation)
     
 if __name__ == "__main__":
     main(sys.argv[1:])

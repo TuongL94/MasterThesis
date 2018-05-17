@@ -77,7 +77,7 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_i
     
     return accuracy, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr
  
-def evaluate_siamese_network(generator, batch_size, thresholds, output_dir, metrics_path, eval_itr,gpu_device_name, negative_multiplier):
+def evaluate_siamese_network(generator, batch_size, thresholds, output_dir, metrics_path, eval_itr,gpu_device_name, negative_multiplier,metric_name):
     """ This method is used to evaluate a siamese network for fingerprint datasets.
     
     The model is defined in the file siamese_nn_model.py and trained in 
@@ -200,7 +200,7 @@ def evaluate_siamese_network(generator, batch_size, thresholds, output_dir, metr
                     accuracy, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr = get_test_diagnostics(left_full,right_full,labels_full,thresholds[i], plot_hist=plot_hist, breakpoint=breakpoint)
                     metrics = (fpr, fnr, recall, accuracy)
                     # save evaluation metrics to a file 
-                    util.save_evaluation_metrics(metrics, metrics_path + "30.txt")
+                    util.save_evaluation_metrics(metrics, metrics_path + metric_name)
                     plot_hist = False
                     
                 
@@ -219,7 +219,7 @@ def evaluate_siamese_network(generator, batch_size, thresholds, output_dir, metr
                 
                       
                 # get evaluation metrics for varying thresholds
-                fpr_vals, fnr_vals, recall_vals, tnr_vals = util.get_evaluation_metrics_vals(metrics_path + "30.txt")
+                fpr_vals, fnr_vals, recall_vals, tnr_vals = util.get_evaluation_metrics_vals(metrics_path + metric_name)
     
                 # plots of evaluation metrics
                 util.plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, tnr_vals)
@@ -229,13 +229,15 @@ def main(argv):
     
     # Set parameters for evaluation
 #   threshold = 0.045
-   thresholds = np.linspace(0, 4, num=100)
-   batch_size = 206
-   eval_itr = 28
-   negative_multiplier = 2
+   thresholds = np.linspace(0, 8, num=500)
+   batch_size = 288
+   eval_itr = 20
+   negative_multiplier = 3
    
    # Set random seed to allways use the same test set
    np.random.seed(2)
+   
+   metric_name = "30_full.txt"
    
     
 #   dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -249,19 +251,19 @@ def main(argv):
    gpu_device_name = argv[-1] 
    
    # if file containing evaluation metrics already exists use this data directly
-#   if os.path.exists(metrics_path + ".txt"):
-#        # get evaluation metrics for varying thresholds
-#        fpr_vals, fnr_vals, recall_vals, acc_vals = util.get_evaluation_metrics_vals(metrics_path + ".txt")
-#
-#        # plots of evaluation metrics
-#        util.plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, acc_vals)
-#        return
+   if os.path.exists(metrics_path + metric_name):
+        # get evaluation metrics for varying thresholds
+        fpr_vals, fnr_vals, recall_vals, acc_vals = util.get_evaluation_metrics_vals(metrics_path + metric_name)
+
+        # plots of evaluation metrics
+        util.plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, acc_vals)
+        return
    
     # Load generator
    with open(data_path + 'generator_data_triplet_trans_30_new.pk1', 'rb') as input:
        generator = pickle.load(input)
     
-   evaluate_siamese_network(generator, batch_size, thresholds, output_dir, metrics_path, eval_itr, gpu_device_name, negative_multiplier)
+   evaluate_siamese_network(generator, batch_size, thresholds, output_dir, metrics_path, eval_itr, gpu_device_name, negative_multiplier, metric_name)
     
 if __name__ == "__main__":
     main(sys.argv[1:])
