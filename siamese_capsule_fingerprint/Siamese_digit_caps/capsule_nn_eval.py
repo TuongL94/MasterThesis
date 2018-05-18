@@ -207,11 +207,11 @@ def main(argv):
     """ Runs evaluation on trained network 
     """
     # Set parameters for evaluation
-    thresholds = np.linspace(0, 0.05, num=100)
+    thresholds = np.linspace(0, 2.0, num=500)
     batch_size = 10
-    eval_itr = 10
-    negative_multiplier = 1
-    metrics_name = "10.txt"
+    eval_itr = 58
+    negative_multiplier = 20
+    metrics_name = "metrics.txt"
     
     output_dir = argv[0] # directory where the model is saved
     data_path =  argv[1]
