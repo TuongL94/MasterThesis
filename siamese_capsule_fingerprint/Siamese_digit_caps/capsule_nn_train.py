@@ -46,8 +46,8 @@ def main(argv):
 
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
-    if not os.path.exists(data_path + "generator_data_caps.pk1"):
-        with open(data_path + "generator_data_caps.pk1", "wb") as output:
+    if not os.path.exists(data_path + "generator_data_siamese_trans_10.pk1"):
+        with open(data_path + "generator_data_siamese_trans_10.pk1", "wb") as output:
             # Load fingerprint labels and data from file with names
             finger_id = np.load(data_path + "/finger_id_mt_vt_112.npy")
             person_id = np.load(data_path + "/person_id_mt_vt_112.npy")
@@ -72,13 +72,13 @@ def main(argv):
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
         # Load generator
-        with open(data_path + "generator_data_caps.pk1", 'rb') as input:
+        with open(data_path + "generator_data_siamese_trans_30.pk1", 'rb') as input:
             generator = pickle.load(input)
     
     image_dims = np.shape(generator.train_data)
     
     # parameters for training
-    batch_size_train = 2    # OBS! Has to be multiple of 2
+    batch_size_train = 10    # OBS! Has to be multiple of 2
     train_itr = 500000000
     
     learning_rate = 0.000001
@@ -93,13 +93,13 @@ def main(argv):
     caps1_n_dims = 8
     
     # Paramters for validation set
-    batch_size_val = 2
+    batch_size_val = 10
     validation_at_itr = 200
     threshold = 0.05
     thresh_step = 0.001
     nbr_val_itr = 10
     
-    save_itr = 3000 # frequency in which the model is saved
+    save_itr = 200 # frequency in which the model is saved
 
     tf.reset_default_graph()
     
@@ -149,7 +149,7 @@ def main(argv):
         
         with tf.device(gpu_device_name):
             # create placeholders
-            left_image_holder, right_image_holder, label_holder, handle = cu.placeholder_inputs(image_dims)
+            left_image_holder, right_image_holder, label_holder, handle, left_image_holder_test, right_image_holder_test = cu.placeholder_inputs(image_dims)
               
             # Create CapsNet graph
 #            with tf.variable_scope("Caps_net", reuse=tf.AUTO_REUSE):
@@ -163,6 +163,11 @@ def main(argv):
                                                    caps1_n_maps, caps1_n_dims, batch_size_train, name="left_train_output")
                 right_train_output = cm.capsule_net(right_image_holder, routing_iterations, digit_caps_classes, digit_caps_dims,
                                                     caps1_n_maps, caps1_n_dims, batch_size_train, name="right_train_output")
+                # Test networks
+                left_test_output = cm.capsule_net(left_image_holder_test, routing_iterations, digit_caps_classes, digit_caps_dims, 
+                                                   caps1_n_maps, caps1_n_dims, batch_size_train, name="left_test_output")
+                right_test_output = cm.capsule_net(right_image_holder_test, routing_iterations, digit_caps_classes, digit_caps_dims,
+                                                    caps1_n_maps, caps1_n_dims, batch_size_train, name="right_test_output")
             
             
 #            # Create Reconstruction graph
@@ -208,6 +213,9 @@ def main(argv):
             tf.add_to_collection("right_train_output",right_train_output)
 #            tf.add_to_collection("reconstruct_left",reconstruct_left)
 #            tf.add_to_collection("reconstruct_right",reconstruct_right)
+            
+            tf.add_to_collection("left_test_output",left_test_output)
+            tf.add_to_collection("right_test_output",right_test_output)
             
             saver = tf.train.Saver()
     else:
@@ -268,7 +276,7 @@ def main(argv):
         val_match_dataset = val_match_dataset.batch(batch_size_val)
         
         val_non_match_dataset_length = np.shape(generator.no_match_val)[0]
-        val_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_val[0:int(val_non_match_dataset_length/10)])
+        val_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_val)  #[0:int(val_non_match_dataset_length/10)])
         val_non_match_dataset = val_non_match_dataset.shuffle(buffer_size = val_non_match_dataset_length)
         val_non_match_dataset = val_non_match_dataset.repeat()
         val_non_match_dataset = val_non_match_dataset.batch(batch_size_val)
@@ -280,8 +288,8 @@ def main(argv):
     
     with tf.Session(config=config) as sess:
         with tf.device(gpu_device_name):
-#            sess = tf_debug.LocalCLIDebugWrapperSession(sess)
-#            sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
+            sess = tf_debug.LocalCLIDebugWrapperSession(sess)
+            sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
             if is_model_new:
 #                train_op = cu.momentum_training(train_loss, learning_rate, momentum)
                 optimizer = tf.train.AdamOptimizer()
@@ -302,42 +310,44 @@ def main(argv):
             
             # get parameters of the first convolutional layer. Add filters and histograms
             # of filters and biases to summary
-#            conv1_filters = graph.get_tensor_by_name("conv1/kernel:0")
-#            nbr_of_filters_conv1 = sess.run(tf.shape(conv1_filters)[-1])
-#            hist_conv1 = tf.summary.histogram("hist_conv1", conv1_filters)
-#            conv1_filters = tf.transpose(conv1_filters, perm = [3,0,1,2])
-#            filter1 = tf.summary.image('Filter_1', conv1_filters, max_outputs=nbr_of_filters_conv1)
-#            conv1_bias = graph.get_tensor_by_name("conv1/bias:0")
-#            hist_bias1 = tf.summary.histogram("hist_bias1", conv1_bias)
-#
-#            conv2_filters = graph.get_tensor_by_name("conv2/kernel:0")
-#            hist_conv2 = tf.summary.histogram("hist_conv2", conv2_filters)
-#            conv2_bias = graph.get_tensor_by_name("conv2/bias:0")
-#            hist_bias2 = tf.summary.histogram("hist_bias2", conv2_bias)
+            conv1_filters = graph.get_tensor_by_name("Caps_net/conv1/kernel:0")
+            nbr_of_filters_conv1 = sess.run(tf.shape(conv1_filters)[-1])
+            hist_conv1 = tf.summary.histogram("hist_conv1", conv1_filters)
+            conv1_filters = tf.transpose(conv1_filters, perm = [3,0,1,2])
+            filter1 = tf.summary.image('Filter_1', conv1_filters, max_outputs=nbr_of_filters_conv1)
+            conv1_bias = graph.get_tensor_by_name("Caps_net/conv1/bias:0")
+            hist_bias1 = tf.summary.histogram("hist_bias1", conv1_bias)
+
+            conv2_filters = graph.get_tensor_by_name("Caps_net/conv2/kernel:0")
+            hist_conv2 = tf.summary.histogram("hist_conv2", conv2_filters)
+            conv2_bias = graph.get_tensor_by_name("Caps_net/conv2/bias:0")
+            hist_bias2 = tf.summary.histogram("hist_bias2", conv2_bias)
             
+            W_transformation = graph.get_tensor_by_name("Caps_net/W_shared/W:0")
+            W_transform = tf.summary.histogram("W_transform", W_transformation)
             # transpose filters to coincide with the dimensions requested by tensorflow's summary. 
             # Add filters to summary
 #            conv1_filters = tf.transpose(conv1_filters, perm = [3,0,1,2])
 #            filter1 = tf.summary.image('Filter_1', conv1_filters, max_outputs=nbr_of_filters_conv1)
             
-            conv1_filters = graph.get_tensor_by_name("Caps_net/kernel1:0")
-            nbr_of_filters_conv1 = sess.run(tf.shape(conv1_filters)[-1])
-            hist_conv1 = tf.summary.histogram("hist_conv1", conv1_filters)
-            conv1_filters = tf.transpose(conv1_filters, perm = [3,0,1,2])
-            filter1 = tf.summary.image('Filter_1', conv1_filters, max_outputs=nbr_of_filters_conv1)
-            conv1_bias = graph.get_tensor_by_name("Caps_net/bias1:0")
-            hist_bias1 = tf.summary.histogram("hist_bias1", conv1_bias)
-
-            conv2_filters = graph.get_tensor_by_name("Caps_net/kernel2:0")
-            hist_conv2 = tf.summary.histogram("hist_conv2", conv2_filters)
-            conv2_bias = graph.get_tensor_by_name("Caps_net/bias2:0")
-            hist_bias2 = tf.summary.histogram("hist_bias2", conv2_bias)
+#            conv1_filters = graph.get_tensor_by_name("Caps_net/kernel1:0")
+#            nbr_of_filters_conv1 = sess.run(tf.shape(conv1_filters)[-1])
+#            hist_conv1 = tf.summary.histogram("hist_conv1", conv1_filters)
+#            conv1_filters = tf.transpose(conv1_filters, perm = [3,0,1,2])
+#            filter1 = tf.summary.image('Filter_1', conv1_filters, max_outputs=nbr_of_filters_conv1)
+#            conv1_bias = graph.get_tensor_by_name("Caps_net/bias1:0")
+#            hist_bias1 = tf.summary.histogram("hist_bias1", conv1_bias)
+#
+#            conv2_filters = graph.get_tensor_by_name("Caps_net/kernel2:0")
+#            hist_conv2 = tf.summary.histogram("hist_conv2", conv2_filters)
+#            conv2_bias = graph.get_tensor_by_name("Caps_net/bias2:0")
+#            hist_bias2 = tf.summary.histogram("hist_bias2", conv2_bias)
             
 
             summary_train_loss = tf.summary.scalar('training_loss', train_loss)
 #            summary_op = tf.summary.scalar('training_loss', train_loss)
             
-            summary_op = tf.summary.merge([summary_train_loss, filter1, hist_conv1, hist_bias1, hist_conv2, hist_bias2])
+            summary_op = tf.summary.merge([summary_train_loss, filter1, hist_conv1, hist_bias1, hist_conv2, hist_bias2, W_transform])
             train_writer = tf.summary.FileWriter(output_dir + "train_summary", graph=tf.get_default_graph())
             
             # training loop 
@@ -457,7 +467,7 @@ def main(argv):
                             current_val_loss += val_loss_value
                             
                     val_loss_over_time.append(current_val_loss*batch_size_val/np.shape(b_sim_full)[0])
-                    precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = ce.get_test_diagnostics(left_full,right_full, b_sim_full,threshold, class_id)
+                    precision, false_pos, false_neg, recall, fnr, fpr, tnr, inter_class_errors = ce.get_test_diagnostics(left_full,right_full, b_sim_full,threshold, class_id)
                 
                     if false_pos > false_neg:   # Can use inter_class_errors to tune the threshold further
                         threshold -= thresh_step

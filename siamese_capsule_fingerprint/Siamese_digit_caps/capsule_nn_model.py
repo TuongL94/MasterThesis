@@ -54,7 +54,7 @@ def capsule_net(input, routing_iterations, digit_caps_classes, digit_caps_dims, 
     net = tf.layers.batch_normalization(
         net,
 #        training = training,
-        name = "batch_norm_3",
+        name = "batch_norm_1",
         reuse = tf.AUTO_REUSE)
     
 #    net = tf.layers.max_pooling2d(
@@ -76,7 +76,7 @@ def capsule_net(input, routing_iterations, digit_caps_classes, digit_caps_dims, 
     net = tf.layers.batch_normalization(
         net,
 #        training = training,
-        name = "batch_norm_3",
+        name = "batch_norm_2",
         reuse = tf.AUTO_REUSE)
     
     net = primary_caps(
@@ -87,11 +87,11 @@ def capsule_net(input, routing_iterations, digit_caps_classes, digit_caps_dims, 
             strides = [2,2],
             padding = "valid")
     
-    net = tf.layers.batch_normalization(
-        net,
-#        training = training,
-        name = "batch_norm_3",
-        reuse = tf.AUTO_REUSE)
+#    net = tf.layers.batch_normalization(
+#        net,
+##        training = training,
+#        name = "batch_norm_3",
+#        reuse = tf.AUTO_REUSE)
     
     
     ######### Starting routing procedure ##########################
@@ -109,7 +109,7 @@ def capsule_net(input, routing_iterations, digit_caps_classes, digit_caps_dims, 
             W = tf.get_variable("W",
                             trainable=True, 
                             shape=[1, caps1_n_caps, digit_caps_classes, digit_caps_dims, caps1_n_dims], 
-                            initializer=tf.random_normal_initializer(mean=0.0, stddev=0.1, dtype=tf.float32))
+                            initializer=tf.random_normal_initializer(mean=0.0, stddev=1, dtype=tf.float32))
         return W
     W = W_shared()    
     W_tiled = tf.tile(W, [batch_size,1,1,1,1], name="W_tiled")

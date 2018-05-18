@@ -56,7 +56,7 @@ def triplet_caps_loss(anchor, pos, neg, margin):
 
 def contrastive_caps_loss(input_1, input_2, label, margin):
 #    dist = tf.reduce_sum(tf.reduce_sum(tf.square(input_1 - input_2), axis=-2), axis=-2)
-    dist = tf.reduce_sum(safe_norm(input_1 - input_2, axis=-2, epsilon=0), axis=-2)
+    dist = tf.reduce_sum(safe_norm(input_1 - input_2, axis=-2, epsilon=1e-8), axis=-2)
     margin_max = tf.square(tf.maximum(0., margin - dist))
     loss = tf.reduce_mean(label*tf.square(dist) + (1-label) * margin_max) / 2
     return loss
@@ -184,4 +184,7 @@ def placeholder_inputs(image_dims):
     label_holder = tf.placeholder(dtype=tf.float32, shape=[None], name="label_holder")
     handle = tf.placeholder(tf.string, shape=[],name="handle")
     
-    return left_image_holder, right_image_holder, label_holder, handle
+    left_image_holder_test = tf.placeholder(dtype=tf.float32, shape=[None, image_dims[2], image_dims[3], image_dims[-1]], name="left_image_holder_test") 
+    right_image_holder_test = tf.placeholder(dtype=tf.float32, shape=[None, image_dims[2], image_dims[3], image_dims[-1]], name="right_image_holder_test")
+    
+    return left_image_holder, right_image_holder, label_holder, handle, left_image_holder_test, right_image_holder_test
