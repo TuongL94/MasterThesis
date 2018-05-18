@@ -166,3 +166,13 @@ def get_separation_distance_hist(l2_distances_sim, l2_distances_no_sim):
     plt.legend(bbox_to_anchor=(0., 1.02, 1., 0.102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
     plt.show()
     
+#def plot_all_roc(dir_path):
+#    """ Plots roc curves for all metric files in directory dir_path
+#    
+#    """
+#    
+#    for file in os.listdir(dir_path):
+#        fpr_vals = []
+#        recall_vals = []
+
+    
