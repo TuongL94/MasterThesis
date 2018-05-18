@@ -10,11 +10,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import tensorflow as tf
-import numpy as np
 
-
+# imports from self-implemented modules
 import capsule_utility as cu
-
 
 def primary_caps(input, kernel_size, capsules, cap_dim, strides, padding, name="primary_caps"):
     with tf.variable_scope(name):
@@ -32,14 +30,8 @@ def primary_caps(input, kernel_size, capsules, cap_dim, strides, padding, name="
 #    net_shape = net.get_shape()
 #    net = tf.reshape(net,[-1,net_shape[1]*net_shape[2]*capsules,cap_dim])
     return net
-    
-#def conv_capsule():
-    
-    
-    
-    
-    
-def capsule_net(input, routing_iterations, digit_caps_classes, digit_caps_dims, caps1_n_maps, caps1_n_dims, batch_size, name="capsule_net"):
+        
+def capsule_net(input, routing_iterations, digit_caps_classes, digit_caps_dims, caps1_n_maps, caps1_n_dims, batch_size, training=True, name="capsule_net"):
     net = tf.layers.conv2d(
         inputs = input,
         filters = 32,
@@ -53,7 +45,7 @@ def capsule_net(input, routing_iterations, digit_caps_classes, digit_caps_dims, 
     
     net = tf.layers.batch_normalization(
         net,
-#        training = training,
+        training = training,
         name = "batch_norm_1",
         reuse = tf.AUTO_REUSE)
     
@@ -75,7 +67,7 @@ def capsule_net(input, routing_iterations, digit_caps_classes, digit_caps_dims, 
     
     net = tf.layers.batch_normalization(
         net,
-#        training = training,
+        training = training,
         name = "batch_norm_2",
         reuse = tf.AUTO_REUSE)
     
@@ -121,7 +113,6 @@ def capsule_net(input, routing_iterations, digit_caps_classes, digit_caps_dims, 
     
     caps2_predicted = tf.matmul(W_tiled, caps1_output_tiled, name="caps2_predicted")
     
-    nbr_of_routing_iterations = 2
     counter = 1
     b_0 = tf.zeros([batch_size, caps1_n_caps, digit_caps_classes, 1, 1],dtype=tf.float32)
 
@@ -138,7 +129,7 @@ def capsule_net(input, routing_iterations, digit_caps_classes, digit_caps_dims, 
         new_b_coeff = tf.add(b_coeff, agreement)
         return [new_b_coeff,tf.add(1,counter)]
     
-    b_final = tf.while_loop(condition, loop_body, [b_0, counter], maximum_iterations=nbr_of_routing_iterations)
+    b_final = tf.while_loop(condition, loop_body, [b_0, counter], maximum_iterations=routing_iterations)
         
     routing_weights = tf.nn.softmax(b_final[0], axis=2)
     weighted_predictions = tf.multiply(routing_weights, caps2_predicted)
@@ -149,22 +140,7 @@ def capsule_net(input, routing_iterations, digit_caps_classes, digit_caps_dims, 
 #    image_size = input.get_shape()
 #    reconstruct = reconstruction_net(caps2_output, image_size[1:3])
 
-#    total_parameters = 0
-#    for variable in tf.trainable_variables():
-#        # shape is an array of tf.Dimension
-#        shape = variable.get_shape()
-#        print(shape)
-#        print(len(shape))
-#        variable_parameters = 1
-#        for dim in shape:
-#            print(dim)
-#            variable_parameters *= dim.value
-#        print(variable_parameters)
-#        total_parameters += variable_parameters
-#    print(total_parameters)
-
     return caps2_output
-
 
 
 def reconstruction_net(digit_caps, image_size, name="Reconstruction_net"):

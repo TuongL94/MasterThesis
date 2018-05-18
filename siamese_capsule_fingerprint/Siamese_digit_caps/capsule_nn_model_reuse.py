@@ -10,9 +10,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import tensorflow as tf
-import numpy as np
 
-
+# imports from self-implemented modules
 import capsule_utility as cu
 
 
@@ -33,10 +32,6 @@ def primary_caps(input, kernel_size, capsules, cap_dim, strides, padding, name="
 #    net = tf.reshape(net,[-1,net_shape[1]*net_shape[2]*capsules,cap_dim])
     return net
     
-#def conv_capsule():
-    
-
-
 def conv_relu_fixed(input,kernel,bias,strides = [1,1,1,1], padding = 'VALID',trainable = False, name=None, kernel_name = None, bias_name = None):
     # Create variable named "weight".
     weight = tf.get_variable(kernel_name, initializer = kernel,
@@ -64,9 +59,6 @@ def conv_relu(input,kernel_shape,bias_shape, strides = [1,1,1,1], padding = 'VAL
                         padding = padding,
                         name = name)
     return tf.nn.relu(conv + bias)
-    
-    
-    
     
     
 def capsule_net(input, routing_iterations, digit_caps_classes, digit_caps_dims, caps1_n_maps, caps1_n_dims, batch_size, *transfer, name="capsule_net"):
@@ -194,22 +186,7 @@ def capsule_net(input, routing_iterations, digit_caps_classes, digit_caps_dims, 
 #    image_size = input.get_shape()
 #    reconstruct = reconstruction_net(caps2_output, image_size[1:3])
 
-#    total_parameters = 0
-#    for variable in tf.trainable_variables():
-#        # shape is an array of tf.Dimension
-#        shape = variable.get_shape()
-#        print(shape)
-#        print(len(shape))
-#        variable_parameters = 1
-#        for dim in shape:
-#            print(dim)
-#            variable_parameters *= dim.value
-#        print(variable_parameters)
-#        total_parameters += variable_parameters
-#    print(total_parameters)
-
     return caps2_output
-
 
 
 def reconstruction_net(digit_caps, image_size, name="Reconstruction_net"):
@@ -237,14 +214,4 @@ def reconstruction_net(digit_caps, image_size, name="Reconstruction_net"):
             name = "reconstruction_output")
 
     return net
-
-
-
-
-
-
-
-
-
-    
-    
+ 

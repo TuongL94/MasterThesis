@@ -228,7 +228,7 @@ def main(argv):
 #        return
     
     # Load generator
-    with open(data_path + "generator_data_siamese_trans_10.pk1", "rb") as input:
+    with open(data_path + "generator_data_small_rotdiff5_transdiff10_new.pk1", "rb") as input:
         generator = pickle.load(input)
     
     evaluate_capsule_network(generator, batch_size, thresholds, eval_itr, output_dir, gpu_device_name, negative_multiplier, metrics_name, metrics_path)

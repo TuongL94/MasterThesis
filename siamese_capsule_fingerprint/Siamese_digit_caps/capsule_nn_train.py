@@ -19,8 +19,6 @@ import time
 from tensorflow.python import debug as tf_debug
 import matplotlib.pyplot as plt
 
-#sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)) + "../SiameseFingerprint/utilities.py")
-
 # imports from self-implemented modules
 import utilities as util
 from data_generator import data_generator
@@ -29,14 +27,13 @@ import capsule_nn_eval as ce
 import capsule_nn_model as cm
 import capsule_nn_model_reuse as cmr
 
-
 def main(argv):
     
     output_dir = argv[0]
     data_path =  argv[1]
-    pretrain_path = argv[2]
-    gpu_device_name = argv[3]
-    if len(argv) == 5:
+#    pretrain_path = argv[2]
+    gpu_device_name = argv[2]
+    if len(argv) == 4:
         use_time = True
     else:
         use_time = False
@@ -46,8 +43,8 @@ def main(argv):
 
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
-    if not os.path.exists(data_path + "generator_data_siamese_trans_10.pk1"):
-        with open(data_path + "generator_data_siamese_trans_10.pk1", "wb") as output:
+    if not os.path.exists(data_path + "generator_data_small_rotdiff5_transdiff10_new.pk1"):
+        with open(data_path + "generator_data.pk1", "wb") as output:
             # Load fingerprint labels and data from file with names
             finger_id = np.load(data_path + "/finger_id_mt_vt_112.npy")
             person_id = np.load(data_path + "/person_id_mt_vt_112.npy")
@@ -72,7 +69,7 @@ def main(argv):
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
         # Load generator
-        with open(data_path + "generator_data_siamese_trans_30.pk1", 'rb') as input:
+        with open(data_path + "generator_data_small_rotdiff5_transdiff10_new.pk1", 'rb') as input:
             generator = pickle.load(input)
     
     image_dims = np.shape(generator.train_data)
@@ -165,11 +162,12 @@ def main(argv):
                                                     caps1_n_maps, caps1_n_dims, batch_size_train, name="right_train_output")
                 # Test networks
                 left_test_output = cm.capsule_net(left_image_holder_test, routing_iterations, digit_caps_classes, digit_caps_dims, 
-                                                   caps1_n_maps, caps1_n_dims, batch_size_train, name="left_test_output")
+                                                   caps1_n_maps, caps1_n_dims, batch_size_train, training=False, name="left_test_output")
                 right_test_output = cm.capsule_net(right_image_holder_test, routing_iterations, digit_caps_classes, digit_caps_dims,
-                                                    caps1_n_maps, caps1_n_dims, batch_size_train, name="right_test_output")
+                                                    caps1_n_maps, caps1_n_dims, batch_size_train, training=False, name="right_test_output")
             
-            
+#            print(util.get_nbr_of_parameters())
+                
 #            # Create Reconstruction graph
 #            shape = left_train_output.get_shape().as_list()[1:]
 #            shape.insert(0, None)
@@ -186,15 +184,19 @@ def main(argv):
             
             # Create loss function
             '''Contrastive loss'''
-            margin = tf.constant(2.0)
+            margin = tf.constant(1.5)
             train_loss = cu.contrastive_caps_loss(left_train_output, right_train_output, label_holder, margin)
+            
             '''Scaled pair loss'''
 #            train_loss = cu.scaled_pair_loss(left_train_output, right_train_output, label_holder)
+            
             '''Agreement loss'''
 #            margin = tf.constant(1.0)
 #            active_threshold = tf.constant(1e-7)
 #            inactive_threshold = tf.constant(1e-7)
 #            train_loss = cu.agreement_loss(left_train_output, right_train_output, label_holder, active_threshold, inactive_threshold, margin)
+            
+#            train_loss = cu.scaled_pair_loss(left_train_output, right_train_output, label_holder)
             
             # Add reconstruction loss
 #            alpha = tf.constant(0.2)      # Scaling parameter of reconstructions contribution to the total loss
@@ -202,11 +204,9 @@ def main(argv):
 #            train_loss += cu.reconstruction_loss(left_image_holder, right_image_holder, image_left, image_right, alpha)
             
             # Add regularization terms to loss function
-#            reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-#            for i in range(len(reg_losses)):
-#                train_loss += reg_losses[i]
-            
-#            train_loss = cu.scaled_pair_loss(left_train_output, right_train_output, label_holder)
+            reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+            for i in range(len(reg_losses)):
+                train_loss += reg_losses[i]
             
             tf.add_to_collection("train_loss",train_loss)
             tf.add_to_collection("left_train_output",left_train_output)
@@ -288,8 +288,8 @@ def main(argv):
     
     with tf.Session(config=config) as sess:
         with tf.device(gpu_device_name):
-            sess = tf_debug.LocalCLIDebugWrapperSession(sess)
-            sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
+#            sess = tf_debug.LocalCLIDebugWrapperSession(sess)
+#            sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
             if is_model_new:
 #                train_op = cu.momentum_training(train_loss, learning_rate, momentum)
                 optimizer = tf.train.AdamOptimizer()
@@ -325,6 +325,7 @@ def main(argv):
             
             W_transformation = graph.get_tensor_by_name("Caps_net/W_shared/W:0")
             W_transform = tf.summary.histogram("W_transform", W_transformation)
+            
             # transpose filters to coincide with the dimensions requested by tensorflow's summary. 
             # Add filters to summary
 #            conv1_filters = tf.transpose(conv1_filters, perm = [3,0,1,2])
@@ -345,7 +346,6 @@ def main(argv):
             
 
             summary_train_loss = tf.summary.scalar('training_loss', train_loss)
-#            summary_op = tf.summary.scalar('training_loss', train_loss)
             
             summary_op = tf.summary.merge([summary_train_loss, filter1, hist_conv1, hist_bias1, hist_conv2, hist_bias2, W_transform])
             train_writer = tf.summary.FileWriter(output_dir + "train_summary", graph=tf.get_default_graph())
@@ -385,8 +385,7 @@ def main(argv):
                 mean_left = np.mean(feature_length_left)
                 mean_right = np.mean(feature_length_right)
                 
-                
-                
+
                 #################
                 
 #                left_o, right_o = sess.run([left_train_output, right_train_output], 
@@ -403,8 +402,7 @@ def main(argv):
 #                                                          label_holder:gt_train_batch,
 #                                                          reconstruct_holder_left:left_o,
 #                                                          reconstruct_holder_right:right_o})            
-    
-                
+        
                 if use_time:
                     elapsed_time = (time.time() - start_time_train)/60.0 # elapsed time in minutes since start of training 
                     if elapsed_time >= int(argv[-1]):
