@@ -205,9 +205,9 @@ def main(argv):
     """
     
     # Set parameters for evaluation
-    thresholds = np.linspace(0, 0.8, num=100)
-    batch_size = 20
-    eval_itr = 28
+    thresholds = np.linspace(0, 1.75, num=100)
+    batch_size = 100
+    eval_itr = 57
     
     output_dir = argv[0]# directories where the models are saved
     data_path =  argv[1]
@@ -224,7 +224,7 @@ def main(argv):
         return
     
     # Load generator
-    with open(data_path + "generator_data_small_rotdiff5_transdiff10_new.pk1", "rb") as input:
+    with open(data_path + "generator_data_small_rotdiff5_transdiff30_new.pk1", "rb") as input:
         generator = pickle.load(input)
         
         evaluate_inception_network(generator, batch_size, thresholds, eval_itr, output_dir, metrics_path, gpu_device_name)

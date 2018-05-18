@@ -271,14 +271,14 @@ def main(argv):
     metrics_path = argv[2]
     gpu_device_name = argv[-1] 
    
-#    # if file containing evaluation metrics already exists use this data directly
-#    if os.path.exists(metrics_path + ".txt"):
-#        # get evaluation metrics for varying thresholds
-#        fpr_vals, fnr_vals, recall_vals, acc_vals = util.get_evaluation_metrics_vals(metrics_path + ".txt")
-#
-#        # plots of evaluation metrics
-#        util.plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, acc_vals)
-#        return
+    # if file containing evaluation metrics already exists use this data directly
+    if os.path.exists(metrics_path + ".txt"):
+        # get evaluation metrics for varying thresholds
+        fpr_vals, fnr_vals, recall_vals, acc_vals = util.get_evaluation_metrics_vals(metrics_path + ".txt")
+
+        # plots of evaluation metrics
+        util.plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, acc_vals)
+        return
     
     # load generator
     with open(data_path + "generator_data_small_rotdiff5_transdiff10_new.pk1", "rb") as input:
