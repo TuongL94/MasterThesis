@@ -187,7 +187,7 @@ def evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output
                 next_element = iterator.get_next()
                 
                 breakpoint = batch_size*eval_itr
-                sim_full = np.vstack((np.ones((breakpoint,1)), np.zeros((20*breakpoint,1))))
+                sim_full = np.vstack((np.ones((breakpoint,1)), np.zeros((3*breakpoint,1))))
                 
                 for i in range(eval_itr):
                     test_batch = sess.run(next_element,feed_dict={handle:test_match_handle})
@@ -216,7 +216,7 @@ def evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output
 #                            class_id = np.vstack((class_id, class_id_batch))
 #                            decision_o_full = np.append(decision_o_full, decision_o, axis=0)
     
-                for i in range(20*eval_itr):
+                for i in range(3*eval_itr):
                     test_batch = sess.run(next_element,feed_dict={handle:test_non_match_handle})
                     for j in range(generator.rotation_res):
                         b_l_test,b_r_test = generator.get_pairs(generator.test_data[j],test_batch) 
@@ -262,9 +262,9 @@ def main(argv):
     """ Runs evaluation on trained network 
     """
     # set parameters for evaluation
-    thresholds = np.linspace(0, 2.0, num=100)
-    batch_size = 58
-    eval_itr = 10
+    thresholds = np.linspace(0, 1.75, num=500)
+    batch_size = 50
+    eval_itr = 115
     
     output_dir = argv[0] # directory where the model is saved
     data_path =  argv[1]
@@ -281,7 +281,7 @@ def main(argv):
         return
     
     # load generator
-    with open(data_path + "generator_data_small_rotdiff5_transdiff10_new.pk1", "rb") as input:
+    with open(data_path + "generator_data_small_rotdiff5_transdiff30_new.pk1", "rb") as input:
         generator = pickle.load(input)
         
         evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output_dir, metrics_path, gpu_device_name)

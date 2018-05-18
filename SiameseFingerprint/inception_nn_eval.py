@@ -147,7 +147,7 @@ def evaluate_inception_network(generator, batch_size, thresholds, eval_itr, outp
                 next_element = iterator.get_next()
                 
                 breakpoint = batch_size*eval_itr
-                sim_full = np.vstack((np.ones((breakpoint,1)), np.zeros((breakpoint,1))))
+                sim_full = np.vstack((np.ones((breakpoint,1)), np.zeros((3*breakpoint,1))))
                 
                 for i in range(eval_itr):
                     test_batch = sess.run(next_element,feed_dict={handle:test_match_handle})
@@ -164,7 +164,7 @@ def evaluate_inception_network(generator, batch_size, thresholds, eval_itr, outp
                             right_full = np.vstack((right_full,right_o))
                             class_id = np.vstack((class_id, class_id_batch))
     
-                for i in range(eval_itr):
+                for i in range(3*eval_itr):
                     test_batch = sess.run(next_element,feed_dict={handle:test_non_match_handle})
                     for j in range(generator.rotation_res):
                         b_l_test,b_r_test = generator.get_pairs(generator.test_data[j],test_batch) 
@@ -205,9 +205,9 @@ def main(argv):
     """
     
     # Set parameters for evaluation
-    thresholds = np.linspace(0, 1.75, num=100)
-    batch_size = 100
-    eval_itr = 57
+    thresholds = np.linspace(0, 0.8, num=500)
+    batch_size = 30
+    eval_itr = 192
     
     output_dir = argv[0]# directories where the models are saved
     data_path =  argv[1]
