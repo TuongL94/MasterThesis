@@ -184,7 +184,7 @@ def evaluate_capsule_network(generator, batch_size, thresholds, eval_itr, output
                     util.save_evaluation_metrics(metrics, metrics_path + matrics_name)
                 
                 
-                accuracy, false_pos, false_neg, recall, fnr, fpr,tnr, _ = get_test_diagnostics(left_full,right_full,sim_full,0.05,plot_hist=True)
+                accuracy, false_pos, false_neg, recall, fnr, fpr,tnr, _ = get_test_diagnostics(left_full,right_full,sim_full,0.05,plot_hist=True, breakpoint = breakpoint)
     
                 print("Accuracy: %f " % accuracy)
                 print("# False positive: %d " % false_pos)
@@ -207,9 +207,9 @@ def main(argv):
     """ Runs evaluation on trained network 
     """
     # Set parameters for evaluation
-    thresholds = np.linspace(0, 2.0, num=10)
+    thresholds = np.linspace(0, 0.05, num=100)
     batch_size = 10
-    eval_itr = 1
+    eval_itr = 10
     negative_multiplier = 1
     metrics_name = "10.txt"
     
@@ -219,13 +219,13 @@ def main(argv):
     gpu_device_name = argv[-1] 
    
     # if file containing evaluation metrics already exists use this data directly
-    if os.path.exists(metrics_path + metrics_name):
-        # get evaluation metrics for varying thresholds
-        fpr_vals, fnr_vals, recall_vals, acc_vals = util.get_evaluation_metrics_vals(metrics_path + metrics_name)
-
-        # plots of evaluation metrics
-        util.plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, acc_vals)
-        return
+#    if os.path.exists(metrics_path + metrics_name):
+#        # get evaluation metrics for varying thresholds
+#        fpr_vals, fnr_vals, recall_vals, acc_vals = util.get_evaluation_metrics_vals(metrics_path + metrics_name)
+#
+#        # plots of evaluation metrics
+#        util.plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, acc_vals)
+#        return
     
     # Load generator
     with open(data_path + "generator_data_siamese_trans_10.pk1", "rb") as input:

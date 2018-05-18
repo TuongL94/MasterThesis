@@ -48,9 +48,9 @@ def main(argv):
 
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
-    if not os.path.exists(data_path + "generator_data_siamese_trans_30_new.pk1"):
+    if not os.path.exists(data_path + "generator_data_siamese_trans_10.pk1"):
         np.random.seed(0)
-        with open(data_path + "generator_data_siamese_trans_30_new.pk1", "wb") as output:
+        with open(data_path + "generator_data_siamese_trans_10.pk1", "wb") as output:
             # Load fingerprint labels and data from file with names
             finger_id = np.load(data_path + "finger_id_mt_vt_112_new.npy")
             person_id = np.load(data_path + "person_id_mt_vt_112_new.npy")
@@ -81,7 +81,7 @@ def main(argv):
             pickle.dump(generator, output, pickle.HIGHEST_PROTOCOL)
     else:
         # Load generator
-        with open(data_path + "generator_data_siamese_trans_30_new.pk1", "rb") as input:
+        with open(data_path + "generator_data_siamese_trans_10.pk1", "rb") as input:
             generator = pickle.load(input)
              
     # parameters for training
@@ -182,7 +182,9 @@ def main(argv):
     with tf.Session(config=config) as sess:
         if is_model_new:
             with tf.device(gpu_device_name):
-                train_op = su.momentum_training(train_loss, learning_rate, momentum)
+#                train_op = su.momentum_training(train_loss, learning_rate, momentum)
+                optimizer = tf.train.AdamOptimizer()
+                train_op = optimizer.minimize(train_loss, name="train_op")
                 sess.run(tf.global_variables_initializer()) # initialize all trainable parameters
                 tf.add_to_collection("train_op",train_op)
         else:

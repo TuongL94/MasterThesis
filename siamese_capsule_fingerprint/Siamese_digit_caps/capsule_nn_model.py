@@ -109,7 +109,7 @@ def capsule_net(input, routing_iterations, digit_caps_classes, digit_caps_dims, 
             W = tf.get_variable("W",
                             trainable=True, 
                             shape=[1, caps1_n_caps, digit_caps_classes, digit_caps_dims, caps1_n_dims], 
-                            initializer=tf.random_normal_initializer(mean=0.0, stddev=1, dtype=tf.float32))
+                            initializer=tf.random_normal_initializer(mean=0.0, stddev=1.5, dtype=tf.float32))
         return W
     W = W_shared()    
     W_tiled = tf.tile(W, [batch_size,1,1,1,1], name="W_tiled")
