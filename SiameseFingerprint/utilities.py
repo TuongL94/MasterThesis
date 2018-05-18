@@ -166,13 +166,27 @@ def get_separation_distance_hist(l2_distances_sim, l2_distances_no_sim):
     plt.legend(bbox_to_anchor=(0., 1.02, 1., 0.102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
     plt.show()
     
-#def plot_all_roc(dir_path):
-#    """ Plots roc curves for all metric files in directory dir_path
-#    
-#    """
-#    
-#    for file in os.listdir(dir_path):
-#        fpr_vals = []
-#        recall_vals = []
-
+def plot_all_roc(dir_path):
+    """ Plots roc curves for all metric files in directory dir_path
     
+    """
+    
+    plt.figure()
+    plt.xlabel("FPR")
+    plt.ylabel("recall")
+    for metric_file in os.listdir(dir_path):
+        fpr_vals = []
+        recall_vals = []
+        words = metric_file.split("_")
+        
+        with open(dir_path + metric_file, "rb") as file:
+            lines = file.readlines()
+            for i in range(len(lines)):
+                line  = lines[i]
+                line = line.split()
+                fpr_vals.append(float(line[0]))
+                recall_vals.append(float(line[2]))
+                
+        plt.semilogx(fpr_vals,recall_vals, label= words[0] + ", " + words[1])
+    plt.legend(loc="upper left")
+    plt.show()
