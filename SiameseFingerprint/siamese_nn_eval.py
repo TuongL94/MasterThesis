@@ -175,7 +175,7 @@ def evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output
 #                test_non_match_dataset_length = np.shape(generator.no_match_test)[0]
                 test_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_test)
 #                test_non_match_dataset = test_non_match_dataset.shuffle(buffer_size = test_non_match_dataset_length)
-                test_non_match_dataset = test_non_match_dataset.batch(10*batch_size)
+                test_non_match_dataset = test_non_match_dataset.batch(batch_size)
                 
                 test_match_iterator = test_match_dataset.make_one_shot_iterator()
                 test_match_handle = sess.run(test_match_iterator.string_handle())
@@ -187,7 +187,7 @@ def evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output
                 next_element = iterator.get_next()
                 
                 breakpoint = batch_size*eval_itr
-                sim_full = np.vstack((np.ones((breakpoint,1)), np.zeros((10*breakpoint,1))))
+                sim_full = np.vstack((np.ones((breakpoint,1)), np.zeros((20*breakpoint,1))))
                 
                 for i in range(eval_itr):
                     test_batch = sess.run(next_element,feed_dict={handle:test_match_handle})
@@ -216,7 +216,7 @@ def evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output
 #                            class_id = np.vstack((class_id, class_id_batch))
 #                            decision_o_full = np.append(decision_o_full, decision_o, axis=0)
     
-                for i in range(eval_itr):
+                for i in range(20*eval_itr):
                     test_batch = sess.run(next_element,feed_dict={handle:test_non_match_handle})
                     for j in range(generator.rotation_res):
                         b_l_test,b_r_test = generator.get_pairs(generator.test_data[j],test_batch) 
@@ -271,17 +271,17 @@ def main(argv):
     metrics_path = argv[2]
     gpu_device_name = argv[-1] 
    
-    # if file containing evaluation metrics already exists use this data directly
-    if os.path.exists(metrics_path + ".txt"):
-        # get evaluation metrics for varying thresholds
-        fpr_vals, fnr_vals, recall_vals, acc_vals = util.get_evaluation_metrics_vals(metrics_path + ".txt")
-
-        # plots of evaluation metrics
-        util.plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, acc_vals)
-        return
+#    # if file containing evaluation metrics already exists use this data directly
+#    if os.path.exists(metrics_path + ".txt"):
+#        # get evaluation metrics for varying thresholds
+#        fpr_vals, fnr_vals, recall_vals, acc_vals = util.get_evaluation_metrics_vals(metrics_path + ".txt")
+#
+#        # plots of evaluation metrics
+#        util.plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, acc_vals)
+#        return
     
     # load generator
-    with open(data_path + "generator_data_small_rotdiff5_transdiff30_new.pk1", "rb") as input:
+    with open(data_path + "generator_data_small_rotdiff5_transdiff10_new.pk1", "rb") as input:
         generator = pickle.load(input)
         
         evaluate_siamese_network(generator, batch_size, thresholds, eval_itr, output_dir, metrics_path, gpu_device_name)

@@ -77,9 +77,9 @@ def main(argv):
             generator = pickle.load(input)
              
     # parameters for training
-    batch_size_train = 40
+    batch_size_train = 75
     train_itr = 30000000000
-    learning_rate = 0.00005
+    learning_rate = 0.0001
     momentum = 0.99
     
     # margin setup for contrastive loss

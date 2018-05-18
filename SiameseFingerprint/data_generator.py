@@ -151,7 +151,7 @@ class data_generator:
         breakpoints_test= [e + nbr_of_test_images for e in self.get_breakpoints(test_person_id, test_finger_id)]
     
         rot_diff = 5
-        trans_diff = 10
+        trans_diff = 30
         margin_trans = 192
         margin_rot = 20
         

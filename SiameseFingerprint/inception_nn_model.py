@@ -362,7 +362,7 @@ def stem(input, training):
     # Convolutional layer 1
     output = tf.layers.conv2d(
             inputs = output,
-            filters = 64,
+            filters = 16,
             kernel_size = [7,7],
             strides = [1,1],
             padding = "valid",
@@ -392,7 +392,7 @@ def stem(input, training):
     # Convolutional Layer 2
     output = tf.layers.conv2d(
             inputs = output,
-            filters = 64,
+            filters = 16,
             kernel_size = [5,5],
             strides = [1,1],
             padding = "valid",

@@ -135,7 +135,7 @@ def evaluate_inception_network(generator, batch_size, thresholds, eval_itr, outp
 #                test_non_match_dataset_length = np.shape(generator.no_match_test)[0]
                 test_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_test)
 #                test_non_match_dataset = test_non_match_dataset.shuffle(buffer_size = test_non_match_dataset_length)
-                test_non_match_dataset = test_non_match_dataset.batch(10*batch_size)
+                test_non_match_dataset = test_non_match_dataset.batch(batch_size)
                 
                 test_match_iterator = test_match_dataset.make_one_shot_iterator()
                 test_match_handle = sess.run(test_match_iterator.string_handle())
@@ -147,7 +147,7 @@ def evaluate_inception_network(generator, batch_size, thresholds, eval_itr, outp
                 next_element = iterator.get_next()
                 
                 breakpoint = batch_size*eval_itr
-                sim_full = np.vstack((np.ones((breakpoint,1)), np.zeros((10*breakpoint,1))))
+                sim_full = np.vstack((np.ones((breakpoint,1)), np.zeros((breakpoint,1))))
                 
                 for i in range(eval_itr):
                     test_batch = sess.run(next_element,feed_dict={handle:test_match_handle})
@@ -205,9 +205,9 @@ def main(argv):
     """
     
     # Set parameters for evaluation
-    thresholds = np.linspace(0, 0.6, num=100)
-    batch_size = 5
-    eval_itr = 600
+    thresholds = np.linspace(0, 0.8, num=100)
+    batch_size = 20
+    eval_itr = 28
     
     output_dir = argv[0]# directories where the models are saved
     data_path =  argv[1]
@@ -224,7 +224,7 @@ def main(argv):
         return
     
     # Load generator
-    with open(data_path + "generator_data_small_rotdiff5_transdiff30_new.pk1", "rb") as input:
+    with open(data_path + "generator_data_small_rotdiff5_transdiff10_new.pk1", "rb") as input:
         generator = pickle.load(input)
         
         evaluate_inception_network(generator, batch_size, thresholds, eval_itr, output_dir, metrics_path, gpu_device_name)
