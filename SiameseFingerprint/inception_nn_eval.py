@@ -15,7 +15,7 @@ import pickle
 # imports from self-implemented modules
 import utilities as util
 
-def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_id=None, plot_hist=False, breakpoint=None):
+def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold, test_batch_full, generator, class_id=None, plot_hist=False, breakpoint=None):
     """ Computes and returns evaluation metrics. Also plots histograms over distances between pairs.
     
     Input:
@@ -147,10 +147,11 @@ def evaluate_inception_network(generator, batch_size, thresholds, eval_itr, outp
                 next_element = iterator.get_next()
                 
                 breakpoint = batch_size*eval_itr
-                sim_full = np.vstack((np.ones((breakpoint,1)), np.zeros((3*breakpoint,1))))
-                
+                sim_full = np.vstack((np.ones((breakpoint,1)), np.zeros((breakpoint,1))))
+                test_batch_full = np.array([-1,-1])
                 for i in range(eval_itr):
                     test_batch = sess.run(next_element,feed_dict={handle:test_match_handle})
+                    test_batch_full = np.vstack((test_batch_full, test_batch))
                     for j in range(generator.rotation_res):
                         b_l_test,b_r_test = generator.get_pairs(generator.test_data[j],test_batch)
                         class_id_batch = generator.same_class(test_batch,test=True)
@@ -164,8 +165,9 @@ def evaluate_inception_network(generator, batch_size, thresholds, eval_itr, outp
                             right_full = np.vstack((right_full,right_o))
                             class_id = np.vstack((class_id, class_id_batch))
     
-                for i in range(3*eval_itr):
+                for i in range(eval_itr):
                     test_batch = sess.run(next_element,feed_dict={handle:test_non_match_handle})
+                    test_batch_full = np.vstack((test_batch_full, test_batch))
                     for j in range(generator.rotation_res):
                         b_l_test,b_r_test = generator.get_pairs(generator.test_data[j],test_batch) 
                         left_o,right_o = sess.run([left_test_inference,right_test_inference],feed_dict = {left_test:b_l_test, right_test:b_r_test})
@@ -176,13 +178,13 @@ def evaluate_inception_network(generator, batch_size, thresholds, eval_itr, outp
                         class_id = np.vstack((class_id, class_id_batch))
 
                 for i in range(len(thresholds)):
-                    precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr = get_test_diagnostics(left_full,right_full,sim_full,thresholds[i],class_id)
+                    precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr = get_test_diagnostics(left_full,right_full,sim_full,thresholds[i], test_batch_full, generator, class_id)
     
                     metrics = (fpr, fnr, recall, tnr)
                     # save evaluation metrics to a file 
                     util.save_evaluation_metrics(metrics, metrics_path + ".txt")
                     
-                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr = get_test_diagnostics(left_full,right_full,sim_full,0.1, plot_hist=True, breakpoint=breakpoint)
+                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr = get_test_diagnostics(left_full,right_full,sim_full,0.1, test_batch_full, generator, plot_hist=True, breakpoint=breakpoint)
                 print("Precision: %f " % precision)
                 print("# False positive: %d " % false_pos)
                 print("# False negative: %d " % false_neg)
@@ -206,8 +208,8 @@ def main(argv):
     
     # Set parameters for evaluation
     thresholds = np.linspace(0, 0.8, num=500)
-    batch_size = 30
-    eval_itr = 192
+    batch_size = 29
+    eval_itr = 20
     
     output_dir = argv[0]# directories where the models are saved
     data_path =  argv[1]
@@ -224,7 +226,7 @@ def main(argv):
         return
     
     # Load generator
-    with open(data_path + "generator_data_small_rotdiff5_transdiff30_new.pk1", "rb") as input:
+    with open(data_path + "generator_data_small_rotdiff5_transdiff10_new.pk1", "rb") as input:
         generator = pickle.load(input)
         
         evaluate_inception_network(generator, batch_size, thresholds, eval_itr, output_dir, metrics_path, gpu_device_name)
