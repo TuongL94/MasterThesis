@@ -76,7 +76,7 @@ def get_test_diagnostics(left_pairs_o,right_pairs_o,sim_labels,threshold,class_i
     return accuracy, false_pos, false_neg, recall, fnr, fpr, tnr, inter_class_errors
 
  
-def evaluate_capsule_network(generator, batch_size, thresholds, eval_itr, output_dir, gpu_device_name, negative_multiplier, matrics_name, metrics_path):
+def evaluate_capsule_network(generator, batch_size, thresholds, eval_itr, output_dir, gpu_device_name, negative_multiplier, metrics_name, metrics_path):
     """ This method is used to evaluate a capsule network for fingerprint datasets.
     
     The model is defined in the file capsule_nn_model.py and trained in 
@@ -113,11 +113,17 @@ def evaluate_capsule_network(generator, batch_size, thresholds, eval_itr, output
 #            left_test_inference = tf.get_collection("left_test_output")[0]
 #            right_test_inference = tf.get_collection("right_test_output")[0]
             
-            left_test = g.get_tensor_by_name("left_image_holder_test:0")
-            right_test = g.get_tensor_by_name("right_image_holder_test:0")
+#            left_test = g.get_tensor_by_name("left_image_holder_test:0")
+#            right_test = g.get_tensor_by_name("right_image_holder_test:0")
+#            
+#            left_test_inference = tf.get_collection("left_test_output")[0]
+#            right_test_inference = tf.get_collection("right_test_output")[0]
             
-            left_test_inference = tf.get_collection("left_test_output")[0]
-            right_test_inference = tf.get_collection("right_test_output")[0]
+            left_test = g.get_tensor_by_name("left_image_holder:0")
+            right_test = g.get_tensor_by_name("right_image_holder:0")
+            
+            left_test_inference = tf.get_collection("left_train_output")[0]
+            right_test_inference = tf.get_collection("right_train_output")[0]
             
             handle = g.get_tensor_by_name("handle:0")
         
@@ -129,12 +135,14 @@ def evaluate_capsule_network(generator, batch_size, thresholds, eval_itr, output
                 saver.restore(sess, tf.train.latest_checkpoint(output_dir))
                 
                 test_match_dataset = tf.data.Dataset.from_tensor_slices(generator.match_test)
+                test_match_dataset = test_match_dataset.repeat()
                 test_match_dataset = test_match_dataset.batch(batch_size)
 #                test_match_dataset_length = np.shape(generator.match_test)[0]
             
 #                test_non_match_dataset_length = np.shape(generator.no_match_test)[0]
                 test_non_match_dataset = tf.data.Dataset.from_tensor_slices(generator.no_match_test)
 #                test_non_match_dataset = test_non_match_dataset.shuffle(buffer_size = test_non_match_dataset_length)
+                test_non_match_dataset = test_non_match_dataset.repeat()
                 test_non_match_dataset = test_non_match_dataset.batch(batch_size)
                 
                 test_match_iterator = test_match_dataset.make_one_shot_iterator()
@@ -176,15 +184,15 @@ def evaluate_capsule_network(generator, batch_size, thresholds, eval_itr, output
 #                        class_id_batch = generator.same_class(test_batch,test=True)
 #                        class_id = np.vstack((class_id, class_id_batch))
 
+                accuracy, false_pos, false_neg, recall, fnr, fpr,tnr, _ = get_test_diagnostics(left_full,right_full,sim_full,0.05,plot_hist=True, breakpoint = breakpoint)
+
                 for i in range(len(thresholds)):
                     
                     accuracy, false_pos, false_neg, recall, fnr, fpr, tnr, _ = get_test_diagnostics(left_full,right_full,sim_full,thresholds[i])
                     metrics = (fpr, fnr, recall, accuracy)
                     # save evaluation metrics to a file 
-                    util.save_evaluation_metrics(metrics, metrics_path + matrics_name)
+                    util.save_evaluation_metrics(metrics, metrics_path + metrics_name)
                 
-                
-                accuracy, false_pos, false_neg, recall, fnr, fpr,tnr, _ = get_test_diagnostics(left_full,right_full,sim_full,0.05,plot_hist=True, breakpoint = breakpoint)
     
                 print("Accuracy: %f " % accuracy)
                 print("# False positive: %d " % false_pos)
@@ -198,7 +206,7 @@ def evaluate_capsule_network(generator, batch_size, thresholds, eval_itr, output
 #                print("Number of fingerprints in the same class in the non matching set: %d " % nbr_same_class)
                 
                   # get evaluation metrics for varying thresholds
-                fpr_vals, fnr_vals, recall_vals, acc_vals = util.get_evaluation_metrics_vals(metrics_path + matrics_name)
+                fpr_vals, fnr_vals, recall_vals, acc_vals = util.get_evaluation_metrics_vals(metrics_path + metrics_name)
     
                 # plots of evaluation metrics
                 util.plot_evaluation_metrics(thresholds, fpr_vals, fnr_vals, recall_vals, acc_vals)
@@ -207,11 +215,11 @@ def main(argv):
     """ Runs evaluation on trained network 
     """
     # Set parameters for evaluation
-    thresholds = np.linspace(0, 0.05, num=100)
+    thresholds = np.linspace(0, 0.05, num=500)
     batch_size = 10
-    eval_itr = 10
+    eval_itr = 577
     negative_multiplier = 1
-    metrics_name = "10.txt"
+    metrics_name = "30_hist.txt"
     
     output_dir = argv[0] # directory where the model is saved
     data_path =  argv[1]
@@ -228,7 +236,7 @@ def main(argv):
 #        return
     
     # Load generator
-    with open(data_path + "generator_data_siamese_trans_10.pk1", "rb") as input:
+    with open(data_path + "generator_data_siamese_trans_30.pk1", "rb") as input:
         generator = pickle.load(input)
     
     evaluate_capsule_network(generator, batch_size, thresholds, eval_itr, output_dir, gpu_device_name, negative_multiplier, metrics_name, metrics_path)

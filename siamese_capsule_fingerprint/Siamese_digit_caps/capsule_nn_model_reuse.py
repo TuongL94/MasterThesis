@@ -69,7 +69,7 @@ def conv_relu(input,kernel_shape,bias_shape, strides = [1,1,1,1], padding = 'VAL
     
     
     
-def capsule_net(input, routing_iterations, digit_caps_classes, digit_caps_dims, caps1_n_maps, caps1_n_dims, batch_size, *transfer, name="capsule_net"):
+def capsule_net(input, routing_iterations, digit_caps_classes, digit_caps_dims, caps1_n_maps, caps1_n_dims, batch_size, *transfer, training = True,name="capsule_net"):
 #    net = tf.layers.conv2d(
 #        inputs = input,
 #        filters = 32,
@@ -166,7 +166,6 @@ def capsule_net(input, routing_iterations, digit_caps_classes, digit_caps_dims, 
     
     caps2_predicted = tf.matmul(W_tiled, caps1_output_tiled, name="caps2_predicted")
     
-    nbr_of_routing_iterations = 2
     counter = 1
     b_0 = tf.zeros([batch_size, caps1_n_caps, digit_caps_classes, 1, 1],dtype=tf.float32)
 
@@ -183,7 +182,7 @@ def capsule_net(input, routing_iterations, digit_caps_classes, digit_caps_dims, 
         new_b_coeff = tf.add(b_coeff, agreement)
         return [new_b_coeff,tf.add(1,counter)]
     
-    b_final = tf.while_loop(condition, loop_body, [b_0, counter], maximum_iterations=nbr_of_routing_iterations)
+    b_final = tf.while_loop(condition, loop_body, [b_0, counter], maximum_iterations=routing_iterations)
         
     routing_weights = tf.nn.softmax(b_final[0], axis=2)
     weighted_predictions = tf.multiply(routing_weights, caps2_predicted)

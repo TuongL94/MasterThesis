@@ -46,8 +46,8 @@ def main(argv):
 
     # Load fingerprint data and create a data_generator instance if one 
     # does not exist, otherwise load existing data_generator
-    if not os.path.exists(data_path + "generator_data_siamese_trans_10.pk1"):
-        with open(data_path + "generator_data_siamese_trans_10.pk1", "wb") as output:
+    if not os.path.exists(data_path + "generator_data_siamese_trans_30.pk1"):
+        with open(data_path + "generator_data_siamese_trans_30.pk1", "wb") as output:
             # Load fingerprint labels and data from file with names
             finger_id = np.load(data_path + "/finger_id_mt_vt_112.npy")
             person_id = np.load(data_path + "/person_id_mt_vt_112.npy")
@@ -85,11 +85,11 @@ def main(argv):
     momentum = 0.99
     
     # Hyper parameters
-    routing_iterations = 3
+    routing_iterations = 2
     digit_caps_classes = 100
     digit_caps_dims = 8
     
-    caps1_n_maps = 16 
+    caps1_n_maps = 16
     caps1_n_dims = 8
     
     # Paramters for validation set
@@ -110,40 +110,41 @@ def main(argv):
         current_itr = 0 # current training iteration
 
         ##############################################################################################
-#        old_saver = tf.train.import_meta_graph(pretrain_path + ".meta")
-#        with open(pretrain_path + "checkpoint","r") as file:
-#            line  = file.readline()
-#            words = re.split("/",line)
-#            model_file_name = words[-1][:-2]
-#            current_itr = int(re.split("-",model_file_name)[-1]) # current training iteration
-#            for file in os.listdir(pretrain_path):
-#                if file.endswith(".meta"):
-#                    meta_file_name = os.path.join(pretrain_path,file)
-#            old_saver = tf.train.import_meta_graph(meta_file_name)
-#        g = tf.get_default_graph()
-#        start_kernel_layer_1 = None
-#        start_bias_layer_1 = None
-#        with tf.device(gpu_device_name):
-#            with tf.Session(config = config) as sess:
-#                old_saver.restore(sess, tf.train.latest_checkpoint(pretrain_path))
-#                old_kernel_1= g.get_tensor_by_name("conv1/kernel:0")
-#                start_kernel_layer_1 = sess.run(old_kernel_1)
-#                old_bias_1 = g.get_tensor_by_name("conv1/bias:0")
-#                start_bias_layer_1 = sess.run(old_bias_1)
+##        old_saver = tf.train.import_meta_graph(pretrain_path + ".meta")
+        with open(pretrain_path + "checkpoint","r") as file:
+            line  = file.readline()
+            words = re.split("/",line)
+            model_file_name = words[-1][:-2]
+            current_itr = int(re.split("-",model_file_name)[-1]) # current training iteration
+            for file in os.listdir(pretrain_path):
+                if file.endswith(".meta"):
+                    meta_file_name = os.path.join(pretrain_path,file)
+            old_saver = tf.train.import_meta_graph(meta_file_name)
+        g = tf.get_default_graph()
+        start_kernel_layer_1 = None
+        start_bias_layer_1 = None
+        with tf.device(gpu_device_name):
+            with tf.Session(config = config) as sess:
+                old_saver.restore(sess, tf.train.latest_checkpoint(pretrain_path))
+                old_kernel_1= g.get_tensor_by_name("conv1/kernel:0")
+                start_kernel_layer_1 = sess.run(old_kernel_1)
+                old_bias_1 = g.get_tensor_by_name("conv1/bias:0")
+                start_bias_layer_1 = sess.run(old_bias_1)
+                
+                old_kernel_2= g.get_tensor_by_name("conv2/kernel:0")
+                start_kernel_layer_2 = sess.run(old_kernel_2)
+                old_bias_2 = g.get_tensor_by_name("conv2/bias:0")
+                start_bias_layer_2 = sess.run(old_bias_2)
+                
+                old_kernel_3 = g.get_tensor_by_name("conv3/kernel:0")
+                start_kernel_layer_3 = sess.run(old_kernel_3)
+                old_bias_3 = g.get_tensor_by_name("conv3/bias:0")
+                start_bias_layer_3 = sess.run(old_bias_3)
 #                
-#                old_kernel_2= g.get_tensor_by_name("conv2/kernel:0")
-#                start_kernel_layer_2 = sess.run(old_kernel_2)
-#                old_bias_2 = g.get_tensor_by_name("conv2/bias:0")
-#                start_bias_layer_2 = sess.run(old_bias_2)
-#                
-#                old_kernel_3 = g.get_tensor_by_name("conv3/kernel:0")
-#                start_kernel_layer_3 = sess.run(old_kernel_3)
-#                old_bias_3 = g.get_tensor_by_name("conv3/bias:0")
-#                start_bias_layer_3 = sess.run(old_bias_3)
-#                
-#                
-#        transfer = (start_kernel_layer_1, start_bias_layer_1, start_kernel_layer_2, start_bias_layer_2, start_kernel_layer_3, start_bias_layer_3)
-#        tf.reset_default_graph()
+                
+        transfer = (start_kernel_layer_1, start_bias_layer_1, start_kernel_layer_2, start_bias_layer_2, start_kernel_layer_3, start_bias_layer_3)
+        tf.reset_default_graph()
+        print("Done restoring parameters")
         ##############################################################################################
         
         
@@ -152,22 +153,28 @@ def main(argv):
             left_image_holder, right_image_holder, label_holder, handle, left_image_holder_test, right_image_holder_test = cu.placeholder_inputs(image_dims)
               
             # Create CapsNet graph
-#            with tf.variable_scope("Caps_net", reuse=tf.AUTO_REUSE):
-#                left_train_output = cmr.capsule_net(left_image_holder, routing_iterations, digit_caps_classes, digit_caps_dims, 
-#                                                   caps1_n_maps, caps1_n_dims, batch_size_train, transfer, name="left_train_output")
-#                right_train_output = cmr.capsule_net(right_image_holder, routing_iterations, digit_caps_classes, digit_caps_dims,
-#                                                    caps1_n_maps, caps1_n_dims, batch_size_train, transfer, name="right_train_output")
-            
             with tf.variable_scope("Caps_net", reuse=tf.AUTO_REUSE):
-                left_train_output = cm.capsule_net(left_image_holder, routing_iterations, digit_caps_classes, digit_caps_dims, 
-                                                   caps1_n_maps, caps1_n_dims, batch_size_train, name="left_train_output")
-                right_train_output = cm.capsule_net(right_image_holder, routing_iterations, digit_caps_classes, digit_caps_dims,
-                                                    caps1_n_maps, caps1_n_dims, batch_size_train, name="right_train_output")
-                # Test networks
-                left_test_output = cm.capsule_net(left_image_holder_test, routing_iterations, digit_caps_classes, digit_caps_dims, 
-                                                   caps1_n_maps, caps1_n_dims, batch_size_train, name="left_test_output")
-                right_test_output = cm.capsule_net(right_image_holder_test, routing_iterations, digit_caps_classes, digit_caps_dims,
-                                                    caps1_n_maps, caps1_n_dims, batch_size_train, name="right_test_output")
+                print("Setting up network")
+                left_train_output = cmr.capsule_net(left_image_holder, routing_iterations, digit_caps_classes, digit_caps_dims, 
+                                                   caps1_n_maps, caps1_n_dims, batch_size_train, transfer, name="left_train_output")
+                right_train_output = cmr.capsule_net(right_image_holder, routing_iterations, digit_caps_classes, digit_caps_dims,
+                                                    caps1_n_maps, caps1_n_dims, batch_size_train, transfer, name="right_train_output")
+                left_test_output = cmr.capsule_net(left_image_holder_test, routing_iterations, digit_caps_classes, digit_caps_dims, 
+                                                   caps1_n_maps, caps1_n_dims, batch_size_train, transfer,training = False, name="left_train_output")
+                right_test_output = cmr.capsule_net(right_image_holder_test, routing_iterations, digit_caps_classes, digit_caps_dims,
+                                                    caps1_n_maps, caps1_n_dims, batch_size_train, transfer, training = False, name="right_train_output")
+                print("Done setting up network")
+            
+#            with tf.variable_scope("Caps_net", reuse=tf.AUTO_REUSE):
+#                left_train_output = cm.capsule_net(left_image_holder, routing_iterations, digit_caps_classes, digit_caps_dims, 
+#                                                   caps1_n_maps, caps1_n_dims, batch_size_train, name="left_train_output")
+#                right_train_output = cm.capsule_net(right_image_holder, routing_iterations, digit_caps_classes, digit_caps_dims,
+#                                                    caps1_n_maps, caps1_n_dims, batch_size_train, name="right_train_output")
+#                # Test networks
+#                left_test_output = cm.capsule_net(left_image_holder_test, routing_iterations, digit_caps_classes, digit_caps_dims, 
+#                                                   caps1_n_maps, caps1_n_dims, batch_size_train, training = False, name="left_test_output")
+#                right_test_output = cm.capsule_net(right_image_holder_test, routing_iterations, digit_caps_classes, digit_caps_dims,
+#                                                    caps1_n_maps, caps1_n_dims, batch_size_train, training = False, name="right_test_output")
             
             
 #            # Create Reconstruction graph
@@ -186,7 +193,7 @@ def main(argv):
             
             # Create loss function
             '''Contrastive loss'''
-            margin = tf.constant(2.0)
+            margin = tf.constant(4.0)
             train_loss = cu.contrastive_caps_loss(left_train_output, right_train_output, label_holder, margin)
             '''Scaled pair loss'''
 #            train_loss = cu.scaled_pair_loss(left_train_output, right_train_output, label_holder)
@@ -202,9 +209,9 @@ def main(argv):
 #            train_loss += cu.reconstruction_loss(left_image_holder, right_image_holder, image_left, image_right, alpha)
             
             # Add regularization terms to loss function
-#            reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-#            for i in range(len(reg_losses)):
-#                train_loss += reg_losses[i]
+            reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+            for i in range(len(reg_losses)):
+                train_loss += reg_losses[i]
             
 #            train_loss = cu.scaled_pair_loss(left_train_output, right_train_output, label_holder)
             
@@ -288,8 +295,8 @@ def main(argv):
     
     with tf.Session(config=config) as sess:
         with tf.device(gpu_device_name):
-            sess = tf_debug.LocalCLIDebugWrapperSession(sess)
-            sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
+#            sess = tf_debug.LocalCLIDebugWrapperSession(sess)
+#            sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
             if is_model_new:
 #                train_op = cu.momentum_training(train_loss, learning_rate, momentum)
                 optimizer = tf.train.AdamOptimizer()
@@ -310,18 +317,18 @@ def main(argv):
             
             # get parameters of the first convolutional layer. Add filters and histograms
             # of filters and biases to summary
-            conv1_filters = graph.get_tensor_by_name("Caps_net/conv1/kernel:0")
-            nbr_of_filters_conv1 = sess.run(tf.shape(conv1_filters)[-1])
-            hist_conv1 = tf.summary.histogram("hist_conv1", conv1_filters)
-            conv1_filters = tf.transpose(conv1_filters, perm = [3,0,1,2])
-            filter1 = tf.summary.image('Filter_1', conv1_filters, max_outputs=nbr_of_filters_conv1)
-            conv1_bias = graph.get_tensor_by_name("Caps_net/conv1/bias:0")
-            hist_bias1 = tf.summary.histogram("hist_bias1", conv1_bias)
-
-            conv2_filters = graph.get_tensor_by_name("Caps_net/conv2/kernel:0")
-            hist_conv2 = tf.summary.histogram("hist_conv2", conv2_filters)
-            conv2_bias = graph.get_tensor_by_name("Caps_net/conv2/bias:0")
-            hist_bias2 = tf.summary.histogram("hist_bias2", conv2_bias)
+#            conv1_filters = graph.get_tensor_by_name("Caps_net/conv1/kernel:0")
+#            nbr_of_filters_conv1 = sess.run(tf.shape(conv1_filters)[-1])
+#            hist_conv1 = tf.summary.histogram("hist_conv1", conv1_filters)
+#            conv1_filters = tf.transpose(conv1_filters, perm = [3,0,1,2])
+#            filter1 = tf.summary.image('Filter_1', conv1_filters, max_outputs=nbr_of_filters_conv1)
+#            conv1_bias = graph.get_tensor_by_name("Caps_net/conv1/bias:0")
+#            hist_bias1 = tf.summary.histogram("hist_bias1", conv1_bias)
+#
+#            conv2_filters = graph.get_tensor_by_name("Caps_net/conv2/kernel:0")
+#            hist_conv2 = tf.summary.histogram("hist_conv2", conv2_filters)
+#            conv2_bias = graph.get_tensor_by_name("Caps_net/conv2/bias:0")
+#            hist_bias2 = tf.summary.histogram("hist_bias2", conv2_bias)
             
             W_transformation = graph.get_tensor_by_name("Caps_net/W_shared/W:0")
             W_transform = tf.summary.histogram("W_transform", W_transformation)
@@ -330,18 +337,18 @@ def main(argv):
 #            conv1_filters = tf.transpose(conv1_filters, perm = [3,0,1,2])
 #            filter1 = tf.summary.image('Filter_1', conv1_filters, max_outputs=nbr_of_filters_conv1)
             
-#            conv1_filters = graph.get_tensor_by_name("Caps_net/kernel1:0")
-#            nbr_of_filters_conv1 = sess.run(tf.shape(conv1_filters)[-1])
-#            hist_conv1 = tf.summary.histogram("hist_conv1", conv1_filters)
-#            conv1_filters = tf.transpose(conv1_filters, perm = [3,0,1,2])
-#            filter1 = tf.summary.image('Filter_1', conv1_filters, max_outputs=nbr_of_filters_conv1)
-#            conv1_bias = graph.get_tensor_by_name("Caps_net/bias1:0")
-#            hist_bias1 = tf.summary.histogram("hist_bias1", conv1_bias)
-#
-#            conv2_filters = graph.get_tensor_by_name("Caps_net/kernel2:0")
-#            hist_conv2 = tf.summary.histogram("hist_conv2", conv2_filters)
-#            conv2_bias = graph.get_tensor_by_name("Caps_net/bias2:0")
-#            hist_bias2 = tf.summary.histogram("hist_bias2", conv2_bias)
+            conv1_filters = graph.get_tensor_by_name("Caps_net/kernel1:0")
+            nbr_of_filters_conv1 = sess.run(tf.shape(conv1_filters)[-1])
+            hist_conv1 = tf.summary.histogram("hist_conv1", conv1_filters)
+            conv1_filters = tf.transpose(conv1_filters, perm = [3,0,1,2])
+            filter1 = tf.summary.image('Filter_1', conv1_filters, max_outputs=nbr_of_filters_conv1)
+            conv1_bias = graph.get_tensor_by_name("Caps_net/bias1:0")
+            hist_bias1 = tf.summary.histogram("hist_bias1", conv1_bias)
+
+            conv2_filters = graph.get_tensor_by_name("Caps_net/kernel2:0")
+            hist_conv2 = tf.summary.histogram("hist_conv2", conv2_filters)
+            conv2_bias = graph.get_tensor_by_name("Caps_net/bias2:0")
+            hist_bias2 = tf.summary.histogram("hist_bias2", conv2_bias)
             
 
             summary_train_loss = tf.summary.scalar('training_loss', train_loss)
@@ -350,6 +357,7 @@ def main(argv):
             summary_op = tf.summary.merge([summary_train_loss, filter1, hist_conv1, hist_bias1, hist_conv2, hist_bias2, W_transform])
             train_writer = tf.summary.FileWriter(output_dir + "train_summary", graph=tf.get_default_graph())
             
+            print("Start training")
             # training loop 
             precision_over_time = []
             val_loss_over_time = []
@@ -426,6 +434,7 @@ def main(argv):
                 
                 # Use validation data set to tune hyperparameters (Classification threshold)
                 if i % validation_at_itr == 0:
+                    print("Doing validation")
                     current_val_loss = 0
     #                b_sim_val_matching = np.repeat(np.ones((batch_size_val*int(val_match_dataset_length/batch_size_val),1)),generator.rotation_res,axis=0)
     #                b_sim_val_non_matching = np.repeat(np.zeros((batch_size_val*int(val_match_dataset_length/batch_size_val),1)),generator.rotation_res,axis=0)
@@ -474,6 +483,7 @@ def main(argv):
                     else:
                         threshold += thresh_step
                     precision_over_time.append(precision)
+                    print("Completed validation")
                     
                 train_writer.add_summary(summary, i)
             

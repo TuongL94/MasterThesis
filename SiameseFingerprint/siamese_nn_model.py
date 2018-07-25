@@ -181,11 +181,11 @@ def inference(input, training = True):
             kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
             name="conv1") 
      
-    output = tf.layers.batch_normalization(
-        output,
-        training = training,
-        name = "batch_norm_2",
-        reuse = tf.AUTO_REUSE)
+#    output = tf.layers.batch_normalization(
+#        output,
+#        training = training,
+#        name = "batch_norm_2",
+#        reuse = tf.AUTO_REUSE)
     
     output = tf.nn.leaky_relu(
             output)
@@ -211,11 +211,11 @@ def inference(input, training = True):
             kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
             name="conv2")
         
-    output = tf.layers.batch_normalization(
-        output,
-        training = training,
-        name = "batch_norm_3",
-        reuse = tf.AUTO_REUSE)
+#    output = tf.layers.batch_normalization(
+#        output,
+#        training = training,
+#        name = "batch_norm_3",
+#        reuse = tf.AUTO_REUSE)
     
     output = tf.nn.leaky_relu(
             output)
@@ -233,30 +233,30 @@ def inference(input, training = True):
             strides = 2)
     
     # Convolutional Layer 3
-    output = tf.layers.conv2d(
-            inputs = output,
-            filters = 64,
-            kernel_size = [5,5],
-            strides = [2,2],
-            padding = "same",
-            reuse = tf.AUTO_REUSE,
-            kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
-            name="conv3")
+#    output = tf.layers.conv2d(
+#            inputs = output,
+#            filters = 64,
+#            kernel_size = [5,5],
+#            strides = [2,2],
+#            padding = "same",
+#            reuse = tf.AUTO_REUSE,
+#            kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
+#            name="conv3")
             
-    output = tf.layers.batch_normalization(
-        output,
-        training = training,
-        name = "batch_norm_4",
-        reuse = tf.AUTO_REUSE)
-    
-    output = tf.nn.leaky_relu(
-            output)
-    
-    output = tf.layers.dropout(
-        output,
-        rate = 0.5,
-        training = training,
-        seed = 3)
+#    output = tf.layers.batch_normalization(
+#        output,
+#        training = training,
+#        name = "batch_norm_4",
+#        reuse = tf.AUTO_REUSE)
+#    
+#    output = tf.nn.leaky_relu(
+#            output)
+#    
+#    output = tf.layers.dropout(
+#        output,
+#        rate = 0.5,
+#        training = training,
+#        seed = 3)
     
     # Convolutional Layer 4
 #    output = tf.layers.conv2d(
@@ -294,11 +294,11 @@ def inference(input, training = True):
         kernel_regularizer = tf.contrib.layers.l2_regularizer(0.3),
         name="dense")
     
-    output = tf.layers.batch_normalization(
-        output,
-        training = training,
-        name = "batch_norm_6",
-        reuse = tf.AUTO_REUSE)
+#    output = tf.layers.batch_normalization(
+#        output,
+#        training = training,
+#        name = "batch_norm_6",
+#        reuse = tf.AUTO_REUSE)
     
     output = tf.nn.leaky_relu(
             output)

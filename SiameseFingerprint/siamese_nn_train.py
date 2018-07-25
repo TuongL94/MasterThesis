@@ -314,7 +314,7 @@ def main(argv):
                         current_val_loss += val_loss_value
                         
                 val_loss_over_time.append(current_val_loss*batch_size_val/np.shape(b_sim_full)[0])
-                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors = sme.get_test_diagnostics(left_full,right_full, b_sim_full,threshold, class_id)
+                precision, false_pos, false_neg, recall, fnr, fpr, inter_class_errors, tnr = sme.get_test_diagnostics(left_full,right_full, b_sim_full,threshold, class_id)
             
                 if false_pos > false_neg:   # Can use inter_class_errors to tune the threshold further
                     threshold -= thresh_step
